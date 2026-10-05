@@ -1,0 +1,18 @@
+{
+  "id": "/",
+  "name": "Rally Table Tennis",
+  "short_name": "Rally",
+  "description": "Run table tennis clubs, record matches, and manage tournaments.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f6f8f6",
+  "theme_color": "#172e29",
+  "orientation": "portrait-primary",
+  "categories": ["sports", "utilities"],
+  "icons": [
+    { "src": "/icons/rally-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/rally-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/rally-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

@@ -1,0 +1,5 @@
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_PUBLISHABLE_KEY=sb_publishable_your_key
+RALLY_ADMIN_EMAILS=admin@example.com
+# Server-only secret for account deletion. Never add this to browser/iOS code.
+SUPABASE_SECRET_KEY=sb_secret_your_key

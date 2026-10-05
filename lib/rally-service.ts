@@ -1,0 +1,109 @@
+import {suggestSeeds} from './seeding';
+import {deletionPending} from './account-deletion';
+import {guardAccountWrites} from './account-write-guard';
+import {scoreError} from './match-rules';
+export {scoreError} from './match-rules';
+import {tournamentAction} from './tournament-service';
+import {AppError} from './rally-errors';
+export {AppError} from './rally-errors';
+type Profile={id:string;name:string;auth_id:string|null};
+type Membership={club_id:string;player_id:string;role:string;status:string};
+type Access={isSiteAdmin?:boolean;reviewerId?:string};
+export type SavedMatch={id:string;club_id:string;a:string;b:string;games:string;best_of:number;played_on:string;status:string;submitted_by:string;confirmed_by:string|null;tournament_id:string|null};
+const fail=(status:number,message:string):never=>{throw new AppError(status,message)};
+function str(value:unknown,label:string,max=100):string{if(typeof value!=='string'||!value.trim()||value.trim().length>max)fail(400,`${label} is required (maximum ${max} characters).`);return (value as string).trim()}
+function id(value:unknown){const s=str(value,'ID',80);if(!/^[a-zA-Z0-9_-]+$/.test(s))fail(400,'Invalid ID.');return s}
+function date(value:unknown){const s=str(value,'Date',10);if(!/^\d{4}-\d{2}-\d{2}$/.test(s)||!Number.isFinite(Date.parse(s))||new Date(s).toISOString().slice(0,10)!==s)fail(400,'Choose a valid date.');return s}
+export function canConfirm(m:SavedMatch,playerId:string,isAdmin:boolean){return m.status==='pending'&&(isAdmin||((m.a===playerId||m.b===playerId)&&m.submitted_by!==playerId))}
+export function makeService(database:D1Database){
+ const db=database;
+ const q=(sql:string,...args:unknown[])=>db.prepare(sql).bind(...args);
+ const all=async<T>(sql:string,...args:unknown[])=>(await q(sql,...args).all<T>()).results;
+ const me=async(authId:string)=>q('SELECT * FROM profiles WHERE auth_id=?',authId).first<Profile>();
+ const member=async(clubId:string,playerId:string)=>q('SELECT * FROM memberships WHERE club_id=? AND player_id=? AND status=?',clubId,playerId,'active').first<Membership>();
+ const admin=async(clubId:string,playerId:string)=>{const m=await member(clubId,playerId);if(!m||!['owner','admin'].includes(m.role))fail(403,'Only club administrators can do that.');return m};
+ return {
+ async read(authId:string|null,access:Access={}){
+  const self=authId?await me(authId):null;
+  const [allProfiles,allClubs,allMatches,allTournaments,allEntries]=await Promise.all([all<{id:string;name:string;is_guest:number;is_deleted:number}>('SELECT id,name,(auth_id IS NULL AND deleted_at IS NULL) AS is_guest,deleted_at IS NOT NULL AS is_deleted FROM profiles ORDER BY name'),all<{id:string;name:string;location:string;owner_id:string;approval_status:string}>('SELECT id,name,location,owner_id,approval_status FROM clubs ORDER BY name'),all<SavedMatch>('SELECT * FROM matches ORDER BY played_on DESC,created_at DESC'),all<{id:string;club_id:string;state_json:string|null;[key:string]:unknown}>('SELECT * FROM tournaments ORDER BY date'),all<{tournament_id:string;player_id:string}>('SELECT tournament_id,player_id FROM entries ORDER BY created_at,id')]);
+  const memberships=await all<Membership>('SELECT club_id,player_id,role,status FROM memberships');
+  const visibleClubIds=new Set(allClubs.filter(c=>c.approval_status==='approved'||access.isSiteAdmin||(self&&memberships.some(m=>m.club_id===c.id&&m.player_id===self.id))).map(c=>c.id));
+  const cs=allClubs.filter(c=>visibleClubIds.has(c.id)),ms=allMatches.filter(m=>visibleClubIds.has(m.club_id)),ts=allTournaments.filter(t=>visibleClubIds.has(t.club_id));
+  const tournamentIds=new Set(ts.map(t=>t.id as string)),es=allEntries.filter(e=>tournamentIds.has(e.tournament_id));
+  const visiblePlayerIds=new Set(memberships.filter(m=>m.status==='active'&&visibleClubIds.has(m.club_id)).map(m=>m.player_id));if(self)visiblePlayerIds.add(self.id);
+  const ps=allProfiles.filter(p=>visiblePlayerIds.has(p.id));
+  const adminIds=self?memberships.filter(m=>m.player_id===self.id&&m.status==='active'&&['owner','admin'].includes(m.role)).map(m=>m.club_id):[];
+  const visibleMatches=self?ms:ms.filter(m=>m.status==='confirmed');
+  return {me:self?{id:self.id,name:self.name}:null,signedIn:!!authId,players:ps,deletedPlayers:allProfiles.filter(p=>p.is_deleted&&(ms.some(m=>m.a===p.id||m.b===p.id)||es.some(e=>e.player_id===p.id))).map(p=>({id:p.id,name:p.name})),clubs:cs.map(({owner_id,approval_status,...c})=>({...c,approvalStatus:approval_status,activeMemberCount:memberships.filter(m=>m.club_id===c.id&&m.status==='active').length,canManage:adminIds.includes(c.id)})),memberships:memberships.filter(m=>visibleClubIds.has(m.club_id)&&(m.status==='active'||(self&&(m.player_id===self.id||adminIds.includes(m.club_id))))),matches:visibleMatches.map(m=>({...m,games:JSON.parse(m.games),canConfirm:!!self&&canConfirm(m,self.id,adminIds.includes(m.club_id)),canVoid:!m.tournament_id&&!!self&&m.status!=='voided'&&(adminIds.includes(m.club_id)||(m.status==='pending'&&m.submitted_by===self.id))})),tournaments:ts.map(({state_json,...t})=>({...t,state:state_json?JSON.parse(state_json):null,seedStats:suggestSeeds(es.filter(e=>e.tournament_id===t.id).map(e=>e.player_id),visibleMatches)})),entries:es};
+ },
+ async act(authId:string,body:Record<string,unknown>,access:Access={}){
+  const db=guardAccountWrites(database,authId);
+  const q=(sql:string,...args:unknown[])=>db.prepare(sql).bind(...args);
+  if(await deletionPending(db,authId))fail(403,'Account deletion is in progress.');
+  const action=str(body.action,'Action',40),now=new Date().toISOString();
+  if(action==='save_profile'){
+   const name=str(body.name,'Display name',60);await q('INSERT INTO profiles (id,auth_id,name,created_at) VALUES (?,?,?,?) ON CONFLICT(auth_id) DO UPDATE SET name=excluded.name',crypto.randomUUID(),authId,name,now).run();return {ok:true};
+  }
+  if(action==='approve_club'||action==='decline_club'){
+   if(!access.isSiteAdmin)fail(403,'Only a Rally app administrator can review clubs.');
+   const clubId=id(body.clubId),status=action==='approve_club'?'approved':'rejected';
+   const result=await q('UPDATE clubs SET approval_status=?,reviewed_by=?,reviewed_at=? WHERE id=? AND approval_status=?',status,access.reviewerId??authId,now,clubId,'pending').run();
+   if(!result.meta?.changes)fail(409,'This club is no longer awaiting review.');return {ok:true,status};
+  }
+  const self=await me(authId);if(!self)fail(409,'Create your player profile first.');const user=self!;
+  if(action==='create_club'){
+   const clubId=id(body.id),name=str(body.name,'Club name',80),location=str(body.location,'Location',100);
+   const owned=await q('SELECT id FROM clubs WHERE owner_id=? LIMIT 1',user.id).first<{id:string}>();
+   if(owned&&owned.id!==clubId)fail(403,'Each account can create one club. You can still administer clubs that invite you.');
+   const existing=await q('SELECT owner_id FROM clubs WHERE id=?',clubId).first<{owner_id:string}>();if(existing){if(existing.owner_id!==user.id)fail(409,'That club ID is already in use.');return {ok:true,id:clubId};}
+   await db.batch([q("INSERT INTO clubs (id,name,location,owner_id,approval_status,created_at) VALUES (?,?,?,?,?,?)",clubId,name,location,user.id,'pending',now),q('INSERT INTO memberships (id,club_id,player_id,role,status,created_at) VALUES (?,?,?,?,?,?)',crypto.randomUUID(),clubId,user.id,'owner','active',now)]);return {ok:true,id:clubId,status:'pending'};
+  }
+  if(action==='request_join'){
+   const clubId=id(body.clubId),club=await q('SELECT approval_status FROM clubs WHERE id=?',clubId).first<{approval_status:string}>();if(!club)fail(404,'Club not found.');if(club!.approval_status!=='approved')fail(403,'This club is not open for membership yet.');
+   await q('INSERT INTO memberships (id,club_id,player_id,role,status,created_at) VALUES (?,?,?,?,?,?) ON CONFLICT(club_id,player_id) DO NOTHING',crypto.randomUUID(),clubId,user.id,'member','pending',now).run();return {ok:true};
+  }
+  if(action==='approve_member'||action==='decline_member'){
+   const clubId=id(body.clubId),playerId=id(body.playerId);await admin(clubId,user.id);
+   if(action==='approve_member')await q("UPDATE memberships SET status='active' WHERE club_id=? AND player_id=? AND status='pending'",clubId,playerId).run();
+   else await q("DELETE FROM memberships WHERE club_id=? AND player_id=? AND status='pending'",clubId,playerId).run();return {ok:true};
+  }
+  if(action==='add_guest'){
+   const clubId=id(body.clubId),playerId=id(body.id),name=str(body.name,'Player name',60);await admin(clubId,user.id);
+   const existing=await q('SELECT id FROM profiles WHERE id=?',playerId).first();if(existing){if(await member(clubId,playerId))return {ok:true};fail(409,'Player already exists.');}
+   await db.batch([q('INSERT INTO profiles (id,name,created_at) VALUES (?,?,?)',playerId,name,now),q('INSERT INTO memberships (id,club_id,player_id,role,status,created_at) VALUES (?,?,?,?,?,?)',crypto.randomUUID(),clubId,playerId,'guest','active',now)]);return {ok:true};
+  }
+  if(action==='record_match'){
+   const matchId=id(body.id),clubId=id(body.clubId),a=id(body.a),b=id(body.b),playedOn=date(body.date),bestOf=body.bestOf;
+   if(playedOn>now.slice(0,10))fail(400,'A result cannot be dated in the future.');
+   const err=scoreError(a,b,body.games,bestOf);if(err)fail(400,err);
+   const membership=await member(clubId,user.id);if(!membership)fail(403,'Join this club before recording a result.');
+   const isAdmin=['owner','admin'].includes(membership!.role);
+   if(!isAdmin&&a!==user.id&&b!==user.id)fail(403,'You can only submit your own matches.');
+   if(!await member(clubId,a)||!await member(clubId,b))fail(400,'Both players must be active members of this club.');
+   const existing=await q('SELECT * FROM matches WHERE id=?',matchId).first<SavedMatch>();
+   if(existing){if(existing.submitted_by!==user.id||existing.a!==a||existing.b!==b||existing.games!==JSON.stringify(body.games))fail(409,'Submission ID already used.');return {ok:true,id:matchId};}
+   const status=isAdmin?'confirmed':'pending';
+   await db.batch([q('INSERT INTO matches (id,club_id,a,b,games,best_of,played_on,status,submitted_by,confirmed_by,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)',matchId,clubId,a,b,JSON.stringify(body.games),bestOf,playedOn,status,user.id,isAdmin?user.id:null,now),q('INSERT INTO audit (id,match_id,actor_id,action,created_at) VALUES (?,?,?,?,?)',crypto.randomUUID(),matchId,user.id,isAdmin?'recorded_and_verified':'submitted',now)]);return {ok:true,id:matchId,status};
+  }
+  if(action==='confirm_match'||action==='void_match'){
+   const matchId=id(body.id),m=await q('SELECT * FROM matches WHERE id=?',matchId).first<SavedMatch>();if(!m)fail(404,'Match not found.');
+   if(m!.tournament_id)fail(409,'Manage tournament results from the tournament draw.');
+   const membership=await member(m!.club_id,user.id),isAdmin=!!membership&&['owner','admin'].includes(membership.role);
+   if(action==='confirm_match'){
+    if(!canConfirm(m!,user.id,isAdmin))fail(403,'Only the opponent or a club administrator can confirm a pending result.');
+    await db.batch([q("INSERT INTO audit (id,match_id,actor_id,action,created_at) SELECT ?,id,?,'confirmed',? FROM matches WHERE id=? AND status='pending'",crypto.randomUUID(),user.id,now,matchId),q("UPDATE matches SET status='confirmed',confirmed_by=? WHERE id=? AND status='pending'",user.id,matchId)]);
+   }else{
+    if(!isAdmin&&!(m!.submitted_by===user.id&&m!.status==='pending'))fail(403,'Only an administrator can void a confirmed result.');
+    await db.batch([q("INSERT INTO audit (id,match_id,actor_id,action,created_at) SELECT ?,id,?,'voided',? FROM matches WHERE id=? AND status!='voided'",crypto.randomUUID(),user.id,now,matchId),q("UPDATE matches SET status='voided' WHERE id=? AND status!='voided'",matchId)]);
+   }return {ok:true};
+  }
+  if(action==='create_tournament'){
+   const clubId=id(body.clubId),eventId=id(body.id),name=str(body.name,'Tournament name',80),eventDate=date(body.date),format=str(body.format,'Format',30),capacity=body.capacity;await admin(clubId,user.id);
+   if(!['Round robin','Single elimination','Double elimination'].includes(format)||!Number.isSafeInteger(capacity)||(capacity as number)<2)fail(400,'Choose a valid format and a whole-number player limit of at least 2.');
+   await q('INSERT INTO tournaments (id,name,club_id,date,format,capacity,created_at) VALUES (?,?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING',eventId,name,clubId,eventDate,format,capacity,now).run();return {ok:true};
+  }
+  if(['enter_tournament','add_tournament_guest','set_capacity','remove_entry','start_tournament','score_fixture','reset_fixture','withdraw_player'].includes(action))return tournamentAction(db,user,body);
+  fail(400,'Unknown action.');
+ }
+ }
+}

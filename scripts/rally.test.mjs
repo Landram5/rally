@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+import {validateMatch,stats,pairs,initialMatches,tally} from '../lib/rally.ts';
+assert.equal(validateMatch('alex','jordan',[[11,9],[12,10]]),null);
+assert.match(validateMatch('alex','alex',[[11,8],[11,7]]),/different/);
+assert.match(validateMatch('alex','jordan',[[11,10],[11,7]]),/Game 1/);
+assert.match(validateMatch('alex','jordan',[[13,10],[11,7]]),/Game 1/);
+assert.match(validateMatch('alex','jordan',[[11,9]]),/all games/);
+assert.match(validateMatch('alex','jordan',[[11,9],[11,8],[11,7]]),/already won/);
+assert.match(validateMatch('alex','jordan',[[NaN,9],[11,7]]),/Game 1/);
+const m={id:'test',a:'alex',b:'jordan',games:[[11,8],[11,7]],date:'2026-09-29',club:'harbor',status:'pending',kind:'Club play'};
+assert.equal(stats('alex',[m]).played,0);
+assert.equal(stats('alex',[{...m,status:'confirmed'}]).wins,1);
+assert.equal(stats('jordan',[{...m,status:'confirmed'}]).pointsWon,15);
+assert.equal(pairs(['a','b','c','d'],'Round robin').length,6);
+assert.equal(pairs(['a','b','c','d','e'],'Single elimination').filter(p=>p[1]===null).length,3);
+for (const m of initialMatches)assert.equal(validateMatch(m.a,m.b,m.games),null);
+assert.equal(initialMatches.reduce((s,m)=>s+stats(m.a,[m]).wins+stats(m.b,[m]).wins,0),initialMatches.length);
+console.log('Passed: score legality, deuce, match completion, confirmation, statistics, fixtures, and seed consistency.');
