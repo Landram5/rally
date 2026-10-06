@@ -1,19 +1,19 @@
 import {AppError} from './rally-errors';
-import {calculateRatings,compareRatedPlayers,type SeedMatch} from './seeding';
+import {calculateRatings,compareRatedPlayers,initialRating,type SeedMatch} from './seeding';
 export type ClubSeason={id:string;club_id:string;name:string;starts_on:string;ends_on:string;closed_at:string|null;created_by:string|null;revision:number;created_at:string};
 export type SeasonPlayer={player_id:string;name:string;status:string;rating:number;played:number;wins:number;rank:number|null};
 export type SeasonView=ClubSeason&{players:SeasonPlayer[];canManage:boolean;canJoin:boolean;me:string|null;asOf:string};
-export function seasonStandings(season:ClubSeason,roster:{player_id:string;name:string;status:string}[],matches:SeedMatch[],today=new Date().toISOString().slice(0,10)){
+export function seasonStandings(season:ClubSeason,roster:{player_id:string;name:string;status:string;initial_rating?:number|null}[],matches:SeedMatch[],today=new Date().toISOString().slice(0,10)){
  const asOf=[today,season.ends_on,...(season.closed_at?[season.closed_at.slice(0,10)]:[])].sort()[0],ids=new Set(roster.map(p=>p.player_id));
- const ratings=calculateRatings(matches.filter(m=>m.played_on>=season.starts_on&&m.played_on<=asOf&&ids.has(m.a)&&ids.has(m.b)),asOf);
- let rank=0;const players=roster.map(p=>({...p,...(ratings.get(p.player_id)??{rating:1000,played:0,wins:0})})).sort((a,b)=>Number(b.status==='active')-Number(a.status==='active')||compareRatedPlayers(a,b)||a.name.localeCompare(b.name)||a.player_id.localeCompare(b.player_id)).map(p=>({...p,rating:Math.round(p.rating),rank:p.status==='active'?++rank:null}));return {players,asOf};
+ const ratings=calculateRatings(matches.filter(m=>m.played_on>=season.starts_on&&m.played_on<=asOf&&ids.has(m.a)&&ids.has(m.b)),asOf,Object.fromEntries(roster.filter(p=>p.initial_rating!=null).map(p=>[p.player_id,p.initial_rating!])));
+ let rank=0;const players=roster.map(p=>({...p,...(ratings.get(p.player_id)??{rating:initialRating(p.initial_rating),played:0,wins:0})})).sort((a,b)=>Number(b.status==='active')-Number(a.status==='active')||compareRatedPlayers(a,b)||a.name.localeCompare(b.name)||a.player_id.localeCompare(b.player_id)).map(p=>({...p,rating:Math.round(p.rating),rank:p.status==='active'?++rank:null}));return {players,asOf};
 }
 export async function seasonViews(db:D1Database,club:string,me:string|null){
  const membership=me?await db.prepare("SELECT role FROM memberships WHERE club_id=? AND player_id=? AND status='active'").bind(club,me).first<{role:string}>():null,canManage=!!membership&&['owner','admin','board'].includes(membership.role);
  const visible=await db.prepare("SELECT 1 FROM clubs WHERE id=? AND (approval_status='approved' OR ?=1)").bind(club,membership?1:0).first();if(!visible)throw new AppError(404,'Club unavailable.');
  const seasons=(await db.prepare('SELECT * FROM club_seasons WHERE club_id=? ORDER BY starts_on DESC,id').bind(club).all<ClubSeason>()).results;
- const matches=(await db.prepare("SELECT m.*,t.rating_weight tournament_weight FROM matches m LEFT JOIN tournaments t ON t.id=m.tournament_id WHERE m.club_id=? AND m.status='confirmed' AND t.deleted_at IS NULL ORDER BY m.played_on DESC,m.created_at DESC").bind(club).all<SeedMatch>()).results;
- return await Promise.all(seasons.map(async s=>{const roster=(await db.prepare('SELECT sp.player_id,p.name,sp.status FROM season_players sp JOIN profiles p ON p.id=sp.player_id WHERE sp.season_id=?').bind(s.id).all<{player_id:string;name:string;status:string}>()).results;return {...s,...seasonStandings(s,roster,matches),me,canManage,canJoin:!!membership&&!s.closed_at&&s.ends_on>=new Date().toISOString().slice(0,10)&&!roster.some(p=>p.player_id===me&&p.status==='active')} satisfies SeasonView;}));
+ const matches=(await db.prepare("SELECT m.*,t.rating_weight tournament_weight,pa.initial_rating a_initial_rating,pb.initial_rating b_initial_rating FROM matches m LEFT JOIN profiles pa ON pa.id=m.a LEFT JOIN profiles pb ON pb.id=m.b LEFT JOIN tournaments t ON t.id=m.tournament_id WHERE m.club_id=? AND m.status='confirmed' AND t.deleted_at IS NULL ORDER BY m.played_on DESC,m.created_at DESC").bind(club).all<SeedMatch>()).results;
+ return await Promise.all(seasons.map(async s=>{const roster=(await db.prepare('SELECT sp.player_id,p.name,sp.status,p.initial_rating FROM season_players sp JOIN profiles p ON p.id=sp.player_id WHERE sp.season_id=?').bind(s.id).all<{player_id:string;name:string;status:string;initial_rating:number|null}>()).results;return {...s,...seasonStandings(s,roster,matches),me,canManage,canJoin:!!membership&&!s.closed_at&&s.ends_on>=new Date().toISOString().slice(0,10)&&!roster.some(p=>p.player_id===me&&p.status==='active')} satisfies SeasonView;}));
 }
 function identifier(value:unknown){if(typeof value!=='string'||!/^[a-zA-Z0-9_-]{1,80}$/.test(value))throw new AppError(400,'Invalid identifier.');return value;}
 function date(value:unknown){if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(value)||!Number.isFinite(Date.parse(value))||new Date(value).toISOString().slice(0,10)!==value)throw new AppError(400,'Choose valid season dates.');return value;}

@@ -12,7 +12,7 @@ assert.deepEqual(a.points.map(p=>p.matches),[1,2,3,4]);
 assert.deepEqual(a.points.map(p=>p.winRate),[100,100,2/3*100,75]);
 assert.equal(a.played,4);assert.equal(a.wins,3);assert.equal(a.losses,1);
 assert.equal(b.wins,1);assert.equal(b.points.at(-1).winRate,25);
-assert.ok(a.points.at(-1).elo-a.points.at(-2).elo>32);
+assert.ok(a.points.at(-1).elo-a.points.at(-2).elo>=24);
 assert.deepEqual(playerPerformance([...matches].reverse(),'a','2026-10-06'),a);
 assert.equal(JSON.stringify(matches),original);
 assert.deepEqual(playerPerformance([],'a','2026-10-06').points,[]);

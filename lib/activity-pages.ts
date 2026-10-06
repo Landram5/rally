@@ -11,7 +11,7 @@ export async function readActivityPage(db:D1Database,authId:string|null,options:
   if(!club||club==='all')throw new AppError(400,'Choose a club.');const role=options.role??'all';if(!['all','owner','admin','board','member','guest'].includes(role))throw new AppError(400,'Choose a member role.');
   const from=`FROM memberships m JOIN clubs c ON c.id=m.club_id JOIN profiles p ON p.id=m.player_id LEFT JOIN profile_photos ph ON ph.player_id=p.id WHERE c.id=? AND ${visible} AND m.status='active' AND p.deleted_at IS NULL AND p.name LIKE ? ESCAPE '\\' AND (?='all' OR CASE WHEN p.auth_id IS NULL THEN 'guest' ELSE m.role END=?)`,args=[club,...visibility,search,role,role];
   const total=await db.prepare(`SELECT count(*) total ${from}`).bind(...args).first<{total:number}>();
-  const rows=await list(`SELECT p.id,p.name,p.auth_id IS NULL AS is_guest,ph.updated_at AS photo_version,m.role ${from} ORDER BY CASE m.role WHEN 'owner' THEN 0 ELSE 1 END,p.name COLLATE NOCASE,p.id LIMIT ? OFFSET ?`,[...args,limit,offset]);
+  const rows=await list(`SELECT p.id,p.name,p.initial_rating,p.initial_rating_revision,p.auth_id IS NULL AS is_guest,ph.updated_at AS photo_version,m.role ${from} ORDER BY CASE m.role WHEN 'owner' THEN 0 ELSE 1 END,p.name COLLATE NOCASE,p.id LIMIT ? OFFSET ?`,[...args,limit,offset]);
   return {page,total:total?.total??0,hasMore:offset+rows.length<(total?.total??0),items:rows.map(({photo_version,...p})=>({...p,photo_url:profilePhotoUrl(p.id as string,photo_version as string|null)}))};
  }
  if(options.view==='matches'){

@@ -1,8 +1,8 @@
 import {clubhouseSummaries,type ClubhouseSummary} from './clubhouse-summary';
-import type {SeedMatch} from './seeding';
+import {RATING_MODEL_VERSION,type SeedMatch} from './seeding';
 export async function summaryVersion(db:D1Database){return (await db.prepare('SELECT version FROM summary_epoch WHERE id=1').first<{version:number}>())?.version??0;}
 export async function cachedSummaries(db:D1Database,matches:(SeedMatch&{club_id:string})[],clubs:string[],version:number,audience:string){
- const day=new Date().toISOString().slice(0,10),key=JSON.stringify([audience,[...clubs].sort()]);
+ const day=new Date().toISOString().slice(0,10),key=JSON.stringify([RATING_MODEL_VERSION,audience,[...clubs].sort()]);
  const cached=await db.prepare('SELECT summary_json FROM clubhouse_summary_cache c WHERE scope_key=? AND c.version=? AND as_of=? AND c.version=(SELECT version FROM summary_epoch WHERE id=1)').bind(key,version,day).first<{summary_json:string}>();
  if(cached){try{return JSON.parse(cached.summary_json) as Record<string,ClubhouseSummary>;}catch{/* Recompute invalid stored data. */}}
  const summaries=clubhouseSummaries(matches,clubs);

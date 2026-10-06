@@ -82,7 +82,7 @@ export async function tournamentAction(db:D1Database,user:{id:string},body:Recor
   try{
    if(action==='start_tournament'){
     if(event.status!=='registration')bad(409,'This tournament has already started.');
-    const seeds=body.seeds??suggestSeeds(participants,(await q("SELECT m.*,t.rating_weight AS tournament_weight FROM matches m LEFT JOIN tournaments t ON t.id=m.tournament_id WHERE m.status='confirmed' AND m.club_id=?",event.club_id).all<SeedMatch>()).results).map(s=>s.id);if(!Array.isArray(seeds)||seeds.length!==participants.length||new Set(seeds).size!==seeds.length||seeds.some(p=>typeof p!=='string'||!participants.includes(p)))bad(400,'The seed list must contain every registered player exactly once.');
+    const seeds=body.seeds??suggestSeeds(participants,(await q("SELECT m.*,t.rating_weight AS tournament_weight,pa.initial_rating a_initial_rating,pb.initial_rating b_initial_rating FROM matches m LEFT JOIN profiles pa ON pa.id=m.a LEFT JOIN profiles pb ON pb.id=m.b LEFT JOIN tournaments t ON t.id=m.tournament_id WHERE m.status='confirmed' AND m.club_id=?",event.club_id).all<SeedMatch>()).results).map(s=>s.id);if(!Array.isArray(seeds)||seeds.length!==participants.length||new Set(seeds).size!==seeds.length||seeds.some(p=>typeof p!=='string'||!participants.includes(p)))bad(400,'The seed list must contain every registered player exactly once.');
     bestOf=Number(body.bestOf);const thirdPlace=body.thirdPlace===true;if(body.thirdPlace!==undefined&&typeof body.thirdPlace!=='boolean')bad(400,'Choose whether to include a third-place playoff.');after=createDraw(seeds as string[],event.format,bestOf,thirdPlace);
    }else{
     if(!before)bad(409,'Start the tournament first.');

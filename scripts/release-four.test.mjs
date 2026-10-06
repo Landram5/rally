@@ -76,8 +76,8 @@ for(const mode of ['keep_results','remove_history']){
  const season={starts_on:'2026-09-01',ends_on:'2026-10-31',closed_at:null};
  const roster=['a','b'].map(player_id=>({player_id,name:player_id,status:'active'}));
  const match={id:'match',a:'a',b:'b',games:[[11,5],[11,5]],status:'confirmed',played_on:'2026-10-01'};
- assert.equal(seasonStandings(season,roster,[match], '2026-10-06').players[0].rating,1016);
- assert.equal(seasonStandings(season,roster,[{...match,tournament_id:'event',tournament_weight:3}], '2026-10-06').players[0].rating,1048);
+ assert.equal(seasonStandings(season,roster,[match], '2026-10-06').players[0].rating,1008);
+ assert.equal(seasonStandings(season,roster,[{...match,tournament_id:'event',tournament_weight:3}], '2026-10-06').players[0].rating,1024);
  assert.equal(seasonStandings(season,roster,[{...match,played_on:'2026-08-01'}], '2026-10-06').players[0].played,0);
  assert.equal(seasonStandings(season,roster,[{...match,status:'voided'}], '2026-10-06').players[0].played,0);
  assert.equal(seasonStandings(season,roster,[{...match,b:'outsider'}], '2026-10-06').players[0].played,0);
