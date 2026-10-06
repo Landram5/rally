@@ -378,3 +378,6 @@ main{padding-top:24px;padding-bottom:28px}
 
 .profile-opponent-picker{display:grid;gap:8px;min-width:240px}.player-profile .public-hero>div{min-width:0}.player-profile h1,.club-detail-heading h1{overflow-wrap:anywhere}.club-detail-heading>div{min-width:0}
 @media(max-width:700px){.profile-opponent-picker{width:100%;min-width:0}}
+
+.member-role-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;flex-shrink:0}.member-edit-button{min-height:44px;padding:8px 12px;border-radius:8px;font-size:14px;font-weight:600;color:var(--foreground);background:var(--background);border:1px solid var(--border)}.member-edit-button:focus-visible{outline:3px solid var(--ring);outline-offset:2px}
+@media(max-width:400px){.member-role-actions{max-width:130px}.club-member-row .person{flex:1}}
