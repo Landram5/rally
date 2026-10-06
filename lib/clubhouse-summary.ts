@@ -1,7 +1,7 @@
 import {stats,tally,type Match} from './rally';
 import {calculateRatings,type SeedMatch} from './seeding';
 type OpponentRecord=Pick<ReturnType<typeof stats>,'played'|'wins'|'losses'|'gamesWon'>;
-export type ClubhouseSummary={stats:Record<string,ReturnType<typeof stats>>;ratings:Record<string,{rating:number;played:number;wins:number}>;opponents:Record<string,Record<string,OpponentRecord>>;confirmed:number;games:number;recorded:number};
+export type ClubhouseSummary={stats:Record<string,ReturnType<typeof stats>>;ratings:Record<string,{rating:number;played:number;wins:number;distinctOpponents:number}>;opponents:Record<string,Record<string,OpponentRecord>>;confirmed:number;games:number;recorded:number};
 export function clubhouseSummaries(matches:(SeedMatch&{club_id:string})[],clubIds:string[]):Record<string,ClubhouseSummary>{
  const result:Record<string,ClubhouseSummary>=Object.create(null);
  for(const scope of ['all',...clubIds]){const source=scope==='all'?matches:matches.filter(m=>m.club_id===scope),converted:Match[]=source.filter(m=>m.status==='confirmed').map(m=>({id:m.id,a:m.a,b:m.b,games:typeof m.games==='string'?JSON.parse(m.games):m.games,date:m.played_on,club:m.club_id,status:'confirmed',kind:m.tournament_id?'Tournament':'Club play'}));const records:ClubhouseSummary['stats']=Object.create(null),opponents:ClubhouseSummary['opponents']=Object.create(null);

@@ -29,7 +29,7 @@ assert.equal(resultWeight('2026-10-07','2026-10-06'),0,'future matches excluded'
 assert.equal(calculateRatings([dated],'2025-10-05').get('a').rating,408);
 assert.equal(calculateRatings([dated],'2025-10-06').get('a').rating,404);
 assert.equal(calculateRatings([dated],'2025-10-06').get('b').rating,396,'losses decay symmetrically');
-assert.deepEqual(calculateRatings([dated],'2026-10-06').get('a'),{rating:400,played:0,wins:0});
+assert.deepEqual(calculateRatings([dated],'2026-10-06').get('a'),{rating:400,played:0,wins:0,distinctOpponents:0});
 assert.equal(calculateRatings([{...dated,tournament_id:'event'}],'2025-10-05').get('a').rating,416,'tournaments carry double weight');
 assert.equal(calculateRatings([{...dated,tournament_id:'event',tournament_weight:3}],'2025-10-05').get('a').rating,424,'cross-club tournaments carry triple weight');
 assert.equal(calculateRatings([{...dated,tournament_weight:3}],'2025-10-05').get('a').rating,408,'weight cannot boost a regular match');

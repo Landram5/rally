@@ -1,12 +1,12 @@
 import {AppError} from './rally-errors';
 import {calculateRatings,compareRatedPlayers,initialRating,type SeedMatch} from './seeding';
 export type ClubSeason={id:string;club_id:string;name:string;starts_on:string;ends_on:string;closed_at:string|null;created_by:string|null;revision:number;created_at:string};
-export type SeasonPlayer={player_id:string;name:string;status:string;rating:number;played:number;wins:number;rank:number|null};
+export type SeasonPlayer={player_id:string;name:string;status:string;rating:number;played:number;wins:number;distinctOpponents:number;rank:number|null};
 export type SeasonView=ClubSeason&{players:SeasonPlayer[];canManage:boolean;canJoin:boolean;me:string|null;asOf:string};
 export function seasonStandings(season:ClubSeason,roster:{player_id:string;name:string;status:string;initial_rating?:number|null}[],matches:SeedMatch[],today=new Date().toISOString().slice(0,10)){
  const asOf=[today,season.ends_on,...(season.closed_at?[season.closed_at.slice(0,10)]:[])].sort()[0],ids=new Set(roster.map(p=>p.player_id));
  const ratings=calculateRatings(matches.filter(m=>m.played_on>=season.starts_on&&m.played_on<=asOf&&ids.has(m.a)&&ids.has(m.b)),asOf,Object.fromEntries(roster.filter(p=>p.initial_rating!=null).map(p=>[p.player_id,p.initial_rating!])));
- let rank=0;const players=roster.map(p=>({...p,...(ratings.get(p.player_id)??{rating:initialRating(p.initial_rating),played:0,wins:0})})).sort((a,b)=>Number(b.status==='active')-Number(a.status==='active')||compareRatedPlayers(a,b)||a.name.localeCompare(b.name)||a.player_id.localeCompare(b.player_id)).map(p=>({...p,rating:Math.round(p.rating),rank:p.status==='active'?++rank:null}));return {players,asOf};
+ let rank=0;const players=roster.map(p=>({...p,...(ratings.get(p.player_id)??{rating:initialRating(p.initial_rating),played:0,wins:0,distinctOpponents:0})})).sort((a,b)=>Number(b.status==='active')-Number(a.status==='active')||compareRatedPlayers(a,b)||a.name.localeCompare(b.name)||a.player_id.localeCompare(b.player_id)).map(p=>({...p,rating:Math.round(p.rating),rank:p.status==='active'?++rank:null}));return {players,asOf};
 }
 export async function seasonViews(db:D1Database,club:string,me:string|null){
  const membership=me?await db.prepare("SELECT role FROM memberships WHERE club_id=? AND player_id=? AND status='active'").bind(club,me).first<{role:string}>():null,canManage=!!membership&&['owner','admin','board'].includes(membership.role);
