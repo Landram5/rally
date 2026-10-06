@@ -49,3 +49,11 @@ Next improvements to discuss:
 4. Database-level pagination as clubs grow.
 
 Real iPhone Home Screen checks remain the next verification priority, particularly touch cropping, keyboard-open forms, safe areas and session persistence. Browser viewport checks cannot establish those behaviors.
+
+## Follow-up: rating explanations and automatic refresh
+
+Rating history now appears in the clubhouse player panel. Review reduced the first implementation's density: the latest match starts expanded, older explanations expand on tap, and the initial list is limited to 10. Original points and today's aged contribution are separately labeled; pre-match values are historical replay values and can change when older records are corrected or voided. The rating rules remain unchanged.
+
+The Inbox now refreshes visible activity every 30 seconds and on focus/resume, with a manual Refresh control. Polling pauses during editing; stale responses cannot replace a newer mutation. It remains an in-app current-activity feed with no email or push delivery. Rating history on public profiles would need a dedicated public rating scope to avoid exposing private club data or producing misleading totals from only one player's matches. Database pagination and real iPhone Home Screen verification remain priorities.
+
+Suggested next product work: club venue/contact/meeting schedules; tournament check-in, match time and court assignments; notification delivery preferences.
