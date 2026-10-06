@@ -1,5 +1,7 @@
 import {env} from 'cloudflare:workers';
 import Link from 'next/link';
+import {redirect} from 'next/navigation';
+import {getAuthenticatedUser} from '@/lib/auth';
 import PublicHeader from './public-header';
 import PlayerAvatar from './player-avatar';
 import {getPublicDirectory} from '@/lib/public-rally';
@@ -9,6 +11,7 @@ export const dynamic='force-dynamic';
 type Params={view?:string;q?:string;page?:string};
 const dateLabel=(date:string)=>new Date(date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
 export default async function Home({searchParams}:{searchParams:Promise<Params>}){
+ if(env.SUPABASE_URL?.trim()&&env.SUPABASE_PUBLISHABLE_KEY?.trim()&&await getAuthenticatedUser())redirect('/clubhouse');
  const params=await searchParams,view=params.view==='players'?'players':params.view==='matches'?'matches':'tournaments',search=(params.q??'').slice(0,80),page=Math.max(1,Math.min(1000,Number.parseInt(params.page??'1')||1));
  const data=env.DB?await getPublicDirectory(env.DB,view,search,page):null;
  const url=(nextView:string,nextPage=1)=>'/?'+new URLSearchParams({view:nextView,...(search?{q:search}:{}),...(nextPage>1?{page:String(nextPage)}:{})}).toString();
