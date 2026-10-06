@@ -8,10 +8,11 @@ export const metadata: Metadata = {
   description: "Track club matches, player statistics, and table tennis tournaments.",
   openGraph: {
     type: "website",
+    url: "https://rallytt.net/",
     siteName: "Rally",
     title: "Rally · Table Tennis",
     description: "Track club matches, player statistics, and table tennis tournaments.",
-    images: [{ url: "/rally-share-v2.png", width: 1200, height: 630, type: "image/png", alt: "Rally — table tennis clubs, matches, standings and tournaments. rallytt.net" }],
+    images: [{ url: "/rally-share-v2.png", secureUrl: "https://rallytt.net/rally-share-v2.png", width: 1200, height: 630, type: "image/png", alt: "Rally — table tennis clubs, matches, standings and tournaments. rallytt.net" }],
   },
   twitter: {
     card: "summary_large_image",
