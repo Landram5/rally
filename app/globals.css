@@ -69,7 +69,7 @@
 /* Mobile app shell and touch ergonomics */
 @media(max-width:700px){
  body:has(.app-shell){min-height:100dvh}
- .nav-wrap{translate:0 var(--rally-nav-offset,0px);overflow-anchor:none}
+ .nav-wrap{overflow-anchor:none}
  body{overflow-x:hidden}
  body:has(.app-shell){padding-bottom:calc(74px + env(safe-area-inset-bottom))}
  main{min-width:0}
