@@ -100,3 +100,10 @@ Drafts are not server backups or submitted results; they do not synchronize acro
 Account names link to public profiles; the menu has separate Edit profile and View public profile items. Public headers obtain the authenticated player's own profile ID/name from the private session endpoint, without exposing tokens or email. Rating charts expose point details through touch/click, keyboard, a native selector, and Previous/Next controls. The selector disambiguates same-date points; original changes remain separate from today's aged contribution. Chart selection resets when rating scope changes.
 
 Run pnpm test:reliability (or node scripts/reliability.test.mjs) for the session, redirect, draft, scoring, rating, real-SQLite service and demo regressions. Run pnpm lint, TypeScript and the production build alongside it before release. Browser verification uses synthetic demo scores and read-only real profile navigation. Actual iPhone Home Screen close/reopen remains a user-device check.
+
+
+## Release two dashboards
+
+Overview defaults to My Rally. Club leaders also have Organizer mode, with scoped approvals/verification, attendance and ready fixture scoring. Club overview keeps the existing standings and comparison tools. Server dashboard summaries precede compact paging; no migration is needed for this release. Photo cropping supports continuous pinch zoom and a single styled zoom control. Mobile navigation mounts directly under the document body to avoid changing tab layout affecting its fixed position.
+
+Run pnpm test:reliability for dashboard eligibility/scoping, compact summary parity, crop geometry and existing account/scoring checks. See ROADMAP.md and PRODUCT_REVIEW.md for release limits and device verification.

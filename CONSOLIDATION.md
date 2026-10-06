@@ -178,3 +178,10 @@ Worker 7a5aa613-9c0e-469e-ab78-485ef8eca496 adds per-account/device live-match d
 Account names now open public profiles and the menu separates Edit profile from View public profile. The private session endpoint includes only the current player's own profile ID/name for that navigation. Public account refresh discards superseded responses. Rating points support click/touch and keyboard with native selection and Previous/Next controls for overlapping dates.
 
 Validation passed: TypeScript, clean lint, production build and node scripts/reliability.test.mjs (auth/session, redirect/origin rules, live-draft recovery/validation/isolation, live scoring/Elo, service registration/verification/retries and demo isolation). At 390 x 844, live demo checks recovered unfinished/completed scores after reload, preserved swapped sides and undo, saved one result and removed its draft, and inspected rating points by selector/keyboard/click. Real profile View/Edit navigation retained the signed-in session. Demo edits were reset; production business records were not changed. Actual iPhone close/reopen is still a device check. Proof: .local-backups/screenshots/live-draft-recovered-release-one.png and rating-point-release-one.png.
+
+
+## Player and organizer dashboard release — 2026-10-06
+
+Deployed Worker version 992e71e0-1aa7-4b0d-ad23-8ff353eba9b3 at rallytt.net. No database migration or production record edits were needed. Overview now offers My Rally, Organizer for club leaders, and Club overview. Includes continuous profile cropping and mobile navigation layout fixes.
+
+Validation: TypeScript, lint, production build and reliability regression suite passed. Read-only production checks confirmed both dashboard modes load with the account still signed in. Sample checks covered club filtering, focused verification, direct fixture scoring, crop controls/export, and all six mobile tab navigation positions. Profile crop test image was applied only to an unsaved sample form; no real player photos were changed. Device-only iPhone pinch/keyboard/rotation/Home Screen checks remain pending.

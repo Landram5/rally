@@ -83,3 +83,14 @@ Implemented recoverable club-match live scoring, explicit draft/submission statu
 Deliberate limits: one draft per account/device; demo drafts last for the browser session; no cross-device draft sync, manual-entry drafts, tournament-score drafts or automatic offline submission. If the current club/player membership changes, the old draft cannot silently be reassigned. Rating dots may overlap on the same date; the selector and Previous/Next controls make each point reachable. The graph is still match-update based, not a continuous daily aging curve. The prior session fix remains deployed and regression-tested, but actual iPhone process termination/reopening needs device confirmation.
 
 Next release remains the player and organizer dashboards. The most valuable next validation is using live scoring through an actual club match and checking that a phone interruption resumes correctly before submitting.
+
+
+## Dashboard release two
+
+My Rally now opens with the player's confirmed record, verification actions, entered/upcoming tournaments, registration eligibility, check-in prompts and ready opponents. Organizer mode is available to active club leaders and shows membership requests, exact-result review, attendance, ready match queues, table/time assignments and direct fixture scoring. Club overview retains standings and head-to-head. Dashboard summaries are calculated before compact paging, so past events and recent match limits cannot hide actionable records. The club filter applies to operations and attention items.
+
+Check-in remains attendance only. Unchecked entrants remain in the draw, and the start dialog warns organizers to remove absent entrants before locking it. Table assignments describe scheduled queues, not live occupancy; matching table/time assignments within a tournament are flagged for review. Live start/finish tracking and table occupancy need their own state model in a future release.
+
+The profile cropper now has a circular preview, one styled continuous zoom control, reset, drag/pan, focal-point two-pointer pinch zoom and keyboard movement/zoom. Image export and file limits stay the same. Mobile navigation is portaled outside the changing tab flex layout, and mobile fields use 16px text to avoid automatic iPhone focus zoom.
+
+Verification: TypeScript, lint, build and the reliability suite pass, including scope/deadline/attendance checks, compact/full dashboard parity, continuous crop geometry and edge bounds. Browser checks verified direct fixture scoring, profile crop keyboard controls and export, and the bottom bar at the same viewport edge across all six tabs at 390px width. Actual iPhone pinch, keyboard, rotation and Home Screen behavior remain device verification items. See ROADMAP.md for the next releases.

@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
+import ts from 'typescript';
+mkdirSync('.test-runtime',{recursive:true});
+for(const name of ['dashboards','logistics','rally-errors'])writeFileSync(`.test-runtime/${name}.mjs`,ts.transpileModule(readFileSync(`lib/${name}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText.replace(/from ['"]\.\/([^'"]+)['"]/g,"from './$1.mjs'"));
+const {dashboardsFor}=await import('../.test-runtime/dashboards.mjs');
+const base={me:{id:'me',name:'Me'},clubs:[{id:'a',name:'My club',canManage:true},{id:'b',name:'Other club',canManage:false}],players:[{id:'me',name:'Me'},{id:'other',name:'Opponent'}],memberships:[{club_id:'a',player_id:'me',status:'active'},{club_id:'a',player_id:'other',status:'pending'}],matches:[{id:'verify',a:'me',b:'other',club_id:'a',status:'pending',canConfirm:true},{id:'waiting',a:'me',b:'other',club_id:'a',status:'pending',canConfirm:false}],entries:[{tournament_id:'live',player_id:'me'},{tournament_id:'live',player_id:'other'}],tournaments:[]};
+const event=(id,extra={})=>({id,name:id,club_id:'a',date:'2026-10-10',status:'registration',capacity:8,state:null,...extra});
+base.tournaments=[...Array.from({length:25},(_,i)=>event(`past-${i}`,{status:'completed',date:'2026-01-01'})),event('live',{status:'active',date:'2026-10-01',check_in_open:1,checkedIn:['me'],state:{fixtures:[{id:'ready',a:'me',b:'other',status:'ready'},{id:'wait',a:null,b:null,status:'waiting'},{id:'done',a:'me',b:'other',status:'played'}]},fixturePlans:[{fixture_id:'ready',court:'Table 2',starts_at:'2026-10-06T18:00:00Z'}]}),event('open'),event('expired',{registration_closes_at:'2026-10-05T00:00:00Z'}),event('full',{capacity:0}),event('foreign',{club_id:'b'}),event('old',{date:'2026-01-01'})];
+const d=dashboardsFor(base,new Date('2026-10-06T12:00:00Z'));
+assert.deepEqual(d.player.events.map(e=>e.id),['live','open'],'upcoming event after 25 past events is retained; expired/full/nonmember excluded');
+assert.equal(d.player.events[0].ready[0].court,'Table 2');assert.equal(d.player.events[0].ready[0].checkedIn,false);assert.equal(d.player.events[0].attendance,1);assert.equal(d.player.events[0].remaining,2);assert.equal(d.player.events[0].finished,1);
+assert.equal(d.player.verification[0].id,'verify');assert.equal(d.player.awaitingVerification,1);assert.equal(d.organizer.approvals[0].count,1);assert.equal(d.organizer.events.some(e=>e.id==='foreign'),false,'cannot organize unrelated club');
+const member=dashboardsFor({...base,clubs:base.clubs.map(c=>({...c,canManage:false}))},new Date('2026-10-06'));
+assert.equal(member.organizer.events.length,0);assert.equal(member.organizer.verification.length,0);assert.equal(member.organizer.approvals.length,0);
+const anonymous=dashboardsFor({...base,me:null,clubs:base.clubs.map(c=>({...c,canManage:false})),matches:[]});assert.equal(anonymous.player.events.length,0);
+console.log('Dashboard scope, attendance, match queues, registration eligibility, deadlines and events beyond compact paging passed.');
