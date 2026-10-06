@@ -3,7 +3,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {readFileSync,writeFileSync,mkdirSync,rmSync,readdirSync} from 'node:fs';
 import ts from 'typescript';
 mkdirSync('.test-runtime',{recursive:true});
-for(const name of ['account-write-guard','account-deletion','rally-service','tournament-service','tournament-engine','match-rules','rally-errors','seeding','public-rally']){
+for(const name of ['profile-photo','account-write-guard','account-deletion','rally-service','tournament-service','tournament-engine','match-rules','rally-errors','seeding','public-rally']){
  const compiled=ts.transpileModule(readFileSync(`lib/${name}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText.replace(/from ['"]\.\/([^'"]+)['"]/g, "from './$1.mjs'");
  writeFileSync(`.test-runtime/${name}.mjs`,compiled);
 }
@@ -21,6 +21,25 @@ await act('opponent-auth',{action:'save_profile',name:'Opponent'});
 await act('outsider-auth',{action:'save_profile',name:'Outsider'});
 const uid=async auth=>(await service.read(auth)).me.id;
 const owner=await uid('owner-auth'),member=await uid('member-auth'),opponent=await uid('opponent-auth');
+const photo='data:image/jpeg;base64,'+readFileSync('scripts/fixtures/profile-photo.jpg').toString('base64');
+await act('member-auth',{action:'save_profile',name:'Member',photo,playerId:owner});
+assert.equal(sql.prepare('SELECT image_data FROM profile_photos WHERE player_id=?').get(member).image_data,photo);
+assert.equal(sql.prepare('SELECT count(*) AS n FROM profile_photos WHERE player_id=?').get(owner).n,0,'cannot upload for someone else');
+assert.match((await service.read('member-auth')).players.find(p=>p.id===member).photo_url,/^\/api\/players\/.*\/photo\?v=/);
+assert.ok((await getPublicPlayer(db,member)).photoUrl,'photo visible on public profile');
+await act('member-auth',{action:'save_profile',name:'Member'});
+assert.equal(sql.prepare('SELECT count(*) AS n FROM profile_photos WHERE player_id=?').get(member).n,1,'editing name preserves photo');
+for(const invalid of ['data:image/svg+xml;base64,PHN2Zz4=','data:image/jpeg;base64,AAAA',false,'data:image/jpeg;base64,'+'A'.repeat(240024)]){
+ await assert.rejects(act('member-auth',{action:'save_profile',name:'Must not change',photo:invalid}),e=>e.status===400);
+ assert.equal((await service.read('member-auth')).me.name,'Member','invalid photo does not partially save name');
+}
+await act('member-auth',{action:'save_profile',name:'Member',photo});
+assert.equal(sql.prepare('SELECT count(*) AS n FROM profile_photos WHERE player_id=?').get(member).n,1,'replacement stays one photo');
+await act('member-auth',{action:'save_profile',name:'Member',photo:null});
+assert.equal((await getPublicPlayer(db,member)).photoUrl,null,'removal clears public photo');
+assert.equal(sql.prepare('SELECT count(*) AS n FROM profile_photos WHERE player_id=?').get(member).n,0);
+console.log('Passed: photo persistence, public URL, self-only writes, replacement, removal, validation and atomic rollback.');
+
 await act('owner-auth',{action:'create_club',id:'club-one',name:'Club One',location:'Baltimore'});
 assert.equal((await service.read('owner-auth')).clubs[0].approvalStatus,'pending');
 assert.equal((await service.read('member-auth')).clubs.length,0,'pending club must be hidden from other accounts');
@@ -40,6 +59,41 @@ for(const auth of ['member-auth','opponent-auth']){
  await act('owner-auth',{action:'approve_member',clubId:'club-one',playerId:await uid(auth)});
 }
 await act('owner-auth',{action:'add_guest',id:'guest-one',clubId:'club-one',name:'Guest'});
+const originalRallyId=(await service.read('member-auth')).players.find(p=>p.id===member).rally_id;
+assert.match(originalRallyId,/^RLY-[A-F0-9]{12}$/);
+await act('member-auth',{action:'save_profile',name:'Renamed Member',bio:'I play table tennis.',rally_id:'RLY-FORGED'});
+assert.equal((await getPublicPlayer(db,member)).bio,'I play table tennis.');
+assert.equal((await service.read('member-auth')).players.find(p=>p.id===member).rally_id,originalRallyId);
+await act('member-auth',{action:'save_profile',name:'Member'});
+assert.equal((await getPublicPlayer(db,member)).bio,'I play table tennis.','name-only edit preserves bio');
+await assert.rejects(act('member-auth',{action:'save_profile',name:'Changed',bio:'X'.repeat(501)}),e=>e.status===400);
+assert.equal((await getPublicPlayer(db,member)).name,'Member');
+assert.throws(()=>sql.prepare('UPDATE profiles SET rally_id=? WHERE id=?').run('RLY-FORGED',member),/cannot be changed/);
+const role=(who,playerId,value)=>act(who,{action:'set_member_role',clubId:'club-one',playerId,role:value});
+await assert.rejects(role('member-auth',member,'admin'),e=>e.status===403);
+await assert.rejects(role('outsider-auth',member,'admin'),e=>e.status===403);
+await assert.rejects(role('owner-auth',owner,'member'),e=>e.status===403);
+await assert.rejects(role('owner-auth','guest-one','admin'),e=>e.status===400);
+await assert.rejects(role('owner-auth',member,'owner'),e=>e.status===400);
+await assert.rejects(role('owner-auth',member,['admin']),e=>e.status===400);
+for(const leaderRole of ['admin','board']){
+ await role('owner-auth',member,leaderRole);
+ assert.equal((await service.read('member-auth')).clubs.find(c=>c.id==='club-one').canManage,true);
+ assert.equal((await service.read('member-auth')).clubs.find(c=>c.id==='club-one').canAssignRoles,false);
+ await assert.rejects(role('member-auth',opponent,'admin'),e=>e.status===403,'leaders cannot appoint leaders');
+ await act('member-auth',{action:'create_tournament',id:'leader-event-'+leaderRole,clubId:'club-one',name:'Leader event',date:'2026-10-11',format:'Single elimination',capacity:4});
+ await act('member-auth',{action:'set_capacity',id:'leader-event-'+leaderRole,capacity:5,revision:0});
+ await act('opponent-auth',{action:'record_match',id:'leader-result-'+leaderRole,clubId:'club-one',a:opponent,b:'guest-one',games:[[11,7],[11,8]],bestOf:3,date:'2026-10-06'});
+ await act('member-auth',{action:'confirm_match',id:'leader-result-'+leaderRole});
+ assert.equal((await service.read('member-auth')).matches.find(m=>m.id==='leader-result-'+leaderRole).status,'confirmed');
+ await role('owner-auth',member,'member');
+ await assert.rejects(act('member-auth',{action:'create_tournament',id:'revoked-'+leaderRole,clubId:'club-one',name:'Revoked',date:'2026-10-11',format:'Single elimination',capacity:4}),e=>e.status===403);
+ await assert.rejects(act('member-auth',{action:'set_capacity',id:'leader-event-'+leaderRole,capacity:6,revision:1}),e=>e.status===403);
+}
+// Leave the shared fixture unchanged for the existing match/statistics checks.
+for(const id of ['leader-result-admin','leader-result-board']){sql.prepare('DELETE FROM audit WHERE match_id=?').run(id);sql.prepare('DELETE FROM matches WHERE id=?').run(id);}
+console.log('Passed: stable Rally IDs, bio validation and persistence; owner-only appointments; both leader roles create and manage tournaments and verify games; demotion revokes access.');
+
 const result={action:'record_match',id:'match-one',clubId:'club-one',a:member,b:opponent,games:[[11,8],[11,9]],bestOf:3,date:'2026-09-28'};
 await assert.rejects(act('outsider-auth',result),e=>e.status===403);
 await assert.rejects(act('member-auth',{...result,a:owner,b:'guest-one'}),e=>e.status===403);
@@ -148,3 +202,14 @@ assert.deepEqual((await service.read('owner-auth')).tournaments.find(t=>t.id==='
 await assert.rejects(go('set_capacity',{capacity:55},'owner-auth','custom-field'),e=>e.status===409);
 await assert.rejects(go('add_tournament_guest',{name:'Late guest'},'owner-auth','custom-field'),e=>e.status===409);
 sql.close();console.log('Passed: arbitrary integer capacity, capacity edits, atomic no-account guest registration, guest permissions, statistic-based auto seeds, post-start registration lock.');
+
+{
+ const old=new DatabaseSync(':memory:');old.exec('PRAGMA foreign_keys=ON');
+ for(const f of readdirSync('drizzle').filter(f=>f.endsWith('.sql')&&!f.startsWith('0007')).sort())old.exec(readFileSync('drizzle/'+f,'utf8'));
+ old.exec("INSERT INTO profiles (id,name,created_at) VALUES ('old-one','Old One','2026-10-01'),('old-two','Old Two','2026-10-01');INSERT INTO profiles (id,name,created_at,deleted_at) VALUES ('old-deleted','Deleted player','2026-10-01','2026-10-02')");
+ old.exec(readFileSync('drizzle/0007_player_details_and_roles.sql','utf8'));
+ const existing=old.prepare('SELECT rally_id FROM profiles WHERE deleted_at IS NULL').all();
+ assert.equal(new Set(existing.map(p=>p.rally_id)).size,2);assert.ok(existing.every(p=>/^RLY-[A-F0-9]{12}$/.test(p.rally_id)));
+ assert.equal(old.prepare("SELECT rally_id FROM profiles WHERE id='old-deleted'").get().rally_id,null);old.close();
+}
+console.log('Passed: existing player migration assigns unique Rally IDs without restoring deleted identities.');

@@ -3,7 +3,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {readFileSync,writeFileSync,mkdirSync,readdirSync} from 'node:fs';
 import ts from 'typescript';
 mkdirSync('.test-runtime',{recursive:true});
-for(const name of ['account-write-guard','account-deletion','account-http','auth-rules','rally-errors','public-rally','rally-service','tournament-service','tournament-engine','match-rules','seeding']){
+for(const name of ['profile-photo','account-write-guard','account-deletion','account-http','auth-rules','rally-errors','public-rally','rally-service','tournament-service','tournament-engine','match-rules','seeding']){
  const code=ts.transpileModule(readFileSync(`lib/${name}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText.replace(/from ['"]\.\/([^'"]+)['"]/g,"from './$1.mjs'");
  writeFileSync(`.test-runtime/${name}.mjs`,code);
 }
@@ -160,3 +160,27 @@ console.log('Passed: ownership authorization and atomic transfer; both deletion 
  assert.equal((await getPublicPlayer(db,'other')).matches.length,5);sql.close();
 }
 console.log('Passed: in-flight writes remain blocked after Auth deletion; temporary security identifiers expire; shared results label deleted players without restoring their public profiles.');
+
+for(const mode of ['keep_results','remove_history']){
+ const {db,one,sql}=fixture();
+ const service=makeService(db),photo='data:image/jpeg;base64,'+readFileSync('scripts/fixtures/profile-photo.jpg').toString('base64');
+ await service.act('player-auth',{action:'save_profile',name:'Player',photo,bio:'My player bio'});
+ assert.equal(one('SELECT count(*) AS n FROM profile_photos').n,1);
+ await beginDeletion(db,'player-auth',mode);
+ assert.equal(one('SELECT count(*) AS n FROM profile_photos').n,0,mode+' removes photo');
+ assert.equal(one("SELECT count(*) AS n FROM profiles WHERE auth_id='player-auth' OR (id='player' AND (bio!='' OR rally_id IS NOT NULL))").n,0,'deletion removes bio and Rally ID');
+ await assert.rejects(service.act('player-auth',{action:'save_profile',name:'Player',photo}),e=>e.status===403);
+ sql.close();
+}
+console.log('Passed: both account deletion modes remove photos and block late uploads.');
+
+{
+ const {db,one,sql}=fixture();
+ const h=accountHandlers({db,session:async()=>({user:{id:'player-auth',email:'player@example.test'},signOut:async()=>{}}),configured:()=>true,admin:()=>({deleteUser:async()=>({error:null})})});
+ const before=await (await h.GET()).json();assert.match(before.profile.rally_id,/^RLY-/);
+ const r=await h.POST(new Request('https://rally.test/api/account',{method:'POST',headers:{origin:'https://rally.test','content-type':'application/json'},body:JSON.stringify({action:'save_profile',name:'New username',bio:'New bio',playerId:'owner'})}));
+ assert.equal(r.status,200);const after=await (await h.GET()).json();
+ assert.equal(after.profile.name,'New username');assert.equal(after.profile.bio,'New bio');assert.equal(after.profile.rally_id,before.profile.rally_id);
+ assert.notEqual(one("SELECT name FROM profiles WHERE id='owner'").name,'New username');sql.close();
+}
+console.log('Passed: account settings return Rally ID and save only the signed-in player username and bio.');

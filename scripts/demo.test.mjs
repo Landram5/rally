@@ -25,5 +25,20 @@ event=data.tournaments.find(t=>t.id==='test-event');data=applyDemoAction(data,{a
 assert.equal(seed.tournaments.some(t=>t.id==='test-event'),false);
 assert.throws(()=>applyDemoAction(seed,{action:'record_match',id:'invalid',clubId:'harbor',a:'alex',b:'jordan',bestOf:3,games:[[11,10],[11,7]],date:'2026-10-05'}),/win by two/);
 assert.throws(()=>applyDemoAction(seed,{action:'record_match',clubId:'harbor',a:'alex',b:'jamie',bestOf:3,games:[[11,7],[11,8]],date:'2026-10-05'}),/active club players/);
-data=applyDemoAction(seed,{action:'create_club',id:'new-club',name:'New sample',location:'Baltimore'});assert.throws(()=>applyDemoAction(data,{action:'create_club',id:'second',name:'Second',location:'Baltimore'}),/already own/);
+const nonOwner=structuredClone(seed);nonOwner.memberships.find(m=>m.player_id==='alex'&&m.role==='owner').role='admin';
+data=applyDemoAction(nonOwner,{action:'create_club',id:'new-club',name:'New sample',location:'Baltimore'});assert.throws(()=>applyDemoAction(data,{action:'create_club',id:'second',name:'Second',location:'Baltimore'}),/already own/);
 console.log('Demo tournament history, progression, reset, validation and isolation checks passed.');
+
+const photoDemo=createDemoData();
+const withPhoto=applyDemoAction(photoDemo,{action:'save_profile',name:photoDemo.me.name,photo:'data:image/jpeg;base64,sample'});
+assert.equal(withPhoto.players.find(p=>p.id===withPhoto.me.id).photo_url,'data:image/jpeg;base64,sample');
+assert.equal(applyDemoAction(withPhoto,{action:'save_profile',name:withPhoto.me.name,photo:null}).players.find(p=>p.id===withPhoto.me.id).photo_url,null);
+console.log('Demo profile photo upload and removal checks passed.');
+
+const details=applyDemoAction(seed,{action:'save_profile',name:'Alex Updated',bio:'Sample bio'});
+assert.equal(details.players.find(p=>p.id==='alex').bio,'Sample bio');
+assert.equal(details.players.find(p=>p.id==='alex').rally_id,seed.players.find(p=>p.id==='alex').rally_id);
+const leaders=applyDemoAction(seed,{action:'set_member_role',clubId:'harbor',playerId:'jordan',role:'board'});
+assert.equal(leaders.memberships.find(m=>m.club_id==='harbor'&&m.player_id==='jordan').role,'board');
+assert.throws(()=>applyDemoAction(seed,{action:'set_member_role',clubId:'harbor',playerId:'alex',role:'member'}),/active member/);
+console.log('Demo bio, username, Rally ID and club role checks passed.');

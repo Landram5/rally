@@ -17,9 +17,9 @@ function derive(data:Data){
 }
 export function createDemoData():Data{
  const data:Data={me:{id:'alex',name:'Alex Morgan'},account:{email:'alex@example.test',displayName:'Alex Morgan',emailVerified:true},signedIn:true,isSiteAdmin:true,
- players:players.map(p=>({id:p.id,name:p.name,is_guest:p.id==='riley'?1:0})),
- clubs:[...clubs.map(c=>({id:c.id,name:c.name,location:c.location,canManage:true,approvalStatus:'approved' as const,activeMemberCount:0})),{id:'campus',name:'Campus Table Tennis',location:'Towson, MD',canManage:false,approvalStatus:'pending',activeMemberCount:1}],
- memberships:players.map(p=>({club_id:p.club,player_id:p.id,role:p.id==='alex'?'admin':'member',status:'active'})),
+ players:players.map(p=>({id:p.id,name:p.name,is_guest:p.id==='riley'?1:0,bio:'',rally_id:'RLY-DEMO-'+p.id.toUpperCase()})),
+ clubs:[...clubs.map(c=>({id:c.id,name:c.name,location:c.location,canManage:true,canAssignRoles:c.id==='harbor',approvalStatus:'approved' as const,activeMemberCount:0})),{id:'campus',name:'Campus Table Tennis',location:'Towson, MD',canManage:false,approvalStatus:'pending',activeMemberCount:1}],
+ memberships:players.map(p=>({club_id:p.club,player_id:p.id,role:p.id==='alex'?'owner':'member',status:'active'})),
  matches:initialMatches.map(m=>({id:m.id,club_id:m.club,a:m.a,b:m.b,games:m.games,best_of:3,played_on:m.date,status:m.status,submitted_by:m.a,confirmed_by:m.status==='confirmed'?'alex':null,canConfirm:m.status==='pending',canVoid:m.status==='confirmed',tournament_id:null})),tournaments:[],entries:[]};
  data.memberships.push({club_id:'metro',player_id:'alex',role:'admin',status:'active'},{club_id:'harbor',player_id:'casey',role:'member',status:'pending'},{club_id:'campus',player_id:'jamie',role:'owner',status:'active'});
  data.matches.unshift({id:'pending-sample',club_id:'harbor',a:'sam',b:'jordan',games:[[11,8],[11,9]],best_of:3,played_on:'2026-10-04',status:'pending',submitted_by:'sam',confirmed_by:null,canConfirm:true,canVoid:false,tournament_id:null});
@@ -35,8 +35,9 @@ export function createDemoData():Data{
 export function applyDemoAction(current:Data,p:Record<string,unknown>):Data{
  const d=structuredClone(current),id=String(p.id??crypto.randomUUID()),clubId=String(p.clubId??''),playerId=String(p.playerId??''),action=String(p.action),text=(key:string)=>String(p[key]??'').trim();
  const addGuest=()=>{if(!text('name'))throw new Error('Enter a player name.');const guestId=crypto.randomUUID();d.players.push({id:guestId,name:text('name'),is_guest:1});d.memberships.push({club_id:clubId||d.tournaments.find(t=>t.id===id)!.club_id,player_id:guestId,role:'member',status:'active'});return guestId;};
- if(action==='save_profile'){if(!text('name'))throw new Error('Enter a display name.');d.me!.name=text('name');d.players.find(x=>x.id===d.me!.id)!.name=text('name');}
- else if(action==='create_club'){if(!text('name')||!text('location'))throw new Error('Enter a club name and location.');if(d.memberships.some(m=>m.player_id===d.me!.id&&m.role==='owner'))throw new Error('You already own a club.');d.clubs.push({id,name:text('name'),location:text('location'),canManage:true,approvalStatus:'pending',activeMemberCount:1});d.memberships.push({club_id:id,player_id:d.me!.id,role:'owner',status:'active'});}
+ if(action==='save_profile'){if(!text('name'))throw new Error('Enter a display name.');d.me!.name=text('name');d.players.find(x=>x.id===d.me!.id)!.name=text('name');if(p.bio!==undefined){if(typeof p.bio!=='string'||p.bio.trim().length>500)throw new Error('Bio must be text with at most 500 characters.');d.players.find(x=>x.id===d.me!.id)!.bio=p.bio.trim();}if(p.photo!==undefined)d.players.find(x=>x.id===d.me!.id)!.photo_url=p.photo===null?null:String(p.photo);}
+ else if(action==='set_member_role'){if(!d.clubs.find(c=>c.id===clubId)?.canAssignRoles)throw new Error('Only the club owner can appoint leaders.');const target=d.memberships.find(m=>m.club_id===clubId&&m.player_id===playerId&&m.status==='active');if(!target||target.role==='owner'||d.players.find(p=>p.id===playerId)?.is_guest||!['member','admin','board'].includes(text('role')))throw new Error('Choose an active member and role.');target.role=text('role');}
+ else if(action==='create_club'){if(!text('name')||!text('location'))throw new Error('Enter a club name and location.');if(d.memberships.some(m=>m.player_id===d.me!.id&&m.role==='owner'))throw new Error('You already own a club.');d.clubs.push({id,name:text('name'),location:text('location'),canManage:true,canAssignRoles:true,approvalStatus:'pending',activeMemberCount:1});d.memberships.push({club_id:id,player_id:d.me!.id,role:'owner',status:'active'});}
  else if(action==='add_guest')addGuest();
  else if(action==='approve_club'||action==='decline_club')d.clubs.find(c=>c.id===clubId)!.approvalStatus=action==='approve_club'?'approved':'rejected';
  else if(action==='request_join')d.memberships.push({club_id:clubId,player_id:d.me!.id,role:'member',status:'pending'});

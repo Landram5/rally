@@ -63,3 +63,15 @@ The live site and `/demo` now share `app/rally-app.tsx`. Fictional demo actions 
 Decorative slogans, redundant headings and slogan footers were removed. The signed-in header uses a dropdown for profile editing, account settings, installation and logout. Mobile forms use one consistent positioning method and a scroll container constrained to the visible viewport. Conflicting Tailwind translation utilities were removed from dialogs.
 
 TypeScript, lint (three existing warnings), demo-state invariants, tournament-engine tests and the production build pass. Browser verification covered player selection, sample score submission with statistics updating, scrolling at 320 × 480, full form bounds at 390 × 844 and 1280 × 800, past-tournament filtering, completed brackets with third place, safe sample account transfer/deletion, and actual Google sign-in/logout through the new dropdown. Real iPhone keyboard and Home Screen checks remain on the checklist.
+
+
+## Player profiles and club leadership - October 6, 2026
+
+- Live Worker version: `9738b016-1cef-4199-97cf-84180a0793e0`.
+- Migration `0006_profile_photos.sql` adds small JPEG thumbnails stored separately from profile/statistics reads, with cascade and soft-deletion cleanup. The photo picker accepts JPG/PNG/WebP originals up to 10 MB, crops and resizes to 320 square pixels, and explicitly asks for a clear face photo. Public image responses use `no-store`.
+- Migration `0007_player_details_and_roles.sql` adds optional 500-character public bios and unique immutable `RLY-` IDs. Existing active profiles are backfilled; new profiles receive IDs automatically. Deletion clears both fields.
+- Account settings edit the existing player name as Username and the public bio. IDs are read-only. No authentication credentials are changed.
+- Club owners appoint or demote active account members using Clubs > Club leadership. Administrator and Board member roles can manage tournaments and verify results. Owner transfers remain a separate guarded operation. Guest, inactive, deleted, cross-club and non-owner appointment attempts are rejected.
+- Ignored production backups: `.local-backups/production-before-photos-20261005.sql` and `.local-backups/production-before-player-details-20261006.sql`.
+- Validation: TypeScript, lint (two existing warnings), production build, SQLite service/HTTP and account-deletion suites, demo state tests. Tests cover photo validation and self-only writes, atomic updates, public data, both deletion modes, permanent IDs, existing-player backfill, owner-only role changes, both roles' tournament/verification permissions, and revoked permissions after demotion.
+- Browser checks: synthetic photo upload and display; username/bio saving with unchanged ID; public bio rendering; role selection; account form and leadership controls fit a 320-pixel mobile viewport. Production database and published demo are checked after deployment. Real iPhone release gates above remain.

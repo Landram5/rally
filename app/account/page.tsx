@@ -2,9 +2,10 @@
 import {useCallback,useEffect,useState} from 'react';
 import Link from 'next/link';
 import PublicHeader from '../public-header';
+import AccountProfileForm,{type AccountProfile} from '../account-profile-form';
 import type {AccountPlan,DeletionMode} from '@/lib/account-deletion';
 
-type Settings=AccountPlan&{email:string;deletionAvailable:boolean};
+type Settings=AccountPlan&{email:string;deletionAvailable:boolean;profile:AccountProfile|null};
 export default function AccountPage(){
  const [settings,setSettings]=useState<Settings|null>(null),[signedOut,setSignedOut]=useState(false),[error,setError]=useState(''),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false);
  const [mode,setMode]=useState<DeletionMode>('keep_results'),[confirmation,setConfirmation]=useState(''),[selection,setSelection]=useState<Record<string,string>>({}),[transfer,setTransfer]=useState<{clubId:string;successorId:string;name:string}|null>(null);
@@ -35,6 +36,7 @@ export default function AccountPage(){
   {error&&<div className="auth-error" role="alert"><p>{error}</p>{!settings&&<button onClick={()=>void load()}>Try again</button>}</div>}
   {signedOut&&<p><Link href="/login">Sign in</Link> to manage or delete your account.</p>}
   {settings&&!loading&&!signedOut&&(settings.pending?<section><h2>Deletion is in progress</h2><p>Your Rally access has been removed. We are retrying the final sign-in account deletion automatically.</p><Link href="/account/deleted?pending=1">View deletion information</Link></section>:<>
+   <AccountProfileForm key={settings.profile?.id??'new'} profile={settings.profile} disabled={busy} onSave={async(name,bio)=>{await send({action:'save_profile',name,bio});await load();}}/>
    <section><h2>Sign-in details</h2><p>{settings.email}</p><Link href="/account/update-password">Change password</Link></section>
    {!!settings.clubs.length&&<section><h2>Transfer club ownership first</h2><p>Your clubs and other members’ records will remain. Choose a new owner for each club before deleting your account. You will remain an administrator until you delete your account.</p>
     {settings.clubs.map(club=><div className="account-club" key={club.id}><h3>{club.name}</h3>{club.successors.length?<>

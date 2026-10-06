@@ -11,7 +11,7 @@ export async function tournamentAction(db:D1Database,user:{id:string},body:Recor
  const previous=await q('SELECT actor_id,tournament_id,payload FROM tournament_operations WHERE id=?',operationId).first<{actor_id:string;tournament_id:string;payload:string}>();
  if(previous){if(previous.actor_id!==user.id||previous.tournament_id!==eventId||previous.payload!==payload)bad(409,'This action ID was already used.');return {ok:true,id:eventId}}
  if(body.revision!==undefined&&body.revision!==event.revision)bad(409,'The tournament changed. Refresh it before trying again.');
- const membership=await q("SELECT role FROM memberships WHERE club_id=? AND player_id=? AND status='active'",event.club_id,user.id).first<{role:string}>(),isAdmin=!!membership&&['owner','admin'].includes(membership.role);
+ const membership=await q("SELECT role FROM memberships WHERE club_id=? AND player_id=? AND status='active'",event.club_id,user.id).first<{role:string}>(),isAdmin=!!membership&&['owner','admin','board'].includes(membership.role);
  const participants=(await q('SELECT player_id FROM entries WHERE tournament_id=? ORDER BY created_at,id',eventId).all<{player_id:string}>()).results.map(e=>e.player_id);
  const before:Draw|null=event.state_json?JSON.parse(event.state_json):null;let after=before,status=event.status,bestOf=event.best_of,capacity=event.capacity;const extra:D1PreparedStatement[]=[];
  const guard='EXISTS (SELECT 1 FROM tournaments WHERE id=? AND last_operation=?)';

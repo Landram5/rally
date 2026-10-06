@@ -1,3 +1,4 @@
+import {makeService} from './rally-service';
 import {sameOrigin} from './auth-rules';
 import {accountPlan,beginDeletion,finishDeletion,transferOwnership} from './account-deletion';
 import {AppError} from './rally-errors';
@@ -25,7 +26,9 @@ export function accountHandlers(deps:Dependencies) {
   async GET(){
    try {
     const {user}=await deps.session();if(!user)return reply({error:'Sign in to manage your account.'},401);
-    return reply({...await accountPlan(deps.db,user.id),email:user.email??'',deletionAvailable:deps.configured()});
+    const plan=await accountPlan(deps.db,user.id);
+    const profile=plan.pending?null:await deps.db.prepare('SELECT id,name,bio,rally_id FROM profiles WHERE auth_id=? AND deleted_at IS NULL').bind(user.id).first<{id:string;name:string;bio:string;rally_id:string}>();
+    return reply({...plan,profile,email:user.email??'',deletionAvailable:deps.configured()});
    } catch(error){return failure(error)}
   },
   async POST(request:Request){
@@ -34,6 +37,7 @@ export function accountHandlers(deps:Dependencies) {
     const body=await readBody(request);
     const session=await deps.session(),user=session.user;
     if(!user)return reply({error:'Sign in to manage your account.'},401);
+    if(body.action==='save_profile'){await makeService(deps.db).act(user.id,{action:'save_profile',name:body.name,bio:body.bio});return reply({ok:true});}
     if(body.action==='transfer') {
      if(body.confirmation!=='TRANSFER')throw new AppError(400,'Confirm the ownership transfer.');
      if(typeof body.clubId!=='string'||typeof body.successorId!=='string'||![body.clubId,body.successorId].every(id=>/^[a-zA-Z0-9_-]{1,80}$/.test(id)))throw new AppError(400,'Select a club and its new owner.');
