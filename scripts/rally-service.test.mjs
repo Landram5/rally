@@ -242,6 +242,57 @@ cross=(await service.read('owner-auth')).tournaments.find(t=>t.id==='cross-ratin
 await go('reset_fixture',{fixtureId:cross.state.fixtures.find(f=>f.status==='played').id},'owner-auth','cross-rating');
 assert.equal(sql.prepare("SELECT rating_weight FROM tournaments WHERE id='cross-rating'").get().rating_weight,3,'reset cannot reclassify a draw');
 console.log('Passed: cross-club registration preview, atomic weight snapshot, membership-change stability, weighted official results and reset stability.');
+
+// Deletion requires the actual creator, explicit confirmation and a current revision.
+assert.equal(sql.prepare("SELECT created_by FROM tournaments WHERE id='bronze'").get().created_by,owner);
+const bronzeBefore=(await service.read('owner-auth')).tournaments.find(t=>t.id==='bronze');
+assert.equal(bronzeBefore.canDelete,true);
+assert.equal((await service.read('member-auth')).tournaments.find(t=>t.id==='bronze').canDelete,false);
+const removal={action:'delete_tournament',id:'bronze',revision:bronzeBefore.revision,confirmation:'DELETE',operationId:crypto.randomUUID()};
+await assert.rejects(act('member-auth',removal),e=>e.status===403);
+await assert.rejects(act('owner-auth',{...removal,confirmation:undefined}),e=>e.status===400);
+await assert.rejects(act('owner-auth',{...removal,revision:undefined}),e=>e.status===400);
+await assert.rejects(act('owner-auth',{...removal,revision:removal.revision-1}),e=>e.status===409);
+const regularBefore=sql.prepare('SELECT id,status FROM matches WHERE tournament_id IS NULL ORDER BY id').all();
+const bronzeMatches=sql.prepare("SELECT id FROM matches WHERE tournament_id='bronze' AND status='confirmed'").all();
+assert.equal(bronzeMatches.length,4);
+await act('owner-auth',removal);
+assert.ok(sql.prepare("SELECT deleted_at FROM tournaments WHERE id='bronze'").get().deleted_at);
+assert.equal((await service.read('owner-auth')).tournaments.some(t=>t.id==='bronze'),false);
+assert.equal((await service.read('owner-auth')).matches.some(m=>m.tournament_id==='bronze'),false);
+assert.equal(await getPublicTournament(db,'bronze'),null);
+assert.equal((await getPublicDirectory(db,'tournaments')).tournaments.some(t=>t.id==='bronze'),false);
+assert.equal((await getPublicDirectory(db,'matches')).matches.some(m=>m.tournament_id==='bronze'),false);
+assert.equal(sql.prepare("SELECT count(*) n FROM matches WHERE tournament_id='bronze' AND status='voided'").get().n,4);
+assert.equal(sql.prepare("SELECT count(*) n FROM audit WHERE action='tournament_deleted'").get().n,4);
+assert.deepEqual(sql.prepare('SELECT id,status FROM matches WHERE tournament_id IS NULL ORDER BY id').all(),regularBefore);
+await act('owner-auth',removal); // An identical network retry is safe.
+assert.equal(sql.prepare("SELECT count(*) n FROM audit WHERE action='tournament_deleted'").get().n,4);
+await assert.rejects(act('owner-auth',{...removal,operationId:crypto.randomUUID(),revision:removal.revision+1}),e=>e.status===404);
+await assert.rejects(act('owner-auth',{action:'reset_fixture',id:'bronze',fixtureId:'r1m1',operationId:crypto.randomUUID()}),e=>e.status===404);
+// A creator keeps deletion rights after demotion, but must still be an active member.
+sql.prepare("UPDATE memberships SET role='admin' WHERE club_id='club-one' AND player_id=?").run(member);
+await act('member-auth',{action:'create_tournament',id:'creator-event',clubId:'club-one',name:'Creator event',date:'2026-10-06',format:'Single elimination',capacity:4,created_by:owner});
+assert.equal(sql.prepare("SELECT created_by FROM tournaments WHERE id='creator-event'").get().created_by,member,'creator cannot be forged');
+await assert.rejects(go('delete_tournament',{confirmation:'DELETE'},'owner-auth','creator-event'),e=>e.status===403);
+sql.prepare("UPDATE memberships SET role='member',status='pending' WHERE club_id='club-one' AND player_id=?").run(member);
+await assert.rejects(go('delete_tournament',{confirmation:'DELETE'},'member-auth','creator-event'),e=>e.status===403);
+sql.prepare("UPDATE memberships SET status='active' WHERE club_id='club-one' AND player_id=?").run(member);
+await go('delete_tournament',{confirmation:'DELETE'},'member-auth','creator-event');
+assert.equal((await service.read('member-auth')).tournaments.some(t=>t.id==='creator-event'),false);
+// Old events have no recorded creator, so only their current club owner can delete them.
+await act('owner-auth',{action:'create_tournament',id:'legacy-delete',clubId:'club-one',name:'Legacy',date:'2026-10-06',format:'Round robin',capacity:4});
+sql.prepare("UPDATE tournaments SET created_by=NULL WHERE id='legacy-delete'").run();
+await assert.rejects(go('delete_tournament',{confirmation:'DELETE'},'member-auth','legacy-delete'),e=>e.status===403);
+await go('delete_tournament',{confirmation:'DELETE'},'owner-auth','legacy-delete');
+// Account deletion clears creator identity without deleting the shared tournament.
+await act('opponent-auth',{action:'save_profile',name:'Opponent'});
+sql.prepare("UPDATE tournaments SET created_by=? WHERE id='custom-field'").run(opponent);
+sql.prepare("UPDATE profiles SET deleted_at='2026-10-06',name='Deleted player',auth_id=NULL WHERE id=?").run(opponent);
+assert.equal(sql.prepare("SELECT created_by FROM tournaments WHERE id='custom-field'").get().created_by,null);
+assert.equal(sql.prepare("SELECT deleted_at FROM tournaments WHERE id='custom-field'").get().deleted_at,null);
+console.log('Passed: creator-only deletion, active membership, legacy owner fallback, confirmation/revision checks, official result cleanup, public hiding, retry safety and creator account deletion.');
+
 const publicEvents=await getPublicDirectory(db,'tournaments');
 assert.ok(publicEvents.tournaments.length>0);
 assert.equal((await getPublicDirectory(db,'tournaments',"' OR 1=1 --")).tournaments.length,0,'public search is parameterized');

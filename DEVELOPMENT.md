@@ -49,3 +49,7 @@
 - `pnpm build`
 
 Google OAuth, browser session persistence and logout were verified on rallytt.net. Email delivery and real-device flows remain on the release checklist.
+
+Tournament creators can delete their events from the tournament panel. Migration 0010 stores creator identity and deletion timestamps. Deletion hides the event and voids its official results atomically; regular club matches remain. Existing events without recorded creators use the current club owner as a fallback. Active club membership is required. Account deletion clears creator identity while retaining the shared event.
+
+Header safe-area padding and height now share one final CSS rule so compact mobile styles cannot collapse the header under the iPhone notch. Actual Home Screen safe-area behavior still requires device confirmation.

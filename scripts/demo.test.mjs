@@ -51,3 +51,14 @@ const imageDemo=applyDemoAction(seed,{action:'set_club_media',clubId:'harbor',ki
 assert.equal(imageDemo.clubs.find(c=>c.id==='harbor').banner_url,'data:image/jpeg;base64,sample');
 assert.equal(applyDemoAction(imageDemo,{action:'set_club_media',clubId:'harbor',kind:'banner',image:null}).clubs.find(c=>c.id==='harbor').banner_url,null);
 console.log('Demo feedback, review status and club image checks passed.');
+
+const deletedDemo=applyDemoAction(seed,{action:'delete_tournament',id:'summer',revision:third.revision,confirmation:'DELETE'});
+assert.equal(deletedDemo.tournaments.some(t=>t.id==='summer'),false);
+assert.equal(deletedDemo.matches.some(m=>m.tournament_id==='summer'),false);
+assert.equal(deletedDemo.entries.some(e=>e.tournament_id==='summer'),false);
+assert.deepEqual(deletedDemo.matches.filter(m=>!m.tournament_id),seed.matches.filter(m=>!m.tournament_id));
+assert.ok(seed.tournaments.some(t=>t.id==='summer'),'sample deletion must not mutate its input');
+assert.throws(()=>applyDemoAction(seed,{action:'delete_tournament',id:'summer'}),/Confirm/);
+const otherCreator=structuredClone(seed);otherCreator.tournaments.find(t=>t.id==='summer').created_by='jordan';
+assert.throws(()=>applyDemoAction(otherCreator,{action:'delete_tournament',id:'summer',confirmation:'DELETE'}),/creator/);
+console.log('Demo tournament deletion, confirmation, creator permissions and regular match preservation passed.');
