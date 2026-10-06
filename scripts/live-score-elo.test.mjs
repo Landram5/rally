@@ -1,0 +1,21 @@
+import assert from 'node:assert/strict';
+import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
+import ts from 'typescript';
+mkdirSync('.test-runtime',{recursive:true});
+for(const name of ['live-score','seeding','match-rules'])writeFileSync(`.test-runtime/${name}.mjs`,ts.transpileModule(readFileSync(`lib/${name}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText);
+const {addLivePoint,newLiveScore,undoLivePoint}=await import('../.test-runtime/live-score.mjs');
+const {calculateRatings,compareRatedPlayers,ESTABLISHED_MATCHES}=await import('../.test-runtime/seeding.mjs');
+const {scoreError}=await import('../.test-runtime/match-rules.mjs');
+let score=newLiveScore();for(let i=0;i<10;i++){score=addLivePoint(score,0,3);score=addLivePoint(score,1,3);}score=addLivePoint(score,0,3);assert.equal(score.games.length,0,'11-10 is unfinished');score=addLivePoint(score,0,3);assert.deepEqual(score.games,[[12,10]]);assert.deepEqual(score.points,[0,0]);
+score=undoLivePoint(score);assert.deepEqual(score.points,[11,10]);assert.equal(score.games.length,0);score=addLivePoint(score,0,3);for(let i=0;i<11;i++)score=addLivePoint(score,0,3);
+assert.equal(score.complete,true);assert.equal(scoreError('a','b',score.games,3),null);assert.equal(addLivePoint(score,1,3),score);score=undoLivePoint(score);assert.equal(score.complete,false);assert.deepEqual(score.points,[10,0]);
+for(const bestOf of [3,5,7]){let s=newLiveScore();for(let g=0;g<Math.floor(bestOf/2)+1;g++)for(let i=0;i<11;i++)s=addLivePoint(s,1,bestOf);assert.equal(s.complete,true);assert.equal(scoreError('a','b',s.games,bestOf),null);}
+const match=(id,a,b,winner,status='confirmed')=>({id,a,b,games:winner===a?[[11,4],[11,5]]:[[4,11],[5,11]],status,played_on:'2026-10-06',created_at:id});
+const history=Array.from({length:10},(_,i)=>match(String(i).padStart(2,'0'),'strong','weak','strong'));
+const before=calculateRatings(history),upset=calculateRatings([...history,match('11','new','strong','new')]),easy=calculateRatings([...history,match('11','new','weak','new')]);
+assert.ok(upset.get('new').rating>easy.get('new').rating,'beating stronger players earns more Elo');assert.equal(upset.get('new').played,1);assert.equal(ESTABLISHED_MATCHES,5);
+assert.ok(compareRatedPlayers({rating:1300,played:1,wins:1},{rating:980,played:5,wins:2})>0,'one win does not outrank an established player');
+assert.equal(calculateRatings([...history,match('12','new','strong','new','pending')]).has('new'),false);assert.equal(calculateRatings([...history,match('12','new','strong','new','voided')]).has('new'),false);
+assert.deepEqual(calculateRatings([...history].reverse()),before,'ratings use deterministic chronological order');
+assert.ok(Math.abs([...before.values()].reduce((sum,r)=>sum+r.rating,0)-2000)<1e-8,'Elo updates conserve points');
+console.log('Passed: live deuce scoring, game advancement, undo across game/match completion, all formats; opponent-weighted Elo, provisional threshold, deterministic replay, pending/voided exclusion.');

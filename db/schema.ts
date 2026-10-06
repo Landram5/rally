@@ -1,4 +1,4 @@
-import {sqliteTable,text,integer,index,uniqueIndex} from 'drizzle-orm/sqlite-core';
+import {sqliteTable,text,integer,index,uniqueIndex,primaryKey} from 'drizzle-orm/sqlite-core';
 export const profiles=sqliteTable('profiles',{id:text('id').primaryKey(),authId:text('auth_id'),deletedAt:text('deleted_at'),bio:text('bio').notNull().default(''),rallyId:text('rally_id'),name:text('name').notNull(),createdAt:text('created_at').notNull()},t=>[uniqueIndex('idx_profiles_auth').on(t.authId),uniqueIndex('idx_profiles_rally_id').on(t.rallyId)]);
 export const clubs=sqliteTable('clubs',{id:text('id').primaryKey(),name:text('name').notNull(),location:text('location').notNull(),ownerId:text('owner_id').notNull().references(()=>profiles.id),createdAt:text('created_at').notNull()});
 export const memberships=sqliteTable('memberships',{id:text('id').primaryKey(),clubId:text('club_id').notNull().references(()=>clubs.id),playerId:text('player_id').notNull().references(()=>profiles.id),role:text('role').notNull(),status:text('status').notNull(),createdAt:text('created_at').notNull()},t=>[uniqueIndex('idx_membership_club_player').on(t.clubId,t.playerId),index('idx_membership_player').on(t.playerId)]);
@@ -18,3 +18,6 @@ export const accountWriteBlocks=sqliteTable('account_write_blocks',{authId:text(
 export const accountWriteGuards=sqliteTable('account_write_guards',{authId:text('auth_id').notNull()});
 
 export const profilePhotos=sqliteTable('profile_photos',{playerId:text('player_id').primaryKey().references(()=>profiles.id,{onDelete:'cascade'}),imageData:text('image_data').notNull(),updatedAt:text('updated_at').notNull()});
+
+export const clubMedia=sqliteTable('club_media',{clubId:text('club_id').notNull().references(()=>clubs.id,{onDelete:'cascade'}),kind:text('kind').notNull(),imageData:text('image_data').notNull(),updatedAt:text('updated_at').notNull()},t=>[primaryKey({columns:[t.clubId,t.kind]})]);
+export const feedback=sqliteTable('feedback',{id:text('id').primaryKey(),submittedBy:text('submitted_by').notNull().references(()=>profiles.id,{onDelete:'cascade'}),type:text('type').notNull(),title:text('title').notNull(),description:text('description').notNull(),page:text('page').notNull().default(''),status:text('status').notNull().default('open'),createdAt:text('created_at').notNull(),updatedAt:text('updated_at').notNull()},t=>[index('idx_feedback_submitter_date').on(t.submittedBy,t.createdAt)]);

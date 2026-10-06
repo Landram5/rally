@@ -42,3 +42,12 @@ const leaders=applyDemoAction(seed,{action:'set_member_role',clubId:'harbor',pla
 assert.equal(leaders.memberships.find(m=>m.club_id==='harbor'&&m.player_id==='jordan').role,'board');
 assert.throws(()=>applyDemoAction(seed,{action:'set_member_role',clubId:'harbor',playerId:'alex',role:'member'}),/active member/);
 console.log('Demo bio, username, Rally ID and club role checks passed.');
+
+let feedbackDemo=applyDemoAction(seed,{action:'submit_feedback',id:'sample-report',type:'feature',title:'Requested feature',description:'Sample details',page:'/'});
+feedbackDemo=applyDemoAction(feedbackDemo,{action:'set_feedback_status',id:'sample-report',status:'planned'});
+assert.equal(feedbackDemo.feedback[0].status,'planned');
+assert.throws(()=>applyDemoAction(seed,{action:'submit_feedback',id:'bad-page',type:'bug',title:'Bug',description:'Details',page:'https://private.test?token=secret'}),/page path/);
+const imageDemo=applyDemoAction(seed,{action:'set_club_media',clubId:'harbor',kind:'banner',image:'data:image/jpeg;base64,sample'});
+assert.equal(imageDemo.clubs.find(c=>c.id==='harbor').banner_url,'data:image/jpeg;base64,sample');
+assert.equal(applyDemoAction(imageDemo,{action:'set_club_media',clubId:'harbor',kind:'banner',image:null}).clubs.find(c=>c.id==='harbor').banner_url,null);
+console.log('Demo feedback, review status and club image checks passed.');

@@ -166,7 +166,9 @@ for(const mode of ['keep_results','remove_history']){
  const service=makeService(db),photo='data:image/jpeg;base64,'+readFileSync('scripts/fixtures/profile-photo.jpg').toString('base64');
  await service.act('player-auth',{action:'save_profile',name:'Player',photo,bio:'My player bio'});
  assert.equal(one('SELECT count(*) AS n FROM profile_photos').n,1);
+ await service.act('player-auth',{action:'submit_feedback',id:'personal-report',type:'bug',title:'My report',description:'My private report.'});
  await beginDeletion(db,'player-auth',mode);
+ assert.equal(one('SELECT count(*) AS n FROM feedback').n,0,'deletion removes submitted feedback');
  assert.equal(one('SELECT count(*) AS n FROM profile_photos').n,0,mode+' removes photo');
  assert.equal(one("SELECT count(*) AS n FROM profiles WHERE auth_id='player-auth' OR (id='player' AND (bio!='' OR rally_id IS NOT NULL))").n,0,'deletion removes bio and Rally ID');
  await assert.rejects(service.act('player-auth',{action:'save_profile',name:'Player',photo}),e=>e.status===403);

@@ -15,6 +15,9 @@
 - Optional profile photos with face-photo guidance, square thumbnails, replacement/removal, public avatars, and deletion cleanup.
 - Account settings edit the existing player username and optional public bio. Permanent unique Rally IDs are assigned to existing and new player profiles.
 - Owners appoint active account holders as administrators or board members from Clubs > Club leadership. Both roles manage tournaments and verify games; only owners change leadership roles.
+- Record match supports live tap-to-score tracking, win-by-two games, undo, side switching and final result submission.
+- Club leaders upload club photos and banners. Signed-in players submit private feature requests and bug reports; site administrators manage their status.
+- Club standings and tournament seeding share club-specific Elo ratings. Players remain provisional until five verified matches; established players rank first. Head-to-head selectors support player search and keyboard selection.
 
 ## Production configuration
 
@@ -28,13 +31,14 @@
 
 - Public player and tournament discovery with search and filters.
 - Guest account claims.
-- Skill ratings, table/time scheduling, divisions, and organizer audit-history UI.
+- Table/time scheduling, divisions, and organizer audit-history UI.
 - Offline-friendly score entry and background synchronization.
 
 ## Validation
 
 - `node scripts/account-deletion.test.mjs`
 - `node scripts/demo.test.mjs`
+- `node scripts/live-score-elo.test.mjs`
 - `node scripts/rally-service.test.mjs`
 - `node scripts/tournament-engine.test.mjs`
 - `node --experimental-strip-types scripts/rally.test.mjs`

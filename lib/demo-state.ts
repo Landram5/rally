@@ -12,7 +12,7 @@ function derive(data:Data){
   if(t.state){t.status=outcome(t.state).status==='completed'?'completed':'active';data.matches=data.matches.filter(m=>m.tournament_id!==t.id);
    for(const f of t.state.fixtures.filter(f=>f.status==='played'))data.matches.push({id:`${t.id}-${f.id}`,club_id:t.club_id,a:f.a!,b:f.b!,games:f.games,best_of:t.state.bestOf,played_on:t.date,status:'confirmed',submitted_by:'alex',confirmed_by:'alex',canConfirm:false,canVoid:false,tournament_id:t.id});}
  }
- for(const t of data.tournaments)t.seedStats=suggestSeeds(data.entries.filter(e=>e.tournament_id===t.id).map(e=>e.player_id),data.matches);
+ for(const t of data.tournaments)t.seedStats=suggestSeeds(data.entries.filter(e=>e.tournament_id===t.id).map(e=>e.player_id),data.matches.filter(m=>m.club_id===t.club_id));
  data.matches.sort((a,b)=>b.played_on.localeCompare(a.played_on));return data;
 }
 export function createDemoData():Data{
@@ -36,6 +36,15 @@ export function applyDemoAction(current:Data,p:Record<string,unknown>):Data{
  const d=structuredClone(current),id=String(p.id??crypto.randomUUID()),clubId=String(p.clubId??''),playerId=String(p.playerId??''),action=String(p.action),text=(key:string)=>String(p[key]??'').trim();
  const addGuest=()=>{if(!text('name'))throw new Error('Enter a player name.');const guestId=crypto.randomUUID();d.players.push({id:guestId,name:text('name'),is_guest:1});d.memberships.push({club_id:clubId||d.tournaments.find(t=>t.id===id)!.club_id,player_id:guestId,role:'member',status:'active'});return guestId;};
  if(action==='save_profile'){if(!text('name'))throw new Error('Enter a display name.');d.me!.name=text('name');d.players.find(x=>x.id===d.me!.id)!.name=text('name');if(p.bio!==undefined){if(typeof p.bio!=='string'||p.bio.trim().length>500)throw new Error('Bio must be text with at most 500 characters.');d.players.find(x=>x.id===d.me!.id)!.bio=p.bio.trim();}if(p.photo!==undefined)d.players.find(x=>x.id===d.me!.id)!.photo_url=p.photo===null?null:String(p.photo);}
+ else if(action==='set_club_media'){const c=d.clubs.find(c=>c.id===clubId);if(!c?.canManage)throw new Error('Only club leaders can update images.');if(p.kind!=='photo'&&p.kind!=='banner')throw new Error('Choose a photo or banner.');c[p.kind==='photo'?'photo_url':'banner_url']=p.image===null?null:String(p.image);}
+ else if(action==='submit_feedback'){
+  if(!text('title')||text('title').length>120||!text('description')||text('description').length>3000||!['bug','feature'].includes(text('type')))throw new Error('Enter a title, details, and feedback type.');
+  if(text('page').length>200||(text('page')&&(!text('page').startsWith('/')||text('page').startsWith('//')||/[?#\\]/.test(text('page')))))throw new Error('Enter a page path without a query or link.');
+  d.feedback??=[];if(d.feedback.some(f=>f.id===id))return derive(d);
+  if(d.feedback.filter(f=>f.submitted_by===d.me!.id&&Date.parse(f.created_at)>Date.now()-86400000).length>=5)throw new Error('You can send up to five reports or requests per day.');
+  d.feedback.unshift({id,submitted_by:d.me!.id,type:text('type') as 'bug'|'feature',title:text('title'),description:text('description'),page:text('page'),status:'open',created_at:new Date().toISOString(),updated_at:new Date().toISOString()});
+ }
+ else if(action==='set_feedback_status'){const report=d.feedback?.find(f=>f.id===id);if(!d.isSiteAdmin||!report)throw new Error('Only site administrators can review feedback.');if(!['open','planned','in_progress','completed','closed'].includes(text('status')))throw new Error('Choose a valid status.');report.status=text('status');}
  else if(action==='set_member_role'){if(!d.clubs.find(c=>c.id===clubId)?.canAssignRoles)throw new Error('Only the club owner can appoint leaders.');const target=d.memberships.find(m=>m.club_id===clubId&&m.player_id===playerId&&m.status==='active');if(!target||target.role==='owner'||d.players.find(p=>p.id===playerId)?.is_guest||!['member','admin','board'].includes(text('role')))throw new Error('Choose an active member and role.');target.role=text('role');}
  else if(action==='create_club'){if(!text('name')||!text('location'))throw new Error('Enter a club name and location.');if(d.memberships.some(m=>m.player_id===d.me!.id&&m.role==='owner'))throw new Error('You already own a club.');d.clubs.push({id,name:text('name'),location:text('location'),canManage:true,canAssignRoles:true,approvalStatus:'pending',activeMemberCount:1});d.memberships.push({club_id:id,player_id:d.me!.id,role:'owner',status:'active'});}
  else if(action==='add_guest')addGuest();

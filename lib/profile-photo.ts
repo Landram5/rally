@@ -1,7 +1,7 @@
 import {AppError} from './rally-errors';
 export const MAX_PHOTO_BYTES=180_000;
 // Only small JPEG thumbnails are accepted; originals never enter the database.
-export function validateProfilePhoto(value:unknown):string {
+export function validateProfilePhoto(value:unknown,maxDimension=512):string {
  const invalid=()=>{throw new AppError(400,'Choose a valid JPG, PNG, or WebP photo using the photo picker.');};
  if(typeof value!=='string'||value.length>240_023||!/^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/.test(value))return invalid();
  let bytes:Uint8Array;try{bytes=Uint8Array.from(atob(value.slice(23)),c=>c.charCodeAt(0));}catch{return invalid();}
@@ -13,7 +13,7 @@ export function validateProfilePhoto(value:unknown):string {
   const length=(bytes[i]<<8)|bytes[i+1];if(length<2||i+length>bytes.length)return invalid();
   if([192,193,194].includes(marker)){
    const height=(bytes[i+3]<<8)|bytes[i+4],width=(bytes[i+5]<<8)|bytes[i+6];
-   if(length<8||!width||!height||width>512||height>512)return invalid();dimensions=true;
+   if(length<8||!width||!height||width>maxDimension||height>maxDimension)return invalid();dimensions=true;
   }
   i+=length;
  }

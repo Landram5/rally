@@ -59,6 +59,29 @@ for(const auth of ['member-auth','opponent-auth']){
  await act('owner-auth',{action:'approve_member',clubId:'club-one',playerId:await uid(auth)});
 }
 await act('owner-auth',{action:'add_guest',id:'guest-one',clubId:'club-one',name:'Guest'});
+for(const kind of ['photo','banner']){
+ await assert.rejects(act('member-auth',{action:'set_club_media',clubId:'club-one',kind,image:photo}),e=>e.status===403);
+ await act('owner-auth',{action:'set_club_media',clubId:'club-one',kind,image:photo});
+ assert.equal(sql.prepare('SELECT image_data FROM club_media WHERE club_id=? AND kind=?').get('club-one',kind).image_data,photo);
+ assert.ok((await service.read('member-auth')).clubs.find(c=>c.id==='club-one')[kind+'_url']);
+ await act('owner-auth',{action:'set_club_media',clubId:'club-one',kind,image:null});
+ assert.equal(sql.prepare('SELECT count(*) AS n FROM club_media WHERE club_id=? AND kind=?').get('club-one',kind).n,0);
+}
+await assert.rejects(act('owner-auth',{action:'set_club_media',clubId:'club-two',kind:'photo',image:photo}),e=>e.status===403);
+await assert.rejects(act('owner-auth',{action:'set_club_media',clubId:'club-one',kind:'photo',image:'data:image/svg+xml;base64,PHN2Zz4='}),e=>e.status===400);
+const feedback={action:'submit_feedback',id:'feedback-test',type:'bug',title:'Score button',description:'Tap did not add a point.',page:'/'};
+await act('member-auth',feedback);await act('member-auth',feedback);
+assert.equal((await service.read('member-auth')).feedback.length,1,'feedback retries are idempotent');
+assert.equal((await service.read('opponent-auth')).feedback.length,0,'feedback stays private');
+assert.equal((await service.read('owner-auth',{isSiteAdmin:true})).feedback.length,1);
+await assert.rejects(act('member-auth',{action:'set_feedback_status',id:feedback.id,status:'planned'}),e=>e.status===403);
+await adminAct('owner-auth',{action:'set_feedback_status',id:feedback.id,status:'planned'});
+assert.equal((await service.read('member-auth')).feedback[0].status,'planned');
+await assert.rejects(act('member-auth',{...feedback,id:'bad-feedback',page:'https://example.com/private?token=123'}),e=>e.status===400);
+for(let i=1;i<5;i++)await act('member-auth',{...feedback,id:'rate-'+i});
+await assert.rejects(act('member-auth',{...feedback,id:'rate-over'}),e=>e.status===429);
+console.log('Passed: club media permissions, validation, replacement and removal; feedback privacy, status authorization, idempotency and rate limits.');
+
 const originalRallyId=(await service.read('member-auth')).players.find(p=>p.id===member).rally_id;
 assert.match(originalRallyId,/^RLY-[A-F0-9]{12}$/);
 await act('member-auth',{action:'save_profile',name:'Renamed Member',bio:'I play table tennis.',rally_id:'RLY-FORGED'});
@@ -205,7 +228,7 @@ sql.close();console.log('Passed: arbitrary integer capacity, capacity edits, ato
 
 {
  const old=new DatabaseSync(':memory:');old.exec('PRAGMA foreign_keys=ON');
- for(const f of readdirSync('drizzle').filter(f=>f.endsWith('.sql')&&!f.startsWith('0007')).sort())old.exec(readFileSync('drizzle/'+f,'utf8'));
+ for(const f of readdirSync('drizzle').filter(f=>f.endsWith('.sql')&&f<'0007').sort())old.exec(readFileSync('drizzle/'+f,'utf8'));
  old.exec("INSERT INTO profiles (id,name,created_at) VALUES ('old-one','Old One','2026-10-01'),('old-two','Old Two','2026-10-01');INSERT INTO profiles (id,name,created_at,deleted_at) VALUES ('old-deleted','Deleted player','2026-10-01','2026-10-02')");
  old.exec(readFileSync('drizzle/0007_player_details_and_roles.sql','utf8'));
  const existing=old.prepare('SELECT rally_id FROM profiles WHERE deleted_at IS NULL').all();

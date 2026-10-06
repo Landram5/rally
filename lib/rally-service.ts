@@ -26,7 +26,7 @@ export function makeService(database:D1Database){
  return {
  async read(authId:string|null,access:Access={}){
   const self=authId?await me(authId):null;
-  const [allProfiles,allClubs,allMatches,allTournaments,allEntries]=await Promise.all([all<{id:string;name:string;is_guest:number;is_deleted:number;bio:string;rally_id:string|null;photo_version:string|null}>('SELECT p.id,p.name,p.bio,p.rally_id,(p.auth_id IS NULL AND p.deleted_at IS NULL) AS is_guest,p.deleted_at IS NOT NULL AS is_deleted,ph.updated_at AS photo_version FROM profiles p LEFT JOIN profile_photos ph ON ph.player_id=p.id ORDER BY p.name'),all<{id:string;name:string;location:string;owner_id:string;approval_status:string}>('SELECT id,name,location,owner_id,approval_status FROM clubs ORDER BY name'),all<SavedMatch>('SELECT * FROM matches ORDER BY played_on DESC,created_at DESC'),all<{id:string;club_id:string;state_json:string|null;[key:string]:unknown}>('SELECT * FROM tournaments ORDER BY date'),all<{tournament_id:string;player_id:string}>('SELECT tournament_id,player_id FROM entries ORDER BY created_at,id')]);
+  const [allProfiles,allClubs,allMatches,allTournaments,allEntries]=await Promise.all([all<{id:string;name:string;is_guest:number;is_deleted:number;bio:string;rally_id:string|null;photo_version:string|null}>('SELECT p.id,p.name,p.bio,p.rally_id,(p.auth_id IS NULL AND p.deleted_at IS NULL) AS is_guest,p.deleted_at IS NOT NULL AS is_deleted,ph.updated_at AS photo_version FROM profiles p LEFT JOIN profile_photos ph ON ph.player_id=p.id ORDER BY p.name'),all<{id:string;name:string;location:string;owner_id:string;approval_status:string;photo_version:string|null;banner_version:string|null}>("SELECT c.id,c.name,c.location,c.owner_id,c.approval_status,(SELECT updated_at FROM club_media WHERE club_id=c.id AND kind='photo') AS photo_version,(SELECT updated_at FROM club_media WHERE club_id=c.id AND kind='banner') AS banner_version FROM clubs c ORDER BY c.name"),all<SavedMatch>('SELECT * FROM matches ORDER BY played_on DESC,created_at DESC'),all<{id:string;club_id:string;state_json:string|null;[key:string]:unknown}>('SELECT * FROM tournaments ORDER BY date'),all<{tournament_id:string;player_id:string}>('SELECT tournament_id,player_id FROM entries ORDER BY created_at,id')]);
   const memberships=await all<Membership>('SELECT club_id,player_id,role,status FROM memberships');
   const visibleClubIds=new Set(allClubs.filter(c=>c.approval_status==='approved'||access.isSiteAdmin||(self&&memberships.some(m=>m.club_id===c.id&&m.player_id===self.id))).map(c=>c.id));
   const cs=allClubs.filter(c=>visibleClubIds.has(c.id)),ms=allMatches.filter(m=>visibleClubIds.has(m.club_id)),ts=allTournaments.filter(t=>visibleClubIds.has(t.club_id));
@@ -35,7 +35,7 @@ export function makeService(database:D1Database){
   const ps=allProfiles.filter(p=>visiblePlayerIds.has(p.id)).map(({photo_version,...p})=>({...p,photo_url:profilePhotoUrl(p.id,photo_version)}));
   const adminIds=self?memberships.filter(m=>m.player_id===self.id&&m.status==='active'&&['owner','admin','board'].includes(m.role)).map(m=>m.club_id):[];
   const visibleMatches=self?ms:ms.filter(m=>m.status==='confirmed');
-  return {me:self?{id:self.id,name:self.name}:null,signedIn:!!authId,players:ps,deletedPlayers:allProfiles.filter(p=>p.is_deleted&&(ms.some(m=>m.a===p.id||m.b===p.id)||es.some(e=>e.player_id===p.id))).map(p=>({id:p.id,name:p.name})),clubs:cs.map(({owner_id,approval_status,...c})=>({...c,approvalStatus:approval_status,activeMemberCount:memberships.filter(m=>m.club_id===c.id&&m.status==='active').length,canAssignRoles:!!self&&owner_id===self.id,canManage:adminIds.includes(c.id)})),memberships:memberships.filter(m=>visibleClubIds.has(m.club_id)&&(m.status==='active'||(self&&(m.player_id===self.id||adminIds.includes(m.club_id))))),matches:visibleMatches.map(m=>({...m,games:JSON.parse(m.games),canConfirm:!!self&&canConfirm(m,self.id,adminIds.includes(m.club_id)),canVoid:!m.tournament_id&&!!self&&m.status!=='voided'&&(adminIds.includes(m.club_id)||(m.status==='pending'&&m.submitted_by===self.id))})),tournaments:ts.map(({state_json,...t})=>({...t,state:state_json?JSON.parse(state_json):null,seedStats:suggestSeeds(es.filter(e=>e.tournament_id===t.id).map(e=>e.player_id),visibleMatches)})),entries:es};
+  return {me:self?{id:self.id,name:self.name}:null,signedIn:!!authId,players:ps,deletedPlayers:allProfiles.filter(p=>p.is_deleted&&(ms.some(m=>m.a===p.id||m.b===p.id)||es.some(e=>e.player_id===p.id))).map(p=>({id:p.id,name:p.name})),feedback:self?await all("SELECT * FROM feedback WHERE (?=1 OR submitted_by=?) ORDER BY created_at DESC LIMIT 100",access.isSiteAdmin?1:0,self.id):[],clubs:cs.map(({owner_id,approval_status,photo_version,banner_version,...c})=>({...c,photo_url:photo_version?`/api/clubs/${c.id}/media/photo?v=${encodeURIComponent(photo_version)}`:null,banner_url:banner_version?`/api/clubs/${c.id}/media/banner?v=${encodeURIComponent(banner_version)}`:null,approvalStatus:approval_status,activeMemberCount:memberships.filter(m=>m.club_id===c.id&&m.status==='active').length,canAssignRoles:!!self&&owner_id===self.id,canManage:adminIds.includes(c.id)})),memberships:memberships.filter(m=>visibleClubIds.has(m.club_id)&&(m.status==='active'||(self&&(m.player_id===self.id||adminIds.includes(m.club_id))))),matches:visibleMatches.map(m=>({...m,games:JSON.parse(m.games),canConfirm:!!self&&canConfirm(m,self.id,adminIds.includes(m.club_id)),canVoid:!m.tournament_id&&!!self&&m.status!=='voided'&&(adminIds.includes(m.club_id)||(m.status==='pending'&&m.submitted_by===self.id))})),tournaments:ts.map(({state_json,...t})=>({...t,state:state_json?JSON.parse(state_json):null,seedStats:suggestSeeds(es.filter(e=>e.tournament_id===t.id).map(e=>e.player_id),visibleMatches.filter(m=>m.club_id===t.club_id))})),entries:es};
  },
  async act(authId:string,body:Record<string,unknown>,access:Access={}){
   const db=guardAccountWrites(database,authId);
@@ -58,6 +58,37 @@ export function makeService(database:D1Database){
    if(!result.meta?.changes)fail(409,'This club is no longer awaiting review.');return {ok:true,status};
   }
   const self=await me(authId);if(!self)fail(409,'Create your player profile first.');const user=self!;
+  if(action==='set_club_media'){
+   const clubId=id(body.clubId),kind=body.kind;
+   if(kind!=='photo'&&kind!=='banner')fail(400,'Choose a club photo or banner.');
+   await admin(clubId,user.id);const image=body.image===null?null:validateProfilePhoto(body.image,kind==='banner'?1200:512);
+   const permission="EXISTS (SELECT 1 FROM memberships m WHERE m.club_id=club_media.club_id AND m.player_id=? AND m.status='active' AND m.role IN ('owner','admin','board'))";
+   if(image===null)await q(`DELETE FROM club_media WHERE club_id=? AND kind=? AND ${permission}`,clubId,kind,user.id).run();
+   else{
+    const result=await q(`INSERT INTO club_media (club_id,kind,image_data,updated_at) SELECT club_id,?,?,? FROM memberships WHERE club_id=? AND player_id=? AND status='active' AND role IN ('owner','admin','board') ON CONFLICT(club_id,kind) DO UPDATE SET image_data=excluded.image_data,updated_at=excluded.updated_at WHERE ${permission}`,kind,image,now,clubId,user.id,user.id).run();
+    if(!result.meta?.changes)fail(403,'You no longer manage this club.');
+   }
+   return {ok:true};
+  }
+  if(action==='submit_feedback'){
+   const feedbackId=id(body.id),type=body.type,title=str(body.title,'Title',120),description=str(body.description,'Details',3000);
+   if(type!=='bug'&&type!=='feature')fail(400,'Choose Bug report or Feature request.');
+   const page=body.page===undefined?'':typeof body.page==='string'?body.page.trim():null;
+   if(page===null||page.length>200||(page!==''&&(!page.startsWith('/')||page.startsWith('//')||/[?#\\]/.test(page))))fail(400,'Use a page path such as /tournaments, without a query or link.');
+   const existing=await q('SELECT * FROM feedback WHERE id=?',feedbackId).first<{submitted_by:string;type:string;title:string;description:string;page:string}>();
+   if(existing){if(existing.submitted_by!==user.id||existing.type!==type||existing.title!==title||existing.description!==description||existing.page!==page)fail(409,'This submission ID is already used.');return {ok:true,id:feedbackId};}
+   const since=new Date(Date.now()-86400000).toISOString();
+   const result=await q("INSERT INTO feedback (id,submitted_by,type,title,description,page,created_at,updated_at) SELECT ?,?,?,?,?,?,?,? WHERE (SELECT count(*) FROM feedback WHERE submitted_by=? AND created_at>=?)<5",feedbackId,user.id,type,title,description,page,now,now,user.id,since).run();
+   if(!result.meta?.changes)fail(429,'You can send up to five reports or requests per day. Please try again later.');
+   return {ok:true,id:feedbackId};
+  }
+  if(action==='set_feedback_status'){
+   if(!access.isSiteAdmin)fail(403,'Only a Rally site administrator can review feedback.');
+   const feedbackId=id(body.id),status=body.status;
+   if(typeof status!=='string'||!['open','planned','in_progress','completed','closed'].includes(status))fail(400,'Choose a valid feedback status.');
+   const result=await q('UPDATE feedback SET status=?,updated_at=? WHERE id=?',status,now,feedbackId).run();
+   if(!result.meta?.changes)fail(404,'Feedback not found.');return {ok:true};
+  }
   if(action==='set_member_role'){
    const clubId=id(body.clubId),playerId=id(body.playerId),role=body.role;
    if(typeof role!=='string'||!['member','admin','board'].includes(role))fail(400,'Choose Member, Administrator, or Board member.');
