@@ -1,8 +1,8 @@
 export type SeedMatch={id:string;a:string;b:string;games:string|[number,number][];status:string;played_on:string;created_at?:string;club_id?:string;tournament_id?:string|null;tournament_weight?:number;a_initial_rating?:number|null;b_initial_rating?:number|null};
 export const ESTABLISHED_MATCHES=5;
-export const DEFAULT_INITIAL_RATING=1000;
+export const DEFAULT_INITIAL_RATING=400;
 export const MIN_INITIAL_RATING=200;
-export const RATING_MODEL_VERSION='usatt-style-v1';
+export const RATING_MODEL_VERSION='usatt-style-v2-baseline400';
 export const REGULAR_K=1,TOURNAMENT_K=2,CROSS_CLUB_K=3;
 export const POINT_EXCHANGES=[[12,8,8],[37,7,10],[62,6,13],[87,5,16],[112,4,20],[137,3,25],[162,2,30],[187,2,35],[212,1,40],[237,1,45],[Infinity,0,50]] as const;
 export function initialRating(value?:number|null){return typeof value==='number'&&Number.isInteger(value)&&value>=200&&value<=4000?value:DEFAULT_INITIAL_RATING;}

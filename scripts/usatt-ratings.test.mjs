@@ -18,6 +18,9 @@ assert.equal(performanceEstimate([1400,1300],[1600],1000,true),1350);
 assert.equal(performanceEstimate([1800],[],1000),1800);
 assert.equal(performanceEstimate([],[800],1000),800);
 assert.equal(performanceEstimate([],[100],1000),200);
+assert.equal(performanceEstimate([],[]),400,'unreferenced initial ratings start at 400');
+assert.equal(ratingHistory([],'new').rating,400,'empty histories use the default baseline');
+assert.equal(suggestSeeds(['new'],[])[0].rating,400,'unrated seed fallback uses the same baseline');
 const match=(id,a,b,winner,extra={})=>({id,a,b,games:winner===a?[[11,5],[11,5]]:[[5,11],[5,11]],status:'confirmed',played_on:'2026-10-06',created_at:id,...extra});
 for(const weight of [1,2,3]){const m=match('equal','a','b','a',weight===1?{}:{tournament_id:'t',tournament_weight:weight}),r=calculateRatings([m],undefined,{a:1500,b:1500});assert.equal(r.get('a').rating,1500+8*weight);assert.equal(r.get('b').rating,1500-8*weight);}
 // A known reference supports opponent-based initial rating for an unrated player.
