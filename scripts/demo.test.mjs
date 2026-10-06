@@ -62,3 +62,9 @@ assert.throws(()=>applyDemoAction(seed,{action:'delete_tournament',id:'summer'})
 const otherCreator=structuredClone(seed);otherCreator.tournaments.find(t=>t.id==='summer').created_by='jordan';
 assert.throws(()=>applyDemoAction(otherCreator,{action:'delete_tournament',id:'summer',confirmation:'DELETE'}),/creator/);
 console.log('Demo tournament deletion, confirmation, creator permissions and regular match preservation passed.');
+
+const bioDemo=applyDemoAction(seed,{action:'update_club',clubId:'harbor',name:'Harbor Table Tennis',location:'Baltimore, MD',bio:'New club bio'});
+assert.equal(bioDemo.clubs.find(c=>c.id==='harbor').bio,'New club bio');
+assert.notEqual(seed.clubs.find(c=>c.id==='harbor').bio,'New club bio');
+assert.throws(()=>applyDemoAction(seed,{action:'update_club',clubId:'metro',name:'Metro',location:'Columbia',bio:'Unauthorized'}),/owner/);
+console.log('Demo club information persistence and owner permissions passed.');

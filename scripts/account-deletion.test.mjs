@@ -183,6 +183,12 @@ console.log('Passed: both account deletion modes remove photos and block late up
  const r=await h.POST(new Request('https://rally.test/api/account',{method:'POST',headers:{origin:'https://rally.test','content-type':'application/json'},body:JSON.stringify({action:'save_profile',name:'New username',bio:'New bio',playerId:'owner'})}));
  assert.equal(r.status,200);const after=await (await h.GET()).json();
  assert.equal(after.profile.name,'New username');assert.equal(after.profile.bio,'New bio');assert.equal(after.profile.rally_id,before.profile.rally_id);
- assert.notEqual(one("SELECT name FROM profiles WHERE id='owner'").name,'New username');sql.close();
+ assert.notEqual(one("SELECT name FROM profiles WHERE id='owner'").name,'New username');
+ const photo='data:image/jpeg;base64,'+readFileSync('scripts/fixtures/profile-photo.jpg').toString('base64');
+ const uploaded=await h.POST(new Request('https://rally.test/api/account',{method:'POST',headers:{origin:'https://rally.test','content-type':'application/json'},body:JSON.stringify({action:'save_profile',name:'New username',bio:'New bio',photo,playerId:'owner'})}));
+ assert.equal(uploaded.status,200);assert.match((await (await h.GET()).json()).profile.photo_url,/^\/api\/players\/player\/photo\?v=/);
+ assert.equal(one("SELECT count(*) n FROM profile_photos WHERE player_id='owner'").n,0);
+ const removed=await h.POST(new Request('https://rally.test/api/account',{method:'POST',headers:{origin:'https://rally.test','content-type':'application/json'},body:JSON.stringify({action:'save_profile',name:'New username',bio:'New bio',photo:null})}));
+ assert.equal(removed.status,200);assert.equal((await (await h.GET()).json()).profile.photo_url,null);sql.close();
 }
 console.log('Passed: account settings return Rally ID and save only the signed-in player username and bio.');

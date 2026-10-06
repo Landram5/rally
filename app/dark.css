@@ -30,3 +30,5 @@ html.dark{color-scheme:dark;--background:#111d19;--foreground:#edf3ed;--card:#1b
 .dark .diagram-player{border-color:var(--border)}.dark .tournament-title-row a{color:#d9ed64}
 .dark :is(.champion-banner h3,.diagram-champion){color:#253c22}
 .appearance-settings{padding:22px;border:1px solid var(--border);border-radius:12px;margin:22px 0}.dark .auth-divider:before,.dark .auth-divider:after{background:var(--border)}
+.dark .account-settings .account-danger{background:#241f1d;border:1px solid #80524a;border-radius:12px;padding:24px;margin-top:24px}.dark .account-danger .account-choice{color:#edf3ed}.dark .account-danger .account-choice input{accent-color:#d9ed64;background:transparent}.dark .account-danger .account-delete{background:#9e4036;color:#fff!important;border:1px solid #c56658}.dark .account-danger .account-delete:disabled{background:#49302b;color:#d3b8b1!important;opacity:1}.dark .account-danger h2{color:#ffb5aa}.dark .account-danger :is(legend,.account-confirm-label){color:#edf3ed}
+.dark .club-detail a,.dark .club-directory-link .directory-view{color:#d9ed64}.dark .club-member-row .person{color:var(--foreground)}

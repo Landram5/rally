@@ -293,6 +293,19 @@ assert.equal(sql.prepare("SELECT created_by FROM tournaments WHERE id='custom-fi
 assert.equal(sql.prepare("SELECT deleted_at FROM tournaments WHERE id='custom-field'").get().deleted_at,null);
 console.log('Passed: creator-only deletion, active membership, legacy owner fallback, confirmation/revision checks, official result cleanup, public hiding, retry safety and creator account deletion.');
 
+
+await assert.rejects(act('member-auth',{action:'update_club',clubId:'club-one',name:'Hijacked',location:'Somewhere',bio:'Unauthorized'}),e=>e.status===403);
+await assert.rejects(act('owner-auth',{action:'update_club',clubId:'club-two',name:'Hijacked',location:'Somewhere',bio:'Unauthorized'}),e=>e.status===403);
+await assert.rejects(act('owner-auth',{action:'update_club',clubId:'club-one',name:'Club One',location:'Baltimore',bio:'x'.repeat(1201)}),e=>e.status===400);
+await act('owner-auth',{action:'update_club',clubId:'club-one',name:'Club One',location:'Baltimore',bio:' Weekly play and tournaments. '});
+assert.equal((await service.read(null)).clubs.find(c=>c.id==='club-one').bio,'Weekly play and tournaments.');
+assert.equal((await service.read(null)).clubs.find(c=>c.id==='club-one').canAssignRoles,false);
+assert.equal((await service.read(null)).clubs.find(c=>c.id==='club-one').canManage,false);
+assert.ok((await service.read(null)).memberships.every(m=>m.status==='active'),'public club pages must not reveal membership requests');
+sql.prepare("UPDATE memberships SET status='pending' WHERE club_id='club-one' AND player_id=?").run(owner);
+await assert.rejects(act('owner-auth',{action:'update_club',clubId:'club-one',name:'Club One',location:'Baltimore',bio:'Blocked'}),e=>e.status===403);
+sql.prepare("UPDATE memberships SET status='active' WHERE club_id='club-one' AND player_id=?").run(owner);
+console.log('Passed: club bio persistence, validation, owner-only edits, revoked access and public membership privacy.');
 const publicEvents=await getPublicDirectory(db,'tournaments');
 assert.ok(publicEvents.tournaments.length>0);
 assert.equal((await getPublicDirectory(db,'tournaments',"' OR 1=1 --")).tournaments.length,0,'public search is parameterized');

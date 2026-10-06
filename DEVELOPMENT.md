@@ -53,3 +53,9 @@ Google OAuth, browser session persistence and logout were verified on rallytt.ne
 Tournament creators can delete their events from the tournament panel. Migration 0010 stores creator identity and deletion timestamps. Deletion hides the event and voids its official results atomically; regular club matches remain. Existing events without recorded creators use the current club owner as a fallback. Active club membership is required. Account deletion clears creator identity while retaining the shared event.
 
 Header safe-area padding and height now share one final CSS rule so compact mobile styles cannot collapse the header under the iPhone notch. Actual Home Screen safe-area behavior still requires device confirmation.
+
+Club directories now link to dedicated /clubs/[id] pages (and /demo/clubs/[id] for samples). Approved clubs are publicly visible; private club access and management come from the authenticated clubhouse API. Bios are stored by migration 0011. Owners edit name/location/bio; existing leader permissions govern images, membership requests and guests. The management section is collapsed initially. Public server props are scoped to the selected club.
+
+Overview standings show the first 10 players with an accessible expand/collapse control. Player directory search still shows the full filtered roster. Account Appearance appears immediately above Delete account, with explicit dark colors for danger controls. Profile photo uploads in both the profile dialog and account settings provide a crop preview, zoom, drag and keyboard-accessible position sliders. Cropped JPEGs are staged until Save profile. Account JSON limits permit profile photos up to the existing 256 KiB cap while retaining 4 KiB for other actions.
+
+Run node scripts/photo-crop.test.mjs for crop geometry coverage. See PRODUCT_REVIEW.md for the post-change critique and next product decisions.

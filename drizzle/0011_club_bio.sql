@@ -1,0 +1,1 @@
+ALTER TABLE clubs ADD bio text NOT NULL DEFAULT '';
