@@ -83,3 +83,24 @@ for(const mode of ['keep_results','remove_history']){
  assert.equal(seasonStandings(season,roster,[{...match,b:'outsider'}], '2026-10-06').players[0].played,0);
 }
 console.log('Season ratings respect date windows, confirmed status, enrollment and tournament weights; both account deletion modes preserve opponents’ season results.');
+{
+ const {act,service,run}=fixture();
+ await act('visitor',{action:'request_join',clubId:'club'});
+ for(const compact of [false,true]){
+  const owner=await service.read('owner-auth',{clubId:'club',compact});
+  assert.ok(owner.memberships.some(m=>m.player_id==='visitor'&&m.status==='pending'));
+  assert.equal(owner.players.find(p=>p.id==='visitor')?.name,'visitor','pending applicant has a visible name for the organizer');
+  const ordinary=await service.read('member-auth',{clubId:'club',compact});
+  assert.ok(!ordinary.memberships.some(m=>m.player_id==='visitor'));
+  assert.ok(!ordinary.players.some(p=>p.id==='visitor'),'ordinary members do not receive pending applicant profiles');
+  const publicView=await service.read(null,{clubId:'club',compact});
+  assert.ok(!publicView.players.some(p=>p.id==='visitor'));
+ }
+ for(const role of ['admin','board']){
+  run('UPDATE memberships SET role=? WHERE player_id=?',role,'member');
+  assert.equal((await service.read('member-auth',{clubId:'club',compact:true})).players.find(p=>p.id==='visitor')?.name,'visitor');
+ }
+ await act('owner',{action:'approve_member',clubId:'club',playerId:'visitor'});
+ assert.ok(!(await service.read('owner-auth',{clubId:'club',compact:true})).memberships.some(m=>m.player_id==='visitor'&&m.status==='pending'));
+}
+console.log('Pending member identities are visible to owners/admins/board in full and compact reads, hidden from ordinary members and public reads, and removed from the queue after approval.');
