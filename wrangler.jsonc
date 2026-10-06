@@ -4,9 +4,10 @@
   "main": "./worker.ts",
   "compatibility_date": "2026-05-22",
   "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
   "routes": [
-    {"pattern": "rallytt.net", "custom_domain": true},
-    {"pattern": "www.rallytt.net", "custom_domain": true}
+    {"pattern": "rallytt.net/*", "zone_name": "rallytt.net"},
+    {"pattern": "www.rallytt.net/*", "zone_name": "rallytt.net"}
   ],
   "d1_databases": [
     {

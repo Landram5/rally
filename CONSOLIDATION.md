@@ -18,7 +18,7 @@ The full Mac source, including the native project, is preserved at `/Users/adaml
 
 Known Mac source location: `/Users/adamlandrum/Documents/Codex/2026-09-29/t/outputs/rally`.
 
-Account-deletion, ownership-transfer, auth-rule, service, tournament, match-rule, TypeScript, lint, and production-build checks pass on Windows after the merge. Lint reports seven pre-existing warnings. No real accounts have been deleted. Production deployment and real-device checks remain separate gates.
+Account-deletion, ownership-transfer, auth-rule, service, tournament, match-rule, TypeScript, lint, and production-build checks pass on Windows after the merge. Lint reports seven pre-existing warnings. No real accounts have been deleted. Real-device checks remain separate gates.
 
 Account-deletion decisions already agreed:
 
@@ -31,14 +31,25 @@ Account-deletion decisions already agreed:
 
 - [x] Retrieve and back up current Mac source and native project.
 - [x] Merge and review Mac web changes, including account deletion.
-- [ ] Create a reviewed baseline commit and connect a private shared repository.
+- [x] Create a reviewed baseline commit and connect a private shared repository.
 - [x] Pass auth-rule, service, tournament, lint, and production-build checks after merging.
-- [ ] Activate `rallytt.net` on Cloudflare and connect it to the Rally Worker.
-- [ ] Configure authentication callback and recovery URLs for the final domain.
+- [x] Activate `rallytt.net` on Cloudflare and connect it to the Rally Worker.
+- [x] Configure authentication callback and recovery URLs for the final domain.
 - [ ] Verify signup, confirmation, Google login, recovery, logout, and session persistence on a real iPhone in Safari and from the Home Screen.
 - [ ] Verify installation instructions, icons, standalone launch, safe areas, and offline fallback on that iPhone.
 - [ ] Exercise club creation/joining/approval, scoring, brackets, third place, and public statistics on mobile.
-- [ ] Back up the production D1 database before migrations; record the prior Worker version for rollback.
-- [ ] Apply reviewed migrations and server-only configuration, deploy, and verify the live site.
+- [x] Back up the production D1 database before migrations; record the prior Worker version for rollback.
+- [x] Apply reviewed migrations and server-only configuration, deploy, and verify the live site.
+- [ ] Connect the Mac to the shared repository before resuming development there. Remote Commander timed out during the final connection check; the preserved original Mac source remains intact.
+
+## Production deployment — October 5, 2026
+
+Live address: https://rallytt.net. Both `rallytt.net/*` and `www.rallytt.net/*` are Cloudflare Worker routes on the existing proxied DNS records. The Worker handles all requests directly; HTTP and www redirect to the HTTPS apex while preserving paths and query strings. Do not disable proxying or remove these routes. Native Cloudflare Custom Domains would require replacing the existing website A records; that migration is optional and has not been performed.
+
+Supabase Site URL is `https://rallytt.net`. Exact `/auth/callback` and `/auth/confirm` redirects are allowed for apex and www; existing localhost and workers.dev redirects remain available. Google sign-in, session persistence across reload, logout, and the owner's disabled account-deletion state were verified in the browser on the new domain. Email signup, confirmation, recovery and actual Home Screen sessions still require end-to-end device checks.
+
+Production D1 backup: `.local-backups/production-before-consolidation-20261005.sql`. DNS inventory: `.local-backups/dns-before-custom-domains-20261005.json`. These backups are excluded from Git. Prior Worker version: `bab2af21-4933-4825-b712-93912c9ae55a`. Released Worker version: `7f39a471-8374-487e-ad67-63ec368609a8`. Migrations 0004 and 0005 are applied; remote migration listing reports none pending. The server-only Supabase secret is configured and deletion retries run every five minutes. Read-only verification found zero pending deletions.
+
+HTTPS homepage, login, install instructions, manifest, service worker, offline page and Home Screen icons return 200. HTTP and www return 308 to the canonical HTTPS address. The install layout was visually checked at 390 × 844; this does not replace Safari on an actual iPhone.
 
 Browser emulation and automated checks do not replace the real-iPhone gates. Cloudflare DNS activation does not by itself connect the Worker or update authentication URLs.

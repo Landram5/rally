@@ -4,6 +4,14 @@ import {retryDeletions} from './lib/account-deletion';
 
 const worker={
  fetch(request:Request,env:Cloudflare.Env,ctx:ExecutionContext){
+  const url=new URL(request.url);
+  if((url.hostname==='rallytt.net'||url.hostname==='www.rallytt.net')&&
+    (url.protocol!=='https:'||url.hostname==='www.rallytt.net')){
+   url.protocol='https:';
+   url.hostname='rallytt.net';
+   url.port='';
+   return Response.redirect(url.toString(),308);
+  }
   return handler.fetch(request,env,ctx);
  },
  async scheduled(_event:ScheduledController,env:Cloudflare.Env){

@@ -10,13 +10,13 @@
 - Original sample experience at `/demo`, separate from real accounts and records.
 - Installable iPhone web app with a Home Screen icon, standalone display, safe-area layout, install instructions, and a privacy-safe offline fallback.
 
-## Configuration still required
+## Production configuration
 
-- Create the production Supabase project and enable its Google provider.
-- Configure allowed redirect URLs and production email delivery in Supabase.
-- Create the production Cloudflare D1 database and replace the placeholder ID in `wrangler.jsonc`.
-- Add the two Supabase Worker bindings, apply remote D1 migrations, and deploy.
-- If preserving records from the former hosted preview, export that D1 database and import it into the new D1 database before launch. Existing profile ownership must be mapped deliberately to the corresponding Supabase user IDs.
+- The merged website is deployed at https://rallytt.net with Cloudflare Worker routes and the existing production D1 database.
+- Supabase Google sign-in, the final Site URL, allowed authentication redirects and server-only account-deletion credentials are configured.
+- Account deletion requires ownership transfer and preserves shared records. Reviewed D1 migrations and the five-minute retry schedule are deployed.
+- See `CONSOLIDATION.md` for backups, deployment versions, verification and the remaining real-iPhone release gates.
+- Email signup, confirmation, password recovery and Home Screen session persistence still need end-to-end verification on a real iPhone.
 
 ## Next product work
 
@@ -33,4 +33,4 @@
 - `pnpm lint`
 - `pnpm build`
 
-Real Google OAuth and email delivery require configured Supabase credentials and are verified after the production project exists.
+Google OAuth, browser session persistence and logout were verified on rallytt.net. Email delivery and real-device flows remain on the release checklist.
