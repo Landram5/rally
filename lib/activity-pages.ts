@@ -1,6 +1,7 @@
+import {matchFilters,type MatchFilters} from './match-filters';
 import {AppError} from './rally-errors';
 import {profilePhotoUrl} from './profile-photo';
-export type PageOptions={view:'members'|'matches'|'tournaments';club?:string;search?:string;role?:string;status?:string;page?:number;match?:string;isSiteAdmin?:boolean};
+export type PageOptions=MatchFilters&{view:'members'|'matches'|'tournaments';club?:string;search?:string;role?:string;status?:string;page?:number;match?:string;isSiteAdmin?:boolean};
 export async function readActivityPage(db:D1Database,authId:string|null,options:PageOptions){
  const self=authId?await db.prepare('SELECT id FROM profiles WHERE auth_id=? AND deleted_at IS NULL').bind(authId).first<{id:string}>():null;
  if(options.view==='matches'&&!self)throw new AppError(401,'Sign in to view clubhouse activity.');
@@ -16,7 +17,8 @@ export async function readActivityPage(db:D1Database,authId:string|null,options:
  }
  if(options.view==='matches'){
   const status=options.status??'all';if(!['all','pending','confirmed','voided'].includes(status))throw new AppError(400,'Choose a result status.');
-  const from=`FROM matches m JOIN clubs c ON c.id=m.club_id LEFT JOIN tournaments t ON t.id=m.tournament_id WHERE t.deleted_at IS NULL AND ${visible} AND (?='all' OR m.club_id=?) AND (?='all' OR m.status=?) AND (?='' OR m.id=?)`,args=[...visibility,club,club,status,status,options.match??'',options.match??''];
+  const filters=matchFilters(options);
+  const from=`FROM matches m JOIN clubs c ON c.id=m.club_id LEFT JOIN tournaments t ON t.id=m.tournament_id WHERE t.deleted_at IS NULL AND ${visible} AND (?='all' OR m.club_id=?) AND (?='all' OR m.status=?) AND (?='' OR m.id=?) AND (?='' OR m.a=? OR m.b=?) AND (?=0 OR m.a=? OR m.b=?) AND (?='' OR m.played_on>=?) AND (?='' OR m.played_on<=?) AND (?='all' OR (?='none' AND m.tournament_id IS NULL) OR (?='any' AND m.tournament_id IS NOT NULL) OR m.tournament_id=?)`,args=[...visibility,club,club,status,status,options.match??'',options.match??'',filters.player,filters.player,filters.player,filters.mine?1:0,self!.id,self!.id,filters.from,filters.from,filters.to,filters.to,filters.tournament,filters.tournament,filters.tournament,filters.tournament];
   const total=await db.prepare(`SELECT count(*) total ${from}`).bind(...args).first<{total:number}>(),rows=await list(`SELECT m.*,EXISTS (SELECT 1 FROM memberships leader WHERE leader.club_id=m.club_id AND leader.player_id=? AND leader.status='active' AND leader.role IN ('owner','admin','board')) AS is_admin ${from} ORDER BY m.played_on DESC,m.created_at DESC,m.id LIMIT ? OFFSET ?`,[self!.id,...args,limit,offset]);
   return {page,total:total?.total??0,hasMore:offset+rows.length<(total?.total??0),items:rows.map(({is_admin,...m})=>({...m,games:JSON.parse(m.games as string),canConfirm:m.status==='pending'&&(!!is_admin||((m.a===self!.id||m.b===self!.id)&&m.submitted_by!==self!.id)),canReview:!!is_admin||m.a===self!.id||m.b===self!.id,canVoid:!m.tournament_id&&m.status!=='voided'&&(!!is_admin||(m.status==='pending'&&m.submitted_by===self!.id))}))};
  }

@@ -2,5 +2,5 @@ import {ratingHistory,type SeedMatch} from './seeding';
 export function playerPerformance(matches:SeedMatch[],playerId:string,asOf=new Date().toISOString().slice(0,10),estimates:Record<string,number>={}){
  const history=ratingHistory(matches,playerId,asOf,estimates);let wins=0;
  const points=[...history.changes].reverse().map((c,index)=>{if(c.won)wins++;return {id:c.matchId,date:c.date,matches:index+1,wins,winRate:wins/(index+1)*100,elo:c.after,won:c.won,delta:c.delta};});
- return {points,rating:history.rating,distinctOpponents:history.distinctOpponents,asOf,played:points.length,wins,losses:points.length-wins};
+ return {points,history,rating:history.rating,distinctOpponents:history.distinctOpponents,asOf,played:points.length,wins,losses:points.length-wins};
 }
