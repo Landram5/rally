@@ -21,3 +21,5 @@ export const profilePhotos=sqliteTable('profile_photos',{playerId:text('player_i
 
 export const clubMedia=sqliteTable('club_media',{clubId:text('club_id').notNull().references(()=>clubs.id,{onDelete:'cascade'}),kind:text('kind').notNull(),imageData:text('image_data').notNull(),updatedAt:text('updated_at').notNull()},t=>[primaryKey({columns:[t.clubId,t.kind]})]);
 export const feedback=sqliteTable('feedback',{id:text('id').primaryKey(),submittedBy:text('submitted_by').notNull().references(()=>profiles.id,{onDelete:'cascade'}),type:text('type').notNull(),title:text('title').notNull(),description:text('description').notNull(),page:text('page').notNull().default(''),status:text('status').notNull().default('open'),createdAt:text('created_at').notNull(),updatedAt:text('updated_at').notNull()},t=>[index('idx_feedback_submitter_date').on(t.submittedBy,t.createdAt)]);
+
+export const notificationReads=sqliteTable('notification_reads',{playerId:text('player_id').notNull().references(()=>profiles.id,{onDelete:'cascade'}),notificationId:text('notification_id').notNull(),readAt:text('read_at').notNull()},t=>[primaryKey({columns:[t.playerId,t.notificationId]})]);

@@ -35,3 +35,17 @@ Yes: Supabase officially supports auth.rallytt.net as a custom auth domain. It r
 - [Supabase custom domains](https://supabase.com/docs/guides/platform/custom-domains)
 - [Google sign-in branding guidance](https://supabase.com/docs/guides/auth/social-login/auth-google#setup-consent-screen-branding)
 - [Supabase pricing](https://supabase.com/pricing)
+
+## Follow-up review: member discovery, registration and inbox
+
+The first three brainstorm items are now implemented: searchable club rosters with role filters and load-more, actionable upcoming tournament cards, and an in-app inbox. These supersede the earlier roster-search and registration limitations.
+
+The inbox is current activity rather than a full notification history. Read receipts synchronize through the account database, but new activity loads on navigation/reload or after an action; automatic refresh, email and push preferences are future improvements. Verification links open Matches and tournament links open the relevant event. A direct highlight for the specific pending result would help clubs with many requests. Club rosters page their rendered list, while the underlying data service still loads the complete authorized graph.
+
+Next improvements to discuss:
+1. Player rating history explaining each change and opponent/tournament influence.
+2. Club venue, meeting schedule and contact fields; tournament check-in and match time/court assignments.
+3. Automatic inbox refresh and optional notification delivery preferences.
+4. Database-level pagination as clubs grow.
+
+Real iPhone Home Screen checks remain the next verification priority, particularly touch cropping, keyboard-open forms, safe areas and session persistence. Browser viewport checks cannot establish those behaviors.

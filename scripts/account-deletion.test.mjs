@@ -3,7 +3,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {readFileSync,writeFileSync,mkdirSync,readdirSync} from 'node:fs';
 import ts from 'typescript';
 mkdirSync('.test-runtime',{recursive:true});
-for(const name of ['profile-photo','account-write-guard','account-deletion','account-http','auth-rules','rally-errors','public-rally','rally-service','tournament-service','tournament-engine','match-rules','seeding']){
+for(const name of ['notifications','profile-photo','account-write-guard','account-deletion','account-http','auth-rules','rally-errors','public-rally','rally-service','tournament-service','tournament-engine','match-rules','seeding']){
  const code=ts.transpileModule(readFileSync(`lib/${name}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText.replace(/from ['"]\.\/([^'"]+)['"]/g,"from './$1.mjs'");
  writeFileSync(`.test-runtime/${name}.mjs`,code);
 }
@@ -167,7 +167,9 @@ for(const mode of ['keep_results','remove_history']){
  await service.act('player-auth',{action:'save_profile',name:'Player',photo,bio:'My player bio'});
  assert.equal(one('SELECT count(*) AS n FROM profile_photos').n,1);
  await service.act('player-auth',{action:'submit_feedback',id:'personal-report',type:'bug',title:'My report',description:'My private report.'});
+ sql.prepare("INSERT INTO notification_reads (player_id,notification_id,read_at) VALUES ('player','test-notice','2026-10-06')").run();
  await beginDeletion(db,'player-auth',mode);
+ assert.equal(one("SELECT count(*) n FROM notification_reads WHERE player_id='player'").n,0,'account deletion removes inbox read state');
  assert.equal(one('SELECT count(*) AS n FROM feedback').n,0,'deletion removes submitted feedback');
  assert.equal(one('SELECT count(*) AS n FROM profile_photos').n,0,mode+' removes photo');
  assert.equal(one("SELECT count(*) AS n FROM profiles WHERE auth_id='player-auth' OR (id='player' AND (bio!='' OR rally_id IS NOT NULL))").n,0,'deletion removes bio and Rally ID');

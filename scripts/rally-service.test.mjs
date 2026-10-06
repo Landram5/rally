@@ -3,7 +3,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {readFileSync,writeFileSync,mkdirSync,rmSync,readdirSync} from 'node:fs';
 import ts from 'typescript';
 mkdirSync('.test-runtime',{recursive:true});
-for(const name of ['profile-photo','account-write-guard','account-deletion','rally-service','tournament-service','tournament-engine','match-rules','rally-errors','seeding','public-rally']){
+for(const name of ['notifications','profile-photo','account-write-guard','account-deletion','rally-service','tournament-service','tournament-engine','match-rules','rally-errors','seeding','public-rally']){
  const compiled=ts.transpileModule(readFileSync(`lib/${name}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText.replace(/from ['"]\.\/([^'"]+)['"]/g, "from './$1.mjs'");
  writeFileSync(`.test-runtime/${name}.mjs`,compiled);
 }
@@ -306,6 +306,23 @@ sql.prepare("UPDATE memberships SET status='pending' WHERE club_id='club-one' AN
 await assert.rejects(act('owner-auth',{action:'update_club',clubId:'club-one',name:'Club One',location:'Baltimore',bio:'Blocked'}),e=>e.status===403);
 sql.prepare("UPDATE memberships SET status='active' WHERE club_id='club-one' AND player_id=?").run(owner);
 console.log('Passed: club bio persistence, validation, owner-only edits, revoked access and public membership privacy.');
+
+await act('owner-auth',{action:'create_tournament',id:'notification-event',clubId:'club-one',name:'Notification Test',date:'2099-10-10',format:'Single elimination',capacity:4});
+const noticeId='register-notification-event';
+assert.ok((await service.read('owner-auth')).notifications.some(n=>n.id===noticeId&&!n.read));
+await assert.rejects(act('outsider-auth',{action:'mark_notification_read',id:noticeId}),e=>e.status===404);
+await act('member-auth',{action:'mark_notification_read',id:noticeId,playerId:owner});
+assert.equal((await service.read('member-auth')).notifications.find(n=>n.id===noticeId).read,true);
+assert.equal((await service.read('owner-auth')).notifications.find(n=>n.id===noticeId).read,false,'read state belongs to the acting player');
+await act('member-auth',{action:'mark_notification_read',id:noticeId});
+assert.equal(sql.prepare('SELECT count(*) n FROM notification_reads WHERE player_id=? AND notification_id=?').get(member,noticeId).n,1,'read retries are idempotent');
+await act('owner-auth',{action:'mark_notifications_read'});
+assert.ok((await service.read('owner-auth')).notifications.every(n=>n.read));
+assert.deepEqual((await service.read(null)).notifications,[],'anonymous reads must not expose an inbox');
+sql.close();open();assert.equal((await service.read('member-auth')).notifications.find(n=>n.id===noticeId).read,true,'read state persists across reopen');
+await go('delete_tournament',{confirmation:'DELETE'},'owner-auth','notification-event');
+assert.equal((await service.read('member-auth')).notifications.some(n=>n.id===noticeId),false,'deleted events disappear from the inbox');
+console.log('Passed: notification eligibility, self-only read receipts, idempotency, persistence, mark-all, anonymous privacy and deleted event cleanup.');
 const publicEvents=await getPublicDirectory(db,'tournaments');
 assert.ok(publicEvents.tournaments.length>0);
 assert.equal((await getPublicDirectory(db,'tournaments',"' OR 1=1 --")).tournaments.length,0,'public search is parameterized');

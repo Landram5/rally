@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
 import ts from 'typescript';
 mkdirSync('.test-runtime',{recursive:true});
-for(const name of ['demo-state','rally','match-rules','tournament-engine','seeding']){
+for(const name of ['notifications','demo-state','rally','match-rules','tournament-engine','seeding']){
  const code=ts.transpileModule(readFileSync(`lib/${name}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText.replace(/from ['"]\.\/([^'"]+)['"]/g,"from './$1.mjs'");
  writeFileSync(`.test-runtime/${name}.mjs`,code);
 }
@@ -68,3 +68,11 @@ assert.equal(bioDemo.clubs.find(c=>c.id==='harbor').bio,'New club bio');
 assert.notEqual(seed.clubs.find(c=>c.id==='harbor').bio,'New club bio');
 assert.throws(()=>applyDemoAction(seed,{action:'update_club',clubId:'metro',name:'Metro',location:'Columbia',bio:'Unauthorized'}),/owner/);
 console.log('Demo club information persistence and owner permissions passed.');
+
+assert.ok(seed.notifications.length>0);
+const firstNotice=seed.notifications[0];
+const readDemo=applyDemoAction(seed,{action:'mark_notification_read',id:firstNotice.id});
+assert.equal(readDemo.notifications.find(n=>n.id===firstNotice.id).read,true);
+assert.equal(seed.notifications.find(n=>n.id===firstNotice.id).read,false);
+assert.ok(applyDemoAction(seed,{action:'mark_notifications_read'}).notifications.every(n=>n.read));
+console.log('Demo inbox read state, mark-all and isolation passed.');

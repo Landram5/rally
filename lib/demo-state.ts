@@ -1,3 +1,4 @@
+import {notificationsFor} from './notifications';
 import type {Data} from '../app/rally-app';
 import {clubs,players,initialMatches} from './rally';
 import {scoreError} from './match-rules';
@@ -13,7 +14,7 @@ function derive(data:Data){
    for(const f of t.state.fixtures.filter(f=>f.status==='played'))data.matches.push({id:`${t.id}-${f.id}`,club_id:t.club_id,a:f.a!,b:f.b!,games:f.games,best_of:t.state.bestOf,played_on:t.date,status:'confirmed',submitted_by:'alex',confirmed_by:'alex',canConfirm:false,canVoid:false,tournament_id:t.id,tournament_weight:t.rating_weight});}
  }
  for(const t of data.tournaments)t.seedStats=suggestSeeds(data.entries.filter(e=>e.tournament_id===t.id).map(e=>e.player_id),data.matches.filter(m=>m.club_id===t.club_id));
- data.matches.sort((a,b)=>b.played_on.localeCompare(a.played_on));return data;
+ data.matches.sort((a,b)=>b.played_on.localeCompare(a.played_on));data.notifications=notificationsFor(data,data.notificationReads??[],true);return data;
 }
 export function createDemoData():Data{
  const data:Data={me:{id:'alex',name:'Alex Morgan'},account:{email:'alex@example.test',displayName:'Alex Morgan',emailVerified:true},signedIn:true,isSiteAdmin:true,
@@ -37,6 +38,7 @@ export function applyDemoAction(current:Data,p:Record<string,unknown>):Data{
  const d=structuredClone(current),id=String(p.id??crypto.randomUUID()),clubId=String(p.clubId??''),playerId=String(p.playerId??''),action=String(p.action),text=(key:string)=>String(p[key]??'').trim();
  const addGuest=()=>{if(!text('name'))throw new Error('Enter a player name.');const guestId=crypto.randomUUID();d.players.push({id:guestId,name:text('name'),is_guest:1});d.memberships.push({club_id:clubId||d.tournaments.find(t=>t.id===id)!.club_id,player_id:guestId,role:'member',status:'active'});return guestId;};
  if(action==='save_profile'){if(!text('name'))throw new Error('Enter a display name.');d.me!.name=text('name');d.players.find(x=>x.id===d.me!.id)!.name=text('name');if(p.bio!==undefined){if(typeof p.bio!=='string'||p.bio.trim().length>500)throw new Error('Bio must be text with at most 500 characters.');d.players.find(x=>x.id===d.me!.id)!.bio=p.bio.trim();}if(p.photo!==undefined)d.players.find(x=>x.id===d.me!.id)!.photo_url=p.photo===null?null:String(p.photo);}
+ else if(action==='mark_notification_read'||action==='mark_notifications_read'){const notices=notificationsFor(d,d.notificationReads??[],true),ids=action==='mark_notifications_read'?notices.map(n=>n.id):notices.filter(n=>n.id===p.id).map(n=>n.id);if(action==='mark_notification_read'&&!ids.length)throw new Error('Notification not found.');d.notificationReads=[...new Set([...(d.notificationReads??[]),...ids])];}
  else if(action==='update_club'){const c=d.clubs.find(c=>c.id===clubId);if(!c?.canAssignRoles)throw new Error('Only the club owner can edit club information.');if(!text('name')||text('name').length>80||!text('location')||text('location').length>100||typeof p.bio!=='string'||p.bio.trim().length>1200)throw new Error('Enter valid club information.');c.name=text('name');c.location=text('location');c.bio=p.bio.trim();}
  else if(action==='set_club_media'){const c=d.clubs.find(c=>c.id===clubId);if(!c?.canManage)throw new Error('Only club leaders can update images.');if(p.kind!=='photo'&&p.kind!=='banner')throw new Error('Choose a photo or banner.');c[p.kind==='photo'?'photo_url':'banner_url']=p.image===null?null:String(p.image);}
  else if(action==='submit_feedback'){
