@@ -75,3 +75,11 @@ Remaining product decisions, in suggested order:
 5. Optional notification delivery preferences before adding email/push. The current Inbox remains current activity rather than a permanent notification archive.
 
 The rating chart shows up to 20 match updates plus today's rating. Aging is reflected at the next plotted update rather than as a continuous daily curve. Appearance remains local to each browser, and original photo files are not retained for later recropping.
+
+## Reliability release one
+
+Implemented recoverable club-match live scoring, explicit draft/submission status, separate Edit/View profile actions, tappable/keyboard-accessible rating points and a one-command reliability regression suite. Browser review verified reload recovery with side orientation and undo, recovery of a completed match, saving exactly one sample result, removal of its draft after acknowledgment, profile editing/viewing, point selection with shared dates and retained production sign-in. Demo test edits were reset afterward.
+
+Deliberate limits: one draft per account/device; demo drafts last for the browser session; no cross-device draft sync, manual-entry drafts, tournament-score drafts or automatic offline submission. If the current club/player membership changes, the old draft cannot silently be reassigned. Rating dots may overlap on the same date; the selector and Previous/Next controls make each point reachable. The graph is still match-update based, not a continuous daily aging curve. The prior session fix remains deployed and regression-tested, but actual iPhone process termination/reopening needs device confirmation.
+
+Next release remains the player and organizer dashboards. The most valuable next validation is using live scoring through an actual club match and checking that a phone interruption resumes correctly before submitting.

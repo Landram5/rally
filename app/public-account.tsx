@@ -4,16 +4,16 @@ import {useRouter} from 'next/navigation';
 import AccountMenu from './account-menu';
 
 export default function PublicAccount(){
- const router=useRouter(),[name,setName]=useState<string|null|undefined>(undefined);
+ const router=useRouter(),[account,setAccount]=useState<{displayName:string;profileId:string|null}|null|undefined>(undefined);
  useEffect(()=>{
-  let current=true;const controller=new AbortController();
-  const refresh=()=>{fetch('/api/auth/session',{cache:'no-store',signal:controller.signal}).then(async response=>{
-   if(!response.ok)return;const body=await response.json() as {user:{displayName:string}|null};
-   if(current)setName(body.user?.displayName??null);
+  let current=true,version=0;const controller=new AbortController();
+  const refresh=()=>{const requestVersion=++version;fetch('/api/auth/session',{cache:'no-store',signal:controller.signal}).then(async response=>{
+   if(!response.ok)return;const body=await response.json() as {user:{displayName:string;profileId:string|null}|null};
+   if(current&&requestVersion===version)setAccount(body.user);
   }).catch(()=>{/* A network error must not turn a known session into signed out. */});};
   const resume=()=>{if(document.visibilityState==='visible')refresh()};
   refresh();window.addEventListener('focus',resume);document.addEventListener('visibilitychange',resume);
   return()=>{current=false;controller.abort();window.removeEventListener('focus',resume);document.removeEventListener('visibilitychange',resume)};
  },[]);
- return name?<><a className="public-member-link" href="/clubhouse">Clubhouse</a><AccountMenu name={name} onProfile={()=>router.push('/account')}/></>:name===null?<a className="public-signin" href="/login">Sign in</a>:<a className="public-member-link" href="/clubhouse">Clubhouse</a>;
+ return account?<><a className="public-member-link" href="/clubhouse">Clubhouse</a><AccountMenu name={account.displayName} profileHref={account.profileId?`/players/${account.profileId}`:undefined} onProfile={()=>router.push('/account')}/></>:account===null?<a className="public-signin" href="/login">Sign in</a>:<a className="public-member-link" href="/clubhouse">Clubhouse</a>;
 }

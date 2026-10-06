@@ -14,7 +14,8 @@
     "db:migrate:remote": "wrangler d1 migrations apply DB --remote",
     "lint": "eslint app lib components proxy.ts worker.ts vite.config.ts --ignore-pattern .next",
     "db:generate": "drizzle-kit generate",
-    "test:account-deletion": "node scripts/account-deletion.test.mjs"
+    "test:account-deletion": "node scripts/account-deletion.test.mjs",
+    "test:reliability": "node scripts/reliability.test.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
