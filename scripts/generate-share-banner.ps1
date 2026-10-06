@@ -1,4 +1,4 @@
-param([string]$OutputPath = (Join-Path $PSScriptRoot "..\public\rally-share.png"))
+param([string]$OutputPath = (Join-Path $PSScriptRoot "..\public\rally-share-v2.png"))
 
 Add-Type -AssemblyName System.Drawing
 $bitmap = [System.Drawing.Bitmap]::new(1200, 630)
