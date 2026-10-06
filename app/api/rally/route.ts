@@ -4,6 +4,8 @@ import {readActivityPage} from '@/lib/activity-pages';
 import {seasonViews} from '@/lib/club-seasons';
 import {matchRecord} from '@/lib/record-ownership';
 import {ratingHistory} from '@/lib/seeding';
+import {playerPerformance} from '@/lib/player-performance';
+import {getPublicDirectory} from '@/lib/public-rally';
 import {AppError,makeService} from '@/lib/rally-service';
 export const dynamic='force-dynamic';
 function service(){if(!env.DB)throw new Error('Database unavailable');return makeService(env.DB)}
@@ -11,6 +13,7 @@ function isSiteAdmin(email:string){return (env.RALLY_ADMIN_EMAILS??'').split(','
 function response(data:unknown,status=200){return Response.json(data,{status,headers:{'Cache-Control':'private, no-store','Vary':'Cookie'}})}
 function error(e:unknown){if(e instanceof AppError)return response({error:e.message},e.status);console.error('Rally data error',e);return response({error:'Your data is temporarily unavailable. Please try again.'},503)}
 export async function GET(request:Request){try{const query=new URL(request.url).searchParams,user=await getAuthenticatedUser(),siteAdmin=!!user&&isSiteAdmin(user.email),view=query.get('view');
+ if(view==='performance'){const player=query.get('player');if(!player){const directory=await getPublicDirectory(env.DB,'players',query.get('search')??'');return response({players:directory.players.map(p=>({id:p.id,name:p.name}))});}const data=await service().read(null);if(!data.players.some(p=>p.id===player))return response({error:'Player unavailable.'},404);return response(playerPerformance(data.matches,player));}
  if(view==='seasons'){const profile=user?await env.DB.prepare('SELECT id FROM profiles WHERE auth_id=? AND deleted_at IS NULL').bind(user.id).first<{id:string}>():null;return response(await seasonViews(env.DB,query.get('club')??'',profile?.id??null));}
  if(view==='members'||view==='matches'||view==='tournaments')return response(await readActivityPage(env.DB,user?.id??null,{view,club:query.get('club')??'all',search:query.get('search')??'',role:query.get('role')??'all',status:query.get('status')??'all',page:Number(query.get('page')??1),match:query.get('match')??'',isSiteAdmin:siteAdmin}));
  if(!user)return response({error:'Sign in to open the Rally clubhouse.'},401);
