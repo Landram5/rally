@@ -19,7 +19,8 @@ import {createDemoData,applyDemoAction} from '@/lib/demo-state';
 import {Button} from '@/components/ui/button';
 export default function ClubPage({id,initialData,demo=false}:{id:string;initialData:Data;demo?:boolean}){
  const [data,setData]=useState(initialData),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState(''),[editing,setEditing]=useState(false),[images,setImages]=useState(false),[name,setName]=useState(''),[location,setLocation]=useState(''),[bio,setBio]=useState(''),[guest,setGuest]=useState('');
- const [eventId,setEventId]=useState<string|null>(null);
+ const [eventId,setEventIdState]=useState<string|null>(null);
+ const setEventId=useCallback((event:string|null)=>{if(event)window.location.assign((demo?'/demo':'')+'/tournaments/'+encodeURIComponent(event)+'/manage');else setEventIdState(null);},[demo]);
  const busyRef=useRef(false),readVersion=useRef(0),mounted=useRef(false),reading=useRef(false),readAbort=useRef<AbortController|null>(null);
  const invalidateReads=useCallback(()=>{readVersion.current++;},[]);
  const [refreshing,setRefreshing]=useState(false);
@@ -33,7 +34,7 @@ export default function ClubPage({id,initialData,demo=false}:{id:string;initialD
   finally{if(readAbort.current===controller){readAbort.current=null;reading.current=false;if(mounted.current){setLoading(false);if(manual)setRefreshing(false);}}}
  },[demo,id]);
  const [loadedEvent,setLoadedEvent]=useState<{event:Data['tournaments'][number];entries:Data['entries'];players:Data['players'];memberships:Data['memberships']}|null>(null),[eventLoading,setEventLoading]=useState(false);
- useEffect(()=>{if(demo||!eventId)return;let current=true;setEventLoading(true);fetch('/api/rally?view=event&event='+encodeURIComponent(eventId),{cache:'no-store'}).then(async r=>{const body=await r.json() as NonNullable<typeof loadedEvent>&{error?:string};if(!r.ok)throw new Error(body.error||'Could not open this event.');if(current)setLoadedEvent(body)}).catch(e=>{if(current){setError(e.message);setEventId(null)}}).finally(()=>{if(current)setEventLoading(false)});return()=>{current=false}},[demo,eventId,data]);
+ useEffect(()=>{if(demo||!eventId)return;let current=true;setEventLoading(true);fetch('/api/rally?view=event&event='+encodeURIComponent(eventId),{cache:'no-store'}).then(async r=>{const body=await r.json() as NonNullable<typeof loadedEvent>&{error?:string};if(!r.ok)throw new Error(body.error||'Could not open this event.');if(current)setLoadedEvent(body)}).catch(e=>{if(current){setError(e.message);setEventId(null)}}).finally(()=>{if(current)setEventLoading(false)});return()=>{current=false}},[demo,eventId,data,setEventId]);
  const [venue,setVenue]=useState(''),[schedule,setSchedule]=useState(''),[contact,setContact]=useState(''),[joining,setJoining]=useState('');
  useEffect(()=>{mounted.current=true;
   if(demo){try{const saved=sessionStorage.getItem('rally-demo-preview');setData(saved?JSON.parse(saved):createDemoData());}catch{}setLoading(false);return()=>{mounted.current=false;};}
