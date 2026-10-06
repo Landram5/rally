@@ -15,7 +15,6 @@ $detail = [System.Drawing.Font]::new('Segoe UI', 26, [System.Drawing.FontStyle]:
 $domain = [System.Drawing.Font]::new('Segoe UI', 28, [System.Drawing.FontStyle]::Bold, [System.Drawing.GraphicsUnit]::Pixel)
 $ring = [System.Drawing.Pen]::new($dark.Color, 13)
 $graphics.Clear($dark.Color)
-$graphics.FillRectangle($lime, 0, 0, 1200, 9)
 $graphics.DrawString('rally', $wordmark, $cream, 65, 95)
 $graphics.DrawString('.', $wordmark, $lime, 352, 95)
 $graphics.DrawString('Table tennis clubs', $heading, $cream, 76, 275)
