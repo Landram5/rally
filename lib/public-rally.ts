@@ -23,6 +23,23 @@ export type PublicTournament={
 
 const validId=(value:string)=>/^[a-zA-Z0-9_-]{1,80}$/.test(value);
 
+export type PublicDirectory={tournaments:{id:string;name:string;date:string;format:string;status:string;clubName:string;entrants:number}[];players:{id:string;name:string;photoUrl:string|null;played:number}[];matches:{id:string;a:string;b:string;aName:string;bName:string;clubName:string;playedOn:string;games:[number,number][];tournamentId:string|null}[];hasMore:boolean};
+export async function getPublicDirectory(db:D1Database,view:'tournaments'|'players'|'matches',search='',page=1):Promise<PublicDirectory>{
+ const result:PublicDirectory={tournaments:[],players:[],matches:[],hasMore:false};
+ const term='%'+search.trim().slice(0,80).replace(/[\\%_]/g,'\\$&')+'%',offset=(Math.max(1,Math.min(1000,Math.floor(page)||1))-1)*24;
+ if(view==='tournaments'){
+  const rows=(await db.prepare("SELECT t.id,t.name,t.date,t.format,t.status,c.name AS clubName,(SELECT count(*) FROM entries e WHERE e.tournament_id=t.id) AS entrants FROM tournaments t JOIN clubs c ON c.id=t.club_id WHERE c.approval_status='approved' AND (t.name LIKE ? ESCAPE '\\' OR c.name LIKE ? ESCAPE '\\') ORDER BY CASE t.status WHEN 'active' THEN 0 WHEN 'registration' THEN 1 ELSE 2 END,t.date DESC,t.id LIMIT 25 OFFSET ?").bind(term,term,offset).all<PublicDirectory['tournaments'][number]>()).results;
+  result.hasMore=rows.length>24;result.tournaments=rows.slice(0,24);
+ }else if(view==='players'){
+  const rows=(await db.prepare("SELECT p.id,p.name,ph.updated_at AS photo_version,(SELECT count(*) FROM matches m JOIN clubs c ON c.id=m.club_id WHERE m.status='confirmed' AND c.approval_status='approved' AND (m.a=p.id OR m.b=p.id)) AS played FROM profiles p LEFT JOIN profile_photos ph ON ph.player_id=p.id WHERE p.deleted_at IS NULL AND p.name LIKE ? ESCAPE '\\' AND (EXISTS (SELECT 1 FROM memberships ms JOIN clubs c ON c.id=ms.club_id WHERE ms.player_id=p.id AND ms.status='active' AND c.approval_status='approved') OR EXISTS (SELECT 1 FROM entries e JOIN tournaments t ON t.id=e.tournament_id JOIN clubs c ON c.id=t.club_id WHERE e.player_id=p.id AND c.approval_status='approved') OR EXISTS (SELECT 1 FROM matches m JOIN clubs c ON c.id=m.club_id WHERE (m.a=p.id OR m.b=p.id) AND m.status='confirmed' AND c.approval_status='approved')) ORDER BY p.name COLLATE NOCASE,p.id LIMIT 25 OFFSET ?").bind(term,offset).all<{id:string;name:string;photo_version:string|null;played:number}>()).results;
+  result.hasMore=rows.length>24;result.players=rows.slice(0,24).map(p=>({id:p.id,name:p.name,photoUrl:profilePhotoUrl(p.id,p.photo_version),played:p.played}));
+ }else{
+  const rows=(await db.prepare("SELECT m.id,m.a,m.b,pa.name AS aName,pb.name AS bName,c.name AS clubName,m.played_on AS playedOn,m.games,m.tournament_id AS tournamentId FROM matches m JOIN clubs c ON c.id=m.club_id JOIN profiles pa ON pa.id=m.a JOIN profiles pb ON pb.id=m.b WHERE m.status='confirmed' AND c.approval_status='approved' AND (pa.name LIKE ? ESCAPE '\\' OR pb.name LIKE ? ESCAPE '\\' OR c.name LIKE ? ESCAPE '\\') ORDER BY m.played_on DESC,m.created_at DESC,m.id LIMIT 25 OFFSET ?").bind(term,term,term,offset).all<Omit<PublicDirectory['matches'][number],'games'>&{games:string}>()).results;
+  result.hasMore=rows.length>24;result.matches=rows.slice(0,24).map(m=>({...m,games:JSON.parse(m.games)}));
+ }
+ return result;
+}
+
 export async function getPublicPlayer(db:D1Database,playerId:string):Promise<PublicPlayer|null>{
  if(!validId(playerId))return null;
  const profile=await db.prepare('SELECT p.id,p.name,p.bio,p.auth_id IS NULL AS is_guest,ph.updated_at AS photo_version FROM profiles p LEFT JOIN profile_photos ph ON ph.player_id=p.id WHERE p.id=? AND p.deleted_at IS NULL').bind(playerId).first<{id:string;name:string;is_guest:number;bio:string;photo_version:string|null}>();

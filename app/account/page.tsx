@@ -31,7 +31,7 @@ export default function AccountPage(){
   catch(e){setError(e instanceof Error?e.message:'Could not delete your account.');setBusy(false)}
  }
  return <><PublicHeader/><main className="account-settings"><h1>Account settings</h1>
-  <Link href="/">Back to clubhouse</Link>
+  <Link href="/clubhouse">Back to clubhouse</Link>
   {loading&&<p role="status">Loading account settings…</p>}
   {error&&<div className="auth-error" role="alert"><p>{error}</p>{!settings&&<button onClick={()=>void load()}>Try again</button>}</div>}
   {signedOut&&<p><Link href="/login">Sign in</Link> to manage or delete your account.</p>}

@@ -8,7 +8,7 @@ for(const name of ['profile-photo','account-write-guard','account-deletion','ral
  writeFileSync(`.test-runtime/${name}.mjs`,compiled);
 }
 const {makeService,scoreError}=await import('../.test-runtime/rally-service.mjs');
-const {getPublicPlayer,getPublicTournament}=await import('../.test-runtime/public-rally.mjs');
+const {getPublicPlayer,getPublicTournament,getPublicDirectory}=await import('../.test-runtime/public-rally.mjs');
 const path='.test-runtime/test-data.sqlite';rmSync(path,{force:true});let sql;
 function open(){sql=new DatabaseSync(path);sql.exec('PRAGMA foreign_keys=ON');}
 open();for(const f of readdirSync('drizzle').filter(f=>f.endsWith('.sql')).sort())sql.exec(readFileSync('drizzle/'+f,'utf8'));
@@ -47,6 +47,8 @@ assert.equal((await getPublicPlayer(db,owner)).clubs.length,0,'pending club must
 await assert.rejects(act('member-auth',{action:'request_join',clubId:'club-one'}),e=>e.status===403);
 await act('owner-auth',{action:'create_tournament',id:'pending-event',clubId:'club-one',name:'Pending Event',date:'2026-10-01',format:'Round robin',capacity:4});
 assert.equal(await getPublicTournament(db,'pending-event'),null,'pending club tournament must not be public');
+assert.equal((await getPublicDirectory(db,'tournaments')).tournaments.length,0,'pending tournaments excluded from public home');
+assert.equal((await getPublicDirectory(db,'players')).players.length,0,'pending club members and unattached accounts excluded');
 await assert.rejects(act('member-auth',{action:'approve_club',clubId:'club-one'}),e=>e.status===403);
 await adminAct('owner-auth',{action:'approve_club',clubId:'club-one'});
 await assert.rejects(act('owner-auth',{action:'create_club',id:'club-extra',name:'Extra Club',location:'Baltimore'}),e=>e.status===403);
@@ -224,6 +226,25 @@ await go('start_tournament',{bestOf:3},'owner-auth','custom-field');
 assert.deepEqual((await service.read('owner-auth')).tournaments.find(t=>t.id==='custom-field').state.seeds,expectedSeeds);
 await assert.rejects(go('set_capacity',{capacity:55},'owner-auth','custom-field'),e=>e.status===409);
 await assert.rejects(go('add_tournament_guest',{name:'Late guest'},'owner-auth','custom-field'),e=>e.status===409);
+const publicEvents=await getPublicDirectory(db,'tournaments');
+assert.ok(publicEvents.tournaments.length>0);
+assert.equal((await getPublicDirectory(db,'tournaments',"' OR 1=1 --")).tournaments.length,0,'public search is parameterized');
+assert.equal((await getPublicDirectory(db,'players','%')).players.length,0,'search treats wildcards literally');
+for(const m of (await getPublicDirectory(db,'matches')).matches){
+ assert.equal(sql.prepare('SELECT status FROM matches WHERE id=?').get(m.id).status,'confirmed','only verified public results');
+ assert.equal(sql.prepare('SELECT c.approval_status FROM clubs c JOIN matches m ON m.club_id=c.id WHERE m.id=?').get(m.id).approval_status,'approved');
+ assert.ok(Array.isArray(m.games));
+}
+for(let n=0;n<26;n++){
+ sql.prepare('INSERT INTO profiles (id,name,created_at) VALUES (?,?,?)').run('directory-'+n,'Directory '+String(n).padStart(2,'0'),'2026-10-06');
+ sql.prepare("INSERT INTO memberships (id,club_id,player_id,role,status,created_at) VALUES (?,?,?,'member','active',?)").run('directory-membership-'+n,'club-one','directory-'+n,'2026-10-06');
+}
+const firstPage=await getPublicDirectory(db,'players','Directory',1),secondPage=await getPublicDirectory(db,'players','Directory',2);
+assert.equal(firstPage.players.length,24);assert.equal(firstPage.hasMore,true);assert.equal(secondPage.players.length,2);assert.equal(secondPage.hasMore,false);
+assert.equal(new Set([...firstPage.players,...secondPage.players].map(p=>p.id)).size,26,'stable pages do not repeat players');
+sql.prepare("UPDATE profiles SET deleted_at='2026-10-06',name='Deleted player' WHERE id='directory-0'").run();
+assert.equal((await getPublicDirectory(db,'players','Deleted player')).players.length,0,'deleted identities excluded');
+console.log('Passed: public discovery hides pending clubs and unverified results, parameterized literal search, pagination and deleted profiles.');
 sql.close();console.log('Passed: arbitrary integer capacity, capacity edits, atomic no-account guest registration, guest permissions, statistic-based auto seeds, post-start registration lock.');
 
 {

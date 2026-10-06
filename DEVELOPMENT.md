@@ -3,6 +3,7 @@
 ## Implemented
 
 - Supabase Auth with Google OAuth, email/password sign-up, email/password sign-in, password reset, password update, and server-managed cookie sessions.
+- Public home page at `/` with searchable, paginated tournaments, players and verified matches from approved clubs. Member actions remain at `/clubhouse`; sign-in defaults to that workspace and preserves safe requested return paths.
 - Durable D1 records for profiles, clubs, memberships, matches, audit events, tournaments, and tournament entries.
 - Server-side authorization for all writes, including membership approval, result confirmation, tournament administration, and audit history.
 - Public player and tournament pages limited to confirmed results and public event data.

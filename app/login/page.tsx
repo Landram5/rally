@@ -3,6 +3,7 @@ import {useState} from 'react';
 import {CircleDot} from 'lucide-react';
 import {useRouter,useSearchParams} from 'next/navigation';
 import Link from 'next/link';
+import {safeNextPath} from '@/lib/auth-rules';
 import PublicHeader from '@/app/public-header';
 
 type Mode='signin'|'signup'|'reset';
@@ -11,22 +12,23 @@ export default function LoginPage(){
  const router=useRouter();
  const searchParams=useSearchParams();
  const [mode,setMode]=useState<Mode>('signin'),[email,setEmail]=useState(''),[password,setPassword]=useState(''),[displayName,setDisplayName]=useState(''),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[error,setError]=useState('');
+ const next=safeNextPath(searchParams.get('next')??'/clubhouse');
  const visibleError=error||searchParams.get('error')||'';
  async function submit(event:React.FormEvent){
   event.preventDefault();if(busy)return;setBusy(true);setError('');setMessage('');
   try{
    const path=mode==='reset'?'/api/auth/reset-password':'/api/auth/password';
-   const response=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(mode==='reset'?{email}:{mode,email,password,displayName,next:'/'})});
+   const response=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(mode==='reset'?{email}:{mode,email,password,displayName,next})});
    const body=await response.json() as {error?:string;needsConfirmation?:boolean};
    if(!response.ok)throw new Error(body.error||'Could not continue.');
    if(mode==='reset'){setMessage('If that email has an account, a reset link is on its way.');return}
    if(body.needsConfirmation){setMessage('Check your email to confirm your account, then sign in.');return}
-   router.push('/');router.refresh();
+   router.push(next);router.refresh();
   }catch(value){setError(value instanceof Error?value.message:'Could not continue.')}finally{setBusy(false)}
  }
  return <><PublicHeader/><main className="auth-shell"><section className="auth-card">
   <div className="auth-heading"><span className="brand-mark"><CircleDot size={26}/></span><h1>{mode==='signup'?'Create your player account':mode==='reset'?'Reset your password':'Sign in'}</h1><p>{mode==='signup'?'Use Google or create an account with your email.':mode==='reset'?'We will email you a secure password reset link.':'Sign in to manage clubs, matches, and tournaments.'}</p></div>
-  {mode!=='reset'&&<><button type="button" className="google-button" onClick={()=>window.location.assign(new URL('/auth/google?next=%2F',window.location.origin).toString())}><GoogleMark/><span>Continue with Google</span></button><div className="auth-divider"><span>or continue with email</span></div></>}
+  {mode!=='reset'&&<><button type="button" className="google-button" onClick={()=>window.location.assign(new URL('/auth/google?'+new URLSearchParams({next}),window.location.origin).toString())}><GoogleMark/><span>Continue with Google</span></button><div className="auth-divider"><span>or continue with email</span></div></>}
   <form className="auth-form" onSubmit={submit}>
    {mode==='signup'&&<label>Display name<input autoComplete="name" maxLength={60} required value={displayName} onChange={e=>setDisplayName(e.target.value)}/></label>}
    <label>Email<input type="email" autoComplete="email" maxLength={254} required value={email} onChange={e=>setEmail(e.target.value)}/></label>
