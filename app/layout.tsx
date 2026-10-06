@@ -3,8 +3,22 @@ import "./globals.css";
 import PwaRegistration from "@/app/pwa-registration";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://rallytt.net"),
   title: "Rally · Table Tennis",
   description: "Track club matches, player statistics, and table tennis tournaments.",
+  openGraph: {
+    type: "website",
+    siteName: "Rally",
+    title: "Rally · Table Tennis",
+    description: "Track club matches, player statistics, and table tennis tournaments.",
+    images: [{ url: "/rally-share.png", width: 1200, height: 630, type: "image/png", alt: "Rally — table tennis clubs, matches, standings and tournaments. rallytt.net" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Rally · Table Tennis",
+    description: "Track club matches, player statistics, and table tennis tournaments.",
+    images: ["/rally-share.png"],
+  },
   applicationName: "Rally",
   manifest: "/manifest.webmanifest",
   appleWebApp: {

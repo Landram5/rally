@@ -86,3 +86,7 @@ TypeScript, lint (three existing warnings), demo-state invariants, tournament-en
 - Both head-to-head selectors filter players by name, support keyboard selection and wrap long names on mobile.
 - Validation passed: TypeScript, lint (two existing warnings), production build, live-score/Elo, service, demo and account-deletion suites. Tests cover deuce, undo across game boundaries, all match formats, Elo upsets and provisional ordering, media permissions and validation, feedback privacy, rate limits and deletion cleanup.
 - Browser checks at 390 x 844 and 320 x 480 covered live scoring, side switching, undo, completed match saving with updated standings, club image uploads, feedback submission/status and searchable player selection. Final live-domain match saved successfully and updated Alex's sample record to 6-4 with Elo 1026. Synthetic demo actions did not create production records. Real iPhone release gates remain above.
+
+## Chat link preview - October 6, 2026
+
+Released Worker version: `742b9121-f0d6-4c19-8061-7f9daa651c2c`. Root metadata now includes Open Graph and large-image Twitter cards using the public 1200 x 630 PNG at `/rally-share.png`. The banner uses Rally's green/lime palette, name, feature labels and domain; regenerate with `scripts/generate-share-banner.ps1`. TypeScript and production build passed. A public crawler-style HTTP request verified absolute image metadata in server HTML and a 200 image/png response. Chat applications control preview rendering and caching; actual Instagram/iMessage rendering was not tested.
