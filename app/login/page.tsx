@@ -25,7 +25,7 @@ export default function LoginPage(){
   }catch(value){setError(value instanceof Error?value.message:'Could not continue.')}finally{setBusy(false)}
  }
  return <><PublicHeader/><main className="auth-shell"><section className="auth-card">
-  <div className="auth-heading"><span className="brand-mark"><CircleDot size={26}/></span><p className="eyebrow">RALLY ACCOUNT</p><h1>{mode==='signup'?'Create your player account':mode==='reset'?'Reset your password':'Welcome back'}</h1><p>{mode==='signup'?'Use Google or create an account with your email.':mode==='reset'?'We will email you a secure password reset link.':'Sign in to manage clubs, matches, and tournaments.'}</p></div>
+  <div className="auth-heading"><span className="brand-mark"><CircleDot size={26}/></span><h1>{mode==='signup'?'Create your player account':mode==='reset'?'Reset your password':'Sign in'}</h1><p>{mode==='signup'?'Use Google or create an account with your email.':mode==='reset'?'We will email you a secure password reset link.':'Sign in to manage clubs, matches, and tournaments.'}</p></div>
   {mode!=='reset'&&<><button type="button" className="google-button" onClick={()=>window.location.assign(new URL('/auth/google?next=%2F',window.location.origin).toString())}><GoogleMark/><span>Continue with Google</span></button><div className="auth-divider"><span>or continue with email</span></div></>}
   <form className="auth-form" onSubmit={submit}>
    {mode==='signup'&&<label>Display name<input autoComplete="name" maxLength={60} required value={displayName} onChange={e=>setDisplayName(e.target.value)}/></label>}

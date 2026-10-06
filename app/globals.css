@@ -182,3 +182,52 @@
 .account-choice input{margin-top:5px;min-width:20px;min-height:20px;accent-color:#172e29}
 .account-choice small{display:block;line-height:1.6;margin-top:6px;font-size:14px}
 .account-delete{background:#9b2525;color:white;margin-top:8px;width:100%;font-weight:600}
+
+/* Compact navigation and forms that fit the visible screen, including keyboards. */
+main{padding-top:24px;padding-bottom:28px}
+.page-heading{margin-bottom:20px;gap:16px}
+.page-heading h1{font-size:1.65rem;letter-spacing:-.035em;line-height:1.25}
+.stat-card{padding:16px 18px}.stat-card>strong{margin:6px 0 0;font-size:2rem}
+.stat-grid,.dashboard-grid{margin-bottom:20px}
+.topbar{height:68px;gap:16px}
+.main-nav,.main-nav [role=tab]{height:54px!important}
+.account-area{gap:4px}.account-name{max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:10px 8px;min-height:44px}
+.account-menu-trigger{display:grid;place-items:center;width:44px;min-width:44px;height:44px;border-radius:8px;color:#fff;border:1px solid #526b60}
+.account-menu-trigger:hover,.account-menu-trigger[data-state=open]{background:#355249}
+.account-menu{min-width:220px;max-width:calc(100vw - 24px)}
+.account-menu [role=menuitem]{min-height:44px;padding:10px 12px;cursor:pointer}
+.demo-note{justify-content:space-between;gap:12px;padding:7px max(16px,calc((100vw - 1250px)/2))}
+.demo-note a{padding:4px 0}
+.access-gate{min-height:0;align-items:flex-start;padding-top:56px;padding-bottom:56px}
+.access-gate>.brand-mark{display:none}.access-gate h1{font-size:2rem}.access-gate>.ios-install-link{margin:20px 0 0}
+[data-slot=dialog-overlay]{z-index:60}
+[data-slot=dialog-content]{z-index:70;display:block;max-height:calc(var(--visible-height,100dvh) - 48px);padding:0!important;overflow:hidden;transform:translate(-50%,-50%)}
+.dialog-scroll-area{max-height:inherit;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:24px;display:flex;flex-direction:column;gap:16px;scroll-padding-block:24px}
+[data-slot=dialog-header]{padding-right:36px;text-align:left}
+[data-slot=dialog-close]{width:36px;height:36px;display:grid;place-items:center;top:12px;right:12px;background:#fff;border:1px solid #d7e1d9;border-radius:8px;opacity:1;z-index:20}
+[data-slot=select-content],[data-slot=dropdown-menu-content]{z-index:90}
+[data-slot=select-item]{min-height:44px}
+.form-stack label,.form-two>*{min-width:0}.form-stack .picker{width:100%;min-width:0}
+.game-header{font-size:.8rem;overflow-wrap:anywhere}.game-input>*{min-width:0}.game-input input{width:100%;min-height:44px}
+.game-input button{min-width:36px;min-height:44px;padding:0}
+.detail-sheet{height:100dvh!important;overflow-y:auto;overscroll-behavior:contain}
+.tournament-title-row{flex-wrap:wrap;gap:10px}
+.sample-public main{max-width:1000px}.sample-public .panel{margin-top:20px}.sample-public .panel>h2{padding:18px}.sample-public .public-draw{padding:16px}
+@media(max-width:700px){
+ .topbar{height:64px}.account-area .account-name:first-child{max-width:min(44vw,190px)}
+ .page-heading{flex-direction:row;align-items:center;margin-bottom:16px}
+ .page-heading .primary-action{width:auto;flex-shrink:0;padding-inline:12px;font-size:.8rem}
+ .page-heading h1{font-size:1.45rem}
+ .main-nav,.main-nav [role=tab]{height:64px!important}
+ [data-slot=dialog-content],.form-dialog{top:calc(var(--visible-top,0px) + 8px)!important;bottom:auto!important;left:8px!important;width:calc(100% - 16px)!important;max-width:calc(100% - 16px)!important;max-height:calc(var(--visible-height,100dvh) - 16px)!important;transform:none!important;translate:none!important;border-radius:12px!important;padding:0!important}
+ .dialog-scroll-area{padding:20px 16px calc(20px + env(safe-area-inset-bottom));scroll-padding-bottom:24px}
+ .form-two{grid-template-columns:1fr;gap:12px}
+ .form-stack input,.form-stack .picker{font-size:16px!important;min-height:44px}
+ .form-stack{gap:14px}.form-stack>.primary-action{width:100%;min-height:48px}
+ .game-input,.game-header{grid-template-columns:40px minmax(0,1fr) minmax(0,1fr) 38px;gap:8px}
+ .stat-card{padding:14px}.stat-card>strong{font-size:1.75rem}
+ .approval-heading{flex-wrap:wrap}.approval-count{margin-left:0}
+ .public-topbar nav a{min-height:44px;display:inline-flex;align-items:center}
+ .public-topbar nav>a.public-demo{display:inline-flex;font-size:.8rem}
+}
+@media(max-width:370px){.topbar{padding-inline:12px}.topbar .brand{font-size:1.55rem}.brand-mark{width:28px;height:28px}.account-area .account-name:first-child{max-width:130px}.page-heading h1{font-size:1.25rem}.page-heading{gap:8px}}

@@ -9,6 +9,8 @@
 - Tournament draws, seeding, byes, round robin standings, withdrawals, walkovers, result resets, and winner display.
 - Original sample experience at `/demo`, separate from real accounts and records.
 - Installable iPhone web app with a Home Screen icon, standalone display, safe-area layout, install instructions, and a privacy-safe offline fallback.
+- Shared live/demo clubhouse interface with in-memory sample actions, past tournament draws in all three formats, scoring and resets, third place, guest registration, approvals and public sample statistics. The account demo illustrates ownership transfer and both deletion choices without contacting production services.
+- Compact page headings, a player account dropdown, and scrollable match forms sized to the visible viewport, including a reduced viewport when the keyboard opens.
 
 ## Production configuration
 
@@ -27,6 +29,7 @@
 
 ## Validation
 
+- `node scripts/demo.test.mjs`
 - `node scripts/rally-service.test.mjs`
 - `node scripts/tournament-engine.test.mjs`
 - `node --experimental-strip-types scripts/rally.test.mjs`

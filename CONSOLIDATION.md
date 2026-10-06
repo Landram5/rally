@@ -53,3 +53,13 @@ Production D1 backup: `.local-backups/production-before-consolidation-20261005.s
 HTTPS homepage, login, install instructions, manifest, service worker, offline page and Home Screen icons return 200. HTTP and www return 308 to the canonical HTTPS address. The install layout was visually checked at 390 × 844; this does not replace Safari on an actual iPhone.
 
 Browser emulation and automated checks do not replace the real-iPhone gates. Cloudflare DNS activation does not by itself connect the Worker or update authentication URLs.
+
+## Streamlined interface update — October 5, 2026
+
+Released Worker version: `dc87c4f8-fc1f-464b-be8f-516f8a60e791`; previous version: `7f39a471-8374-487e-ad67-63ec368609a8`. No database migrations or account-deletion behavior changed in this update.
+
+The live site and `/demo` now share `app/rally-app.tsx`. Fictional demo actions use an isolated in-memory adapter and the production tournament engine; no sample changes are sent to Rally's APIs. Completed single elimination, double elimination and round robin events, third place, current competition and registration are seeded. Tournament status filters include past events. Sample public statistics and a separate ownership/deletion simulation are available from the demo.
+
+Decorative slogans, redundant headings and slogan footers were removed. The signed-in header uses a dropdown for profile editing, account settings, installation and logout. Mobile forms use one consistent positioning method and a scroll container constrained to the visible viewport. Conflicting Tailwind translation utilities were removed from dialogs.
+
+TypeScript, lint (three existing warnings), demo-state invariants, tournament-engine tests and the production build pass. Browser verification covered player selection, sample score submission with statistics updating, scrolling at 320 × 480, full form bounds at 390 × 844 and 1280 × 800, past-tournament filtering, completed brackets with third place, safe sample account transfer/deletion, and actual Google sign-in/logout through the new dropdown. Real iPhone keyboard and Home Screen checks remain on the checklist.
