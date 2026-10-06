@@ -338,3 +338,13 @@ main{padding-top:24px;padding-bottom:28px}
 .double-tree-node .diagram-footer{min-height:48px}.bracket-viewport{height:min(65dvh,640px);max-height:min(65dvh,640px)}
 .initial-rating-editor{padding:0 16px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:.8rem;color:var(--muted-foreground)}.initial-rating-editor form{width:100%;display:grid;gap:8px;border:1px solid var(--border);border-radius:10px;padding:16px;color:var(--foreground)}.initial-rating-editor input{background:var(--background);border:1px solid var(--input);border-radius:8px;padding:10px;min-height:44px;font-size:16px;min-width:0;width:100%}.initial-rating-editor p{line-height:1.5;margin:6px 0}.initial-rating-editor form>button{justify-self:start}.club-member-entry{border-bottom:1px solid var(--border)}.club-member-entry:last-child{border-bottom:0}
 .rating-explanation table{width:100%;border-collapse:collapse;margin:16px 0;font-size:.9rem}.rating-explanation th,.rating-explanation td{padding:10px;text-align:left;border-bottom:1px solid var(--border)}.rating-explanation th{line-height:1.35;background:var(--muted)}
+
+.install-platform{margin-top:32px}.install-platform h2{margin-bottom:16px}
+@media(max-width:700px){
+ body.has-persistent-navigation{padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+ .persistent-mobile-navigation{position:fixed;bottom:0!important;left:0;right:0;transform:none;translate:none;background:var(--card);color:var(--foreground);padding-bottom:env(safe-area-inset-bottom,0px)}
+ .persistent-mobile-navigation .main-nav a{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0;min-height:64px;gap:3px;padding:7px 2px 6px;font-size:.62rem;line-height:1.1;text-decoration:none;color:var(--muted-foreground);border-top:3px solid transparent}
+ .persistent-mobile-navigation .main-nav a[aria-current=page]{color:var(--foreground);border-top-color:#355244}
+ .persistent-mobile-navigation .main-nav a svg{width:19px;height:19px}
+ body.has-persistent-navigation .announcement-banner{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+}

@@ -37,7 +37,7 @@ export default function LoginPage(){
    <button className="primary-action auth-submit" disabled={busy}>{busy?'Please wait…':mode==='signup'?'Create account':mode==='reset'?'Send reset link':'Sign in'}</button>
   </form>
   <div className="auth-switch">{mode==='signin'?<><button onClick={()=>{setMode('reset');setError('');setMessage('')}}>Forgot password?</button><span>New to Rally? <button onClick={()=>{setMode('signup');setError('');setMessage('')}}>Create an account</button></span></>:<button onClick={()=>{setMode('signin');setError('');setMessage('')}}>Back to sign in</button>}</div>
-  <Link className="ios-install-link" href="/install">Install Rally on iPhone</Link>
+  <Link className="ios-install-link" href="/install">Install Rally on your phone</Link>
  </section></main></>;
 }
 
