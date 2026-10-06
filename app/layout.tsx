@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import "./dark.css";
 import AppearanceProvider from "./appearance-provider";
+import AnnouncementBanner from './announcement-banner';
 import PwaRegistration from "@/app/pwa-registration";
 
 export const metadata: Metadata = {
@@ -51,7 +52,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="antialiased"><AppearanceProvider>{children}<PwaRegistration /></AppearanceProvider></body>
+      <body className="antialiased"><AppearanceProvider>{children}<AnnouncementBanner/><PwaRegistration /></AppearanceProvider></body>
     </html>
   );
 }

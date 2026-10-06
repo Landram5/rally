@@ -1,0 +1,12 @@
+'use client';
+import {useEffect,useRef,useState} from 'react';
+import {X} from 'lucide-react';
+import type {Announcement} from '@/lib/announcements';
+import {TimeLabel} from './time-label';
+export default function AnnouncementBanner(){
+ const [active,setActive]=useState<Announcement|null>(null),current=useRef<Announcement|null>(null);
+ useEffect(()=>{let mounted=true,busy=false;const controller=new AbortController();async function check(){if(busy||current.current||document.visibilityState!=='visible'||window.location.pathname.startsWith('/demo'))return;busy=true;try{const r=await fetch('/api/announcements?next=1',{cache:'no-store',signal:controller.signal});if(!r.ok)return;const {announcement}=await r.json() as {announcement:Announcement|null};if(!announcement||!mounted)return;const claimed=await fetch('/api/announcements',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'claim',id:announcement.id}),signal:controller.signal});if(!claimed.ok)return;const result=await claimed.json() as {claimed:boolean};if(result.claimed&&mounted){current.current=announcement;setActive(announcement);}}catch{/* Retry on the next visit/focus; never block the page. */}finally{busy=false;}}
+ void check();const timer=setInterval(()=>void check(),30000),resume=()=>void check();window.addEventListener('focus',resume);document.addEventListener('visibilitychange',resume);window.addEventListener('rally-announcements-changed',resume);return()=>{mounted=false;controller.abort();clearInterval(timer);window.removeEventListener('focus',resume);document.removeEventListener('visibilitychange',resume);window.removeEventListener('rally-announcements-changed',resume);};},[]);
+ if(!active)return null;return <AnnouncementNotice announcement={active} onClose={()=>{current.current=null;setActive(null);}}/>;
+}
+export function AnnouncementNotice({announcement:a,onClose,preview=false}:{announcement:Announcement;onClose:()=>void;preview?:boolean}){return <aside className="announcement-banner" role="region" aria-label={preview?'Announcement preview':'New announcement'} aria-live="polite"><button className="announcement-close" aria-label="Close announcement" onClick={onClose}><X size={20}/></button><span className="badge">{preview?'Announcement preview':a.clubName??'Rally announcement'}</span><h2>{a.title}</h2><small><TimeLabel value={a.created_at}/></small><p>{a.body}</p>{preview?<small>Preview only · not published</small>:<a href={a.club_id?'/clubs/'+a.club_id+'#announcements':'/announcements'}>View announcements</a>}</aside>;}
