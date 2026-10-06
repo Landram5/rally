@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import "./dark.css";
+import AppearanceProvider from "./appearance-provider";
 import PwaRegistration from "@/app/pwa-registration";
 
 export const metadata: Metadata = {
@@ -48,8 +50,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className="antialiased">{children}<PwaRegistration /></body>
+    <html lang="en" suppressHydrationWarning>
+      <body className="antialiased"><AppearanceProvider>{children}<PwaRegistration /></AppearanceProvider></body>
     </html>
   );
 }

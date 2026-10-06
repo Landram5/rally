@@ -42,7 +42,7 @@ export async function tournamentAction(db:D1Database,user:{id:string},body:Recor
   try{
    if(action==='start_tournament'){
     if(event.status!=='registration')bad(409,'This tournament has already started.');
-    const seeds=body.seeds??suggestSeeds(participants,(await q("SELECT * FROM matches WHERE status='confirmed' AND club_id=?",event.club_id).all<SeedMatch>()).results).map(s=>s.id);if(!Array.isArray(seeds)||seeds.length!==participants.length||new Set(seeds).size!==seeds.length||seeds.some(p=>typeof p!=='string'||!participants.includes(p)))bad(400,'The seed list must contain every registered player exactly once.');
+    const seeds=body.seeds??suggestSeeds(participants,(await q("SELECT m.*,t.rating_weight AS tournament_weight FROM matches m LEFT JOIN tournaments t ON t.id=m.tournament_id WHERE m.status='confirmed' AND m.club_id=?",event.club_id).all<SeedMatch>()).results).map(s=>s.id);if(!Array.isArray(seeds)||seeds.length!==participants.length||new Set(seeds).size!==seeds.length||seeds.some(p=>typeof p!=='string'||!participants.includes(p)))bad(400,'The seed list must contain every registered player exactly once.');
     bestOf=Number(body.bestOf);const thirdPlace=body.thirdPlace===true;if(body.thirdPlace!==undefined&&typeof body.thirdPlace!=='boolean')bad(400,'Choose whether to include a third-place playoff.');after=createDraw(seeds as string[],event.format,bestOf,thirdPlace);
    }else{
     if(!before)bad(409,'Start the tournament first.');
@@ -60,7 +60,7 @@ export async function tournamentAction(db:D1Database,user:{id:string},body:Recor
  }
  const now=new Date().toISOString(),afterJson=after?JSON.stringify(after):null;
  if(afterJson&&new TextEncoder().encode(afterJson).length>800000)bad(400,'This draw exceeds the current event storage limit. Split the field into smaller divisions.');
- const statements=[q('UPDATE tournaments SET state_json=?,status=?,best_of=?,capacity=?,revision=revision+1,last_operation=? WHERE id=? AND revision=?',afterJson,status,bestOf,capacity,operationId,eventId,event.revision),...extra];
+ const statements=[q(`UPDATE tournaments SET state_json=?,status=?,best_of=?,capacity=?,rating_weight=CASE WHEN ? THEN (SELECT CASE WHEN count(DISTINCT e.player_id)>=2 AND count(DISTINCT m.club_id)>=2 THEN 3 ELSE 2 END FROM entries e JOIN memberships m ON m.player_id=e.player_id JOIN clubs c ON c.id=m.club_id JOIN profiles p ON p.id=e.player_id WHERE e.tournament_id=tournaments.id AND m.status='active' AND m.role!='guest' AND c.approval_status='approved' AND p.deleted_at IS NULL) ELSE rating_weight END,revision=revision+1,last_operation=? WHERE id=? AND revision=?`,afterJson,status,bestOf,capacity,action==='start_tournament'?1:0,operationId,eventId,event.revision),...extra];
  // Every mutation after the compare-and-swap uses the same operation guard.
  // A stale writer therefore cannot partially update fixtures, standings or history.
  if(after){for(const fixture of after.fixtures){

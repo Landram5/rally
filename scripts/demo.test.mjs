@@ -9,7 +9,7 @@ for(const name of ['demo-state','rally','match-rules','tournament-engine','seedi
 const {createDemoData,applyDemoAction}=await import('../.test-runtime/demo-state.mjs');
 const {outcome}=await import('../.test-runtime/tournament-engine.mjs');
 const seed=createDemoData();
-assert.equal(seed.tournaments.filter(t=>t.status==='completed').length,3);
+assert.equal(seed.tournaments.filter(t=>t.status==='completed').length,4);
 for(const t of seed.tournaments.filter(t=>t.status==='completed'))assert.equal(outcome(t.state).status,'completed');
 const third=seed.tournaments.find(t=>t.id==='summer');assert.ok(third.state.thirdPlace);assert.ok(seed.matches.some(m=>m.tournament_id===third.id));
 const pending=seed.matches.find(m=>m.status==='pending');assert.ok(pending);

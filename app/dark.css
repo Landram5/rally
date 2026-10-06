@@ -1,0 +1,32 @@
+html.dark{color-scheme:dark;--background:#111d19;--foreground:#edf3ed;--card:#1b2a23;--card-foreground:#edf3ed;--popover:#1b2a23;--popover-foreground:#edf3ed;--primary:#b7d6bf;--primary-foreground:#15271b;--secondary:#263a2e;--secondary-foreground:#edf3ed;--muted:#263a2e;--muted-foreground:#b4c5b8;--accent:#304434;--accent-foreground:#edf3ed;--destructive:#ff9c90;--border:#415449;--input:#415449;--ring:#d9ed64;--sidebar:#1b2a23;--sidebar-foreground:#edf3ed;--sidebar-primary:#d9ed64;--sidebar-primary-foreground:#15271b;--sidebar-accent:#263a2e;--sidebar-accent-foreground:#edf3ed;--sidebar-border:#415449}
+.dark body{background:var(--background);color:var(--foreground)}
+.dark :is(.nav-wrap,.stat-card,.panel,.event-card,.club-card,.profile-card,.auth-card,.legal-page section,.account-settings section,.feedback-card,.directory-card,.directory-empty,.public-stat-grid article,.public-result,.public-event-hero,.public-draw,.public-entrants,.public-player-links,.form-dialog,.seed-dialog,.picker,.searchbox,.player-search-trigger){background:var(--card);color:var(--foreground);border-color:var(--border)}
+.dark :is(input,textarea,select,.account-settings textarea,.account-settings select,.auth-form input,.directory-search input:not([type=hidden])){background:var(--background);color:var(--foreground);border-color:var(--border)}
+.dark :is(.directory-heading p,.directory-card p,.directory-card small,.directory-empty,.public-hero p,.public-result small,.public-score small,.legal-page section p,.legal-updated,.auth-heading>p:last-child,.auth-switch,.account-settings p,.account-settings .profile-help,.account-choice small,.person small,.stat-card>span,.stat-card>small,.panel-heading p,.panel-heading button,.panel .rank-col,.match-score small,.match-meta,.event-card>p,.event-info,.event-bottom,.club-body p,.club-body small,.club-meta,.profile-help,.profile-stats small,.profile-meta,.eyebrow,.subheading,.footnote,.muted,.elo-help,.live-match-context,.feedback-card small){color:var(--muted-foreground)}
+.dark :is(.directory-member-link,.directory-view,.directory-search a,.directory-empty a,.directory-pagination a,.public-footer a,.legal-page section a,.auth-switch button,.ios-install-link,.account-settings>a,.account-settings section a,.rating-explanation>a,.elo-help a){color:#d9ed64}
+.dark :is(.demo-note,.accent-card,.badge,.date-block,.rally-id,.live-game-history span,.live-reset-confirm,.seeding-explanation,.seed-preview,.welcome-panel,.account-confirm,.public-stat-grid .highlight){background:#293e2e;color:#deebd8;border-color:var(--border)}
+.dark :is(.panel th,.table-head,.public-standings th){background:#223529;color:var(--muted-foreground)}
+.dark :is(.main-nav [role=tab],.directory-tabs a){color:var(--muted-foreground)}
+.dark :is(.main-nav [role=tab][data-state=active],.directory-tabs a[aria-current=page]){color:#d9ed64;border-color:#d9ed64}
+.dark :is(.match-row,.match-actions,.event-bottom,.club-footer,.profile-section,.directory-tabs,.public-footer,.event-facts span){border-color:var(--border)}
+.dark .google-button{background:var(--card);color:var(--foreground);border-color:var(--border)}.dark .google-button:hover{background:#263a2e}
+.dark .auth-form label{color:var(--foreground)}.dark .auth-form label small{color:var(--muted-foreground)}
+.dark .auth-error{background:#472a28;color:#ffc4b8;border-color:#80524a}.dark .auth-success{background:#283f2a;color:#c4e9b6;border-color:#456c43}
+.dark .account-danger{border-color:#80524a!important}.dark .account-danger h2,.dark .account-danger button:not(.primary-action){color:#ffb5aa}.dark .account-delete{background:#642e2b;color:#ffe1db!important}
+.dark .win{background:#30492c;color:#d9edc9}.dark .loss{background:#49312d;color:#f0c0b2}
+.dark .player-search-trigger{background:var(--card);color:var(--foreground);border-color:var(--border)}
+.dark [data-sonner-toast]{background:var(--card)!important;color:var(--foreground)!important;border-color:var(--border)!important}
+.appearance-settings label{display:block;margin-top:12px}.appearance-settings select{margin-top:8px;min-height:44px;max-width:100%;width:260px}.rating-explanation .rating-formula{font-family:monospace;background:var(--muted);color:var(--foreground);padding:12px;border-radius:8px;margin:16px 0;overflow-wrap:anywhere}.rating-explanation section p+p{margin-top:14px}
+.dark :is(h1,h2,h3){color:var(--foreground)}
+.dark [data-slot=dialog-close]{background:var(--card);color:var(--foreground)}
+.dark :is(.entrant-rows,.seed-list,.bracket-match,.fixture-label,.standings-wrap,.guest-registration,.bracket-viewport,.diagram-node,.event-facts,.public-entrants a,.public-player-links a,.third-place-card,.install-steps li,.approval-empty){background:var(--card);color:var(--foreground);border-color:var(--border)}
+.dark :is(.load-error,.approval-count){background:#472a28;color:#ffc4b8;border-color:#80524a}
+.dark .result-loss{background:#49312d;color:#f0c0b2}.dark .leadership-row select{background:var(--background);color:var(--foreground);border-color:var(--border)}
+.dark :is(.fixture-label,.bracket-match small,.bracket-player,.entrant-row small,.seed-evidence,.event-facts small,.install-steps p){color:var(--muted-foreground)}
+.elo-help a,.footnote a,.seeding-explanation a{text-decoration:underline;text-underline-offset:3px}
+.dark :is(.tournament-sheet,.profile-stats,.event-intro,.rules-box,.next-step,.third-place-option,.account-club,.diagram-meta,.approval-empty>span,.approval-icon){background:var(--card);color:var(--foreground);border-color:var(--border)}
+.dark :is(.diagram-meta,.diagram-heading,.diagram-footer>span,.rules-box p,.event-intro p,.bracket-toolbar,.zoom-label){color:var(--muted-foreground)}
+.dark :is(.diagram-player.advanced,.fixture-ready .fixture-label,.fixture-played .fixture-label,.result-win){background:#30492c;color:#deebd8;border-color:var(--border)}
+.dark .diagram-player{border-color:var(--border)}.dark .tournament-title-row a{color:#d9ed64}
+.dark :is(.champion-banner h3,.diagram-champion){color:#253c22}
+.appearance-settings{padding:22px;border:1px solid var(--border);border-radius:12px;margin:22px 0}.dark .auth-divider:before,.dark .auth-divider:after{background:var(--border)}

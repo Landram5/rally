@@ -1,4 +1,5 @@
 'use client';
+import AppearanceSettings from '@/app/appearance-settings';
 import {useCallback,useEffect,useState} from 'react';
 import Link from 'next/link';
 import PublicHeader from '../public-header';
@@ -30,7 +31,7 @@ export default function AccountPage(){
   try {const result=await send({action:'delete',mode,confirmation});window.location.replace(`/account/deleted${result.pending?'?pending=1':''}`)}
   catch(e){setError(e instanceof Error?e.message:'Could not delete your account.');setBusy(false)}
  }
- return <><PublicHeader/><main className="account-settings"><h1>Account settings</h1>
+ return <><PublicHeader/><main className="account-settings"><h1>Account settings</h1><AppearanceSettings/>
   <Link href="/clubhouse">Back to clubhouse</Link>
   {loading&&<p role="status">Loading account settings…</p>}
   {error&&<div className="auth-error" role="alert"><p>{error}</p>{!settings&&<button onClick={()=>void load()}>Try again</button>}</div>}

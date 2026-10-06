@@ -2,15 +2,15 @@ import type {Data} from '../app/rally-app';
 import {clubs,players,initialMatches} from './rally';
 import {scoreError} from './match-rules';
 import {createDraw,recordFixture,resetFixture,withdrawPlayer,outcome,type Draw} from './tournament-engine';
-import {suggestSeeds} from './seeding';
+import {suggestSeeds,tournamentWeight} from './seeding';
 
 // Sample actions stay in memory and never call the production API.
 function finish(draw:Draw){let d=draw;while(d.fixtures.some(f=>f.status==='ready')){const f=d.fixtures.find(f=>f.status==='ready')!;d=recordFixture(d,f.id,Array.from({length:Math.floor(d.bestOf/2)+1},()=>[11,7]));}return d;}
 function derive(data:Data){
  for(const c of data.clubs)c.activeMemberCount=data.memberships.filter(m=>m.club_id===c.id&&m.status==='active').length;
  for(const t of data.tournaments){
-  if(t.state){t.status=outcome(t.state).status==='completed'?'completed':'active';data.matches=data.matches.filter(m=>m.tournament_id!==t.id);
-   for(const f of t.state.fixtures.filter(f=>f.status==='played'))data.matches.push({id:`${t.id}-${f.id}`,club_id:t.club_id,a:f.a!,b:f.b!,games:f.games,best_of:t.state.bestOf,played_on:t.date,status:'confirmed',submitted_by:'alex',confirmed_by:'alex',canConfirm:false,canVoid:false,tournament_id:t.id});}
+  if(t.state){t.rating_weight??=tournamentWeight(data.entries.filter(e=>e.tournament_id===t.id).map(e=>e.player_id),data.memberships,data.clubs.filter(c=>c.approvalStatus==='approved').map(c=>c.id));t.status=outcome(t.state).status==='completed'?'completed':'active';data.matches=data.matches.filter(m=>m.tournament_id!==t.id);
+   for(const f of t.state.fixtures.filter(f=>f.status==='played'))data.matches.push({id:`${t.id}-${f.id}`,club_id:t.club_id,a:f.a!,b:f.b!,games:f.games,best_of:t.state.bestOf,played_on:t.date,status:'confirmed',submitted_by:'alex',confirmed_by:'alex',canConfirm:false,canVoid:false,tournament_id:t.id,tournament_weight:t.rating_weight});}
  }
  for(const t of data.tournaments)t.seedStats=suggestSeeds(data.entries.filter(e=>e.tournament_id===t.id).map(e=>e.player_id),data.matches.filter(m=>m.club_id===t.club_id));
  data.matches.sort((a,b)=>b.played_on.localeCompare(a.played_on));return data;
@@ -27,6 +27,7 @@ export function createDemoData():Data{
  {id:'autumn',name:'Autumn Singles',date:'2026-10-10',club:'harbor',format:'Single elimination',state:null},
  {id:'live',name:'Harbor Open',date:'2026-10-05',club:'harbor',format:'Single elimination',state:createDraw(['alex','jordan','sam','riley'],'Single elimination',3,true)},
  {id:'summer',name:'Summer Singles Final',date:'2026-09-20',club:'harbor',format:'Single elimination',state:finish(createDraw(['alex','jordan','sam','riley'],'Single elimination',3,true))},
+ {id:'interclub',name:'Interclub Open',date:'2026-09-22',club:'harbor',format:'Single elimination',state:finish(createDraw(['alex','jordan','casey','taylor'],'Single elimination',3))},
  {id:'league',name:'September Round Robin',date:'2026-09-13',club:'metro',format:'Round robin',state:finish(createDraw(['casey','taylor','morgan','jamie'],'Round robin',3))},
  {id:'double',name:'Metro Double Elimination',date:'2026-08-30',club:'metro',format:'Double elimination',state:finish(createDraw(['casey','taylor','morgan','jamie'],'Double elimination',3))}];
  for(const t of samples){data.tournaments.push({id:t.id,name:t.name,club_id:t.club,date:t.date,format:t.format,capacity:16,status:t.state?'active':'registration',best_of:3,revision:0,state:t.state,seedStats:[]});for(const id of t.state?.seeds??['alex','jordan','sam'])data.entries.push({tournament_id:t.id,player_id:id});}
@@ -62,7 +63,7 @@ export function applyDemoAction(current:Data,p:Record<string,unknown>):Data{
   if(action==='enter_tournament'||action==='add_tournament_guest'){if(t.status!=='registration'||entries.length>=t.capacity)throw new Error('Registration is closed or full.');const entrant=action==='add_tournament_guest'?addGuest():playerId;if(entries.some(e=>e.player_id===entrant))throw new Error('Player is already registered.');d.entries.push({tournament_id:id,player_id:entrant});}
   else if(action==='remove_entry'){if(t.status!=='registration')throw new Error('The draw is locked.');d.entries=d.entries.filter(e=>e.tournament_id!==id||e.player_id!==playerId);}
   else if(action==='set_capacity'){if(!Number.isInteger(p.capacity)||Number(p.capacity)<Math.max(2,entries.length))throw new Error('The limit must fit the registered players.');t.capacity=Number(p.capacity);}
-  else if(action==='start_tournament'){t.state=createDraw(p.seeds as string[],t.format,Number(p.bestOf),Boolean(p.thirdPlace));t.best_of=Number(p.bestOf);}
+  else if(action==='start_tournament'){t.rating_weight=tournamentWeight(entries.map(e=>e.player_id),d.memberships,d.clubs.filter(c=>c.approvalStatus==='approved').map(c=>c.id));t.state=createDraw(p.seeds as string[],t.format,Number(p.bestOf),Boolean(p.thirdPlace));t.best_of=Number(p.bestOf);}
   else if(action==='score_fixture')t.state=recordFixture(t.state!,text('fixtureId'),p.games,p.forfeitWinner as string|undefined);
   else if(action==='reset_fixture')t.state=resetFixture(t.state!,text('fixtureId'));
   else if(action==='withdraw_player')t.state=withdrawPlayer(t.state!,playerId);

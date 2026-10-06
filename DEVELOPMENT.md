@@ -19,6 +19,8 @@
 - Record match supports live tap-to-score tracking, win-by-two games, undo, side switching and final result submission.
 - Club leaders upload club photos and banners. Signed-in players submit private feature requests and bug reports; site administrators manage their status.
 - Club standings and tournament seeding share club-specific Elo ratings. Players remain provisional until five verified matches; established players rank first. Head-to-head selectors support player search and keyboard selection.
+- Account settings offer Light, Dark and device-based appearance, saved per browser. Public rating guidance at `/ratings` explains the adapted Elo formula, tournament weights, time window and separation from official USATT ratings.
+- Rally Elo weights regular matches 1x, single-club tournaments 2x and qualifying cross-club tournaments 3x. Point changes retain full value for 12 months, half value for the next 12, then expire. Five eligible matches in that window establish a player. Tournament weights are locked when the draw starts.
 
 ## Production configuration
 
