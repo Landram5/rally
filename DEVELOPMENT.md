@@ -82,3 +82,11 @@ The clubhouse uses compact summaries plus on-demand rating/event details. Matche
 Rating history adds a trend chart and an all-clubs/individual-club scope selector. The rating rules are unchanged. Inbox verification links select the exact match, which identifies its submitter and eligible verifier. The demo seeds club details, event logistics and check-in notices, and supports the same operations without changing production records.
 
 Regression coverage is in rally-service, demo, notifications, account-deletion, rating-history and live-score-elo tests. Production club checks caught a Server Component serialization restriction: internal null-prototype aggregation dictionaries must be converted to plain objects before passing page props. The service test now guards that boundary.
+
+## Session continuity — October 6, 2026
+
+proxy.ts renews expired Auth sessions before page rendering, propagating refreshed cookies to both the current request and browser response. It preserves Supabase's persistent cookie options and refresh cache headers, adding private/no-store for changed session responses. APIs and Auth callbacks keep their existing route-handler cookie persistence and are excluded from the proxy, along with static assets. Identity still comes from Auth getUser; stored cookie identity is never sufficient for authorization. Invalid/revoked refresh tokens clear the session normally.
+
+PublicHeader now restores the current account through the private/no-store /api/auth/session endpoint and exposes a return to the member clubhouse. Public profiles, the home page and other public pages no longer unconditionally label signed-in visitors as signed out. Account state reloads on focus/resume; temporary fetch failures preserve a previously known account. No refresh token or email is exposed by the endpoint. Public browsing remains available without an account.
+
+Run node scripts/auth-session.test.mjs for expired-token renewal, browser/request cookie propagation, persistent lifetime, reopening continuity, verified identity, anonymous browsing and revoked-session rejection. Browser checks cannot establish the actual iOS Home Screen process lifecycle; after an already-lost session, sign in once from the installed app and verify close/reopen on the device.

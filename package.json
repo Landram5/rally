@@ -12,7 +12,7 @@
     "deploy": "pnpm build && wrangler deploy --config dist/server/wrangler.json",
     "db:migrate:local": "wrangler d1 migrations apply DB --local --persist-to .wrangler/state",
     "db:migrate:remote": "wrangler d1 migrations apply DB --remote",
-    "lint": "eslint app lib components worker.ts vite.config.ts --ignore-pattern .next",
+    "lint": "eslint app lib components proxy.ts worker.ts vite.config.ts --ignore-pattern .next",
     "db:generate": "drizzle-kit generate",
     "test:account-deletion": "node scripts/account-deletion.test.mjs"
   },
