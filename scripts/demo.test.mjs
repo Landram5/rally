@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
 import ts from 'typescript';
 mkdirSync('.test-runtime',{recursive:true});
-for(const name of ['rally-errors','logistics','notifications','demo-state','rally','match-rules','tournament-engine','seeding']){
+for(const name of ['notification-preferences','club-seasons','feedback-progress','rally-errors','logistics','notifications','demo-state','rally','match-rules','tournament-engine','seeding']){
  const code=ts.transpileModule(readFileSync(`lib/${name}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText.replace(/from ['"]\.\/([^'"]+)['"]/g,"from './$1.mjs'");
  writeFileSync(`.test-runtime/${name}.mjs`,code);
 }

@@ -1,6 +1,7 @@
 import {env} from 'cloudflare:workers';
 import {getAuthenticatedUser} from '@/lib/auth';
 import {readActivityPage} from '@/lib/activity-pages';
+import {seasonViews} from '@/lib/club-seasons';
 import {matchRecord} from '@/lib/record-ownership';
 import {ratingHistory} from '@/lib/seeding';
 import {AppError,makeService} from '@/lib/rally-service';
@@ -10,6 +11,7 @@ function isSiteAdmin(email:string){return (env.RALLY_ADMIN_EMAILS??'').split(','
 function response(data:unknown,status=200){return Response.json(data,{status,headers:{'Cache-Control':'private, no-store','Vary':'Cookie'}})}
 function error(e:unknown){if(e instanceof AppError)return response({error:e.message},e.status);console.error('Rally data error',e);return response({error:'Your data is temporarily unavailable. Please try again.'},503)}
 export async function GET(request:Request){try{const query=new URL(request.url).searchParams,user=await getAuthenticatedUser(),siteAdmin=!!user&&isSiteAdmin(user.email),view=query.get('view');
+ if(view==='seasons'){const profile=user?await env.DB.prepare('SELECT id FROM profiles WHERE auth_id=? AND deleted_at IS NULL').bind(user.id).first<{id:string}>():null;return response(await seasonViews(env.DB,query.get('club')??'',profile?.id??null));}
  if(view==='members'||view==='matches'||view==='tournaments')return response(await readActivityPage(env.DB,user?.id??null,{view,club:query.get('club')??'all',search:query.get('search')??'',role:query.get('role')??'all',status:query.get('status')??'all',page:Number(query.get('page')??1),match:query.get('match')??'',isSiteAdmin:siteAdmin}));
  if(!user)return response({error:'Sign in to open the Rally clubhouse.'},401);
  if(view==='match-record'){const profile=await env.DB.prepare('SELECT id FROM profiles WHERE auth_id=? AND deleted_at IS NULL').bind(user.id).first<{id:string}>();if(!profile)return response({error:'Create your player profile first.'},403);return response(await matchRecord(env.DB,profile.id,query.get('match')??''));}

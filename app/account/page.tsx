@@ -1,4 +1,6 @@
 'use client';
+import NotificationSettings from '@/app/notification-settings';
+import type {NotificationPreferences} from '@/lib/notification-preferences';
 import AppearanceSettings from '@/app/appearance-settings';
 import {useCallback,useEffect,useState} from 'react';
 import Link from 'next/link';
@@ -6,7 +8,7 @@ import PublicHeader from '../public-header';
 import AccountProfileForm,{type AccountProfile} from '../account-profile-form';
 import type {AccountPlan,DeletionMode} from '@/lib/account-deletion';
 
-type Settings=AccountPlan&{email:string;deletionAvailable:boolean;profile:AccountProfile|null};
+type Settings=AccountPlan&{preferences?:NotificationPreferences|null;email:string;deletionAvailable:boolean;profile:AccountProfile|null};
 export default function AccountPage(){
  const [settings,setSettings]=useState<Settings|null>(null),[signedOut,setSignedOut]=useState(false),[error,setError]=useState(''),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false);
  const [mode,setMode]=useState<DeletionMode>('keep_results'),[confirmation,setConfirmation]=useState(''),[selection,setSelection]=useState<Record<string,string>>({}),[transfer,setTransfer]=useState<{clubId:string;successorId:string;name:string}|null>(null);
@@ -46,7 +48,7 @@ export default function AccountPage(){
     </>:<p>No eligible new owner is available. Ask another person to create a Rally account and join your club, then approve their membership. They must not already own another club. <button onClick={()=>void load()} disabled={busy}>Refresh members</button></p>}</div>)}
     {transfer&&<div className="account-confirm" role="group" aria-label="Confirm ownership transfer"><p>Make <strong>{transfer.name}</strong> the new owner? They will control the club. You cannot take ownership back yourself.</p><button type="button" onClick={()=>void transferOwner()} disabled={busy}>{busy?'Transferring…':'Confirm transfer'}</button><button type="button" onClick={()=>setTransfer(null)} disabled={busy}>Cancel</button></div>}
    </section>}
-   <AppearanceSettings/><section className="account-danger"><h2>Delete account</h2><p>This permanently removes your sign-in account, display name and club memberships. Your public player profile will no longer be available. This cannot be undone.</p>
+   <NotificationSettings key={settings.profile?.id} initial={settings.preferences} disabled={busy||!settings.profile} onSave={async preferences=>{await send({action:'save_notification_preferences',...preferences});}}/><AppearanceSettings/><section className="account-danger"><h2>Delete account</h2><p>This permanently removes your sign-in account, display name and club memberships. Your public player profile will no longer be available. This cannot be undone.</p>
     <form onSubmit={remove}>
      <fieldset disabled={busy}><legend>What should happen to your player history?</legend>
       <label className="account-choice"><input type="radio" name="history" checked={mode==='keep_results'} onChange={()=>setMode('keep_results')}/><span><strong>Keep past results as “Deleted player”</strong><small>Retain the connection between your previous match and tournament results without your name or sign-in details.</small></span></label>

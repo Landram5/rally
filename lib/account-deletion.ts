@@ -66,6 +66,8 @@ export async function beginDeletion(db:D1Database,authId:string,mode:DeletionMod
   const id=profile.id;
   statements.push(q("UPDATE profiles SET name='Deleted player',auth_id=NULL,deleted_at=? WHERE id=?",now,id));
   statements.push(q('DELETE FROM memberships WHERE player_id=?',id));
+  statements.push(q('DELETE FROM notification_preferences WHERE player_id=?',id));
+  statements.push(q("UPDATE season_players SET status='withdrawn' WHERE player_id=?",id));
   statements.push(q('DELETE FROM tournament_waitlist WHERE player_id=?',id));
   // Requests contain personal explanations. Remove them when either identity goes.
   statements.push(q('DELETE FROM guest_claims WHERE guest_id=? OR claimant_id=?',id,id));
@@ -98,7 +100,7 @@ export async function beginDeletion(db:D1Database,authId:string,mode:DeletionMod
     OR id IN (SELECT tournament_id FROM tournament_operations WHERE actor_id!=? AND
      (instr(payload,?)>0 OR instr(COALESCE(before_state,''),?)>0 OR instr(COALESCE(after_state,''),?)>0))`,
     id,id,id,id,id,quotedId,id,quotedId,quotedId,quotedId).all<{id:string;state_json:string|null;revision:number}>()).results;
-   const matches=(await q('SELECT id,tournament_id FROM matches WHERE a=? OR b=? OR submitted_by=? OR confirmed_by=?',id,id,id,id).all<{id:string;tournament_id:string|null}>()).results;
+   const matches=(await q('SELECT id,tournament_id,club_id,played_on FROM matches WHERE a=? OR b=? OR submitted_by=? OR confirmed_by=?',id,id,id,id).all<{id:string;tournament_id:string|null;club_id:string;played_on:string}>()).results;
    const scopes=new Map<string,string>();
    const placeholder=(scope:string)=>{
     let pid=scopes.get(scope);
@@ -119,10 +121,12 @@ export async function beginDeletion(db:D1Database,authId:string,mode:DeletionMod
    }
    for(const match of matches) {
     const pid=placeholder(match.tournament_id?`event:${match.tournament_id}`:`match:${match.id}`);
+    statements.push(q("INSERT OR IGNORE INTO season_players(season_id,player_id,status,created_at) SELECT sp.season_id,?,'withdrawn',sp.created_at FROM season_players sp JOIN club_seasons s ON s.id=sp.season_id WHERE sp.player_id=? AND s.club_id=? AND s.starts_on<=? AND s.ends_on>=?",pid,id,match.club_id,match.played_on,match.played_on));
     statements.push(q('UPDATE matches SET a=CASE WHEN a=? THEN ? ELSE a END,b=CASE WHEN b=? THEN ? ELSE b END,submitted_by=CASE WHEN submitted_by=? THEN ? ELSE submitted_by END,confirmed_by=CASE WHEN confirmed_by=? THEN ? ELSE confirmed_by END WHERE id=?',id,pid,id,pid,id,pid,id,pid,match.id));
     statements.push(q('UPDATE match_history SET before_json=replace(before_json,?,?),after_json=replace(after_json,?,?) WHERE match_id=?',quotedId,JSON.stringify(pid),quotedId,JSON.stringify(pid),match.id));
    }
    statements.push(q('DELETE FROM entries WHERE player_id=?',id));
+   statements.push(q('DELETE FROM season_players WHERE player_id=?',id));
    statements.push(q('DELETE FROM profiles WHERE id=?',id));
   }
  }

@@ -1,1 +1,1 @@
-export type Feedback={id:string;submitted_by:string;type:'bug'|'feature';title:string;description:string;page:string;status:string;created_at:string;updated_at:string};
+export type Feedback={revision?:number;updates?:{id:string;status:string;note:string;created_at:string}[];id:string;submitted_by:string;type:'bug'|'feature';title:string;description:string;page:string;status:string;created_at:string;updated_at:string};
