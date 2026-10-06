@@ -66,7 +66,25 @@ export async function beginDeletion(db:D1Database,authId:string,mode:DeletionMod
   const id=profile.id;
   statements.push(q("UPDATE profiles SET name='Deleted player',auth_id=NULL,deleted_at=? WHERE id=?",now,id));
   statements.push(q('DELETE FROM memberships WHERE player_id=?',id));
+  statements.push(q('DELETE FROM tournament_waitlist WHERE player_id=?',id));
+  // Requests contain personal explanations. Remove them when either identity goes.
+  statements.push(q('DELETE FROM guest_claims WHERE guest_id=? OR claimant_id=?',id,id));
+  statements.push(q('UPDATE guest_claims SET reviewed_by=NULL WHERE reviewed_by=?',id));
+  statements.push(q('DELETE FROM match_reviews WHERE requested_by=?',id));
+  statements.push(q('UPDATE match_reviews SET resolved_by=NULL WHERE resolved_by=?',id));
+  statements.push(q('DELETE FROM match_history WHERE actor_id=?',id));
+  statements.push(q('UPDATE profiles SET merged_into=NULL WHERE merged_into=?',id));
   statements.push(q("DELETE FROM entries WHERE player_id=? AND tournament_id IN (SELECT id FROM tournaments WHERE status='registration')",id));
+  const openEntries=(await q("SELECT t.id,t.revision FROM tournaments t JOIN entries e ON e.tournament_id=t.id WHERE e.player_id=? AND t.status='registration' AND t.deleted_at IS NULL AND (t.registration_closes_at IS NULL OR t.registration_closes_at>?)",id,now).all<{id:string;revision:number}>()).results;
+  for(const event of openEntries){
+   const next=await q("SELECT w.id,w.player_id FROM tournament_waitlist w JOIN profiles p ON p.id=w.player_id WHERE w.tournament_id=? AND p.id!=? AND p.deleted_at IS NULL AND NOT EXISTS(SELECT 1 FROM account_deletions d WHERE d.auth_id=p.auth_id) ORDER BY w.created_at,w.rowid LIMIT 1",event.id,id).first<{id:string;player_id:string}>();
+   if(next){
+    statements.push(q('INSERT INTO deletion_revision_guards(tournament_id,expected_revision) VALUES(?,?)',event.id,event.revision));
+    statements.push(q('UPDATE tournaments SET revision=revision+1 WHERE id=?',event.id));
+    statements.push(q('INSERT INTO entries(id,tournament_id,player_id,created_at) VALUES(?,?,?,?)',crypto.randomUUID(),event.id,next.player_id,now));
+    statements.push(q('DELETE FROM tournament_waitlist WHERE id=?',next.id));
+   }
+  }
   // Operation payloads accept arbitrary JSON from the client, so drop authored audit
   // payloads rather than risk retaining personal text submitted as an extra property.
   statements.push(q('DELETE FROM tournament_operations WHERE actor_id=?',id));
@@ -102,6 +120,7 @@ export async function beginDeletion(db:D1Database,authId:string,mode:DeletionMod
    for(const match of matches) {
     const pid=placeholder(match.tournament_id?`event:${match.tournament_id}`:`match:${match.id}`);
     statements.push(q('UPDATE matches SET a=CASE WHEN a=? THEN ? ELSE a END,b=CASE WHEN b=? THEN ? ELSE b END,submitted_by=CASE WHEN submitted_by=? THEN ? ELSE submitted_by END,confirmed_by=CASE WHEN confirmed_by=? THEN ? ELSE confirmed_by END WHERE id=?',id,pid,id,pid,id,pid,id,pid,match.id));
+    statements.push(q('UPDATE match_history SET before_json=replace(before_json,?,?),after_json=replace(after_json,?,?) WHERE match_id=?',quotedId,JSON.stringify(pid),quotedId,JSON.stringify(pid),match.id));
    }
    statements.push(q('DELETE FROM entries WHERE player_id=?',id));
    statements.push(q('DELETE FROM profiles WHERE id=?',id));

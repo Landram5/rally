@@ -185,3 +185,12 @@ Validation passed: TypeScript, clean lint, production build and node scripts/rel
 Deployed Worker version 992e71e0-1aa7-4b0d-ad23-8ff353eba9b3 at rallytt.net. No database migration or production record edits were needed. Overview now offers My Rally, Organizer for club leaders, and Club overview. Includes continuous profile cropping and mobile navigation layout fixes.
 
 Validation: TypeScript, lint, production build and reliability regression suite passed. Read-only production checks confirmed both dashboard modes load with the account still signed in. Sample checks covered club filtering, focused verification, direct fixture scoring, crop controls/export, and all six mobile tab navigation positions. Profile crop test image was applied only to an unsaved sample form; no real player photos were changed. Device-only iPhone pinch/keyboard/rotation/Home Screen checks remain pending.
+
+
+## Registration and record ownership release — 2026-10-06
+
+Deployed Worker ea40f385-e89d-4e21-bf29-a5e58402f2b3 to rallytt.net after a 234,471-byte production export at .local-backups/production-before-release3.sql and successful remote migration 0014_registration_ownership.sql. Added visitor opt-in, FIFO waitlists, local QR invitations, organizer-approved guest claims, match disputes and score history. No production business records were created/merged/corrected for UI testing.
+
+TypeScript, clean lint, production build, existing reliability/account-deletion suites and the new release-three SQLite tests passed. Live sample checks verified correction snapshots and resolution, waitlist position changes, capacity promotion and copying the invitation URL. Signed-in /records loaded successfully without changing real requests. Mobile sheet and invitation layout were checked at 390 × 844; actual device QR scanning and organizer/player pilot remain pending.
+
+Final review also verifies deletion-driven waitlist promotion and exact-match review access beyond the global 100-request list. Proof: .local-backups/screenshots/records-release-three.png. A native confirmation from an earlier temporary test tab blocked further pointer interaction; the application now uses a Radix in-page confirmation instead. Final source/type/lint/build checks and database tests passed; the new confirmation’s live interaction can be rechecked after that earlier browser pop-up is dismissed.

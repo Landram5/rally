@@ -1,5 +1,5 @@
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
-const suites=[['scripts/auth-session.test.mjs'],['--experimental-strip-types','scripts/auth-rules.test.mjs'],['scripts/live-draft.test.mjs'],['scripts/dashboards.test.mjs'],['scripts/photo-crop.test.mjs'],['scripts/live-score-elo.test.mjs'],['scripts/rally-service.test.mjs'],['scripts/demo.test.mjs']];
+const suites=[['scripts/auth-session.test.mjs'],['--experimental-strip-types','scripts/auth-rules.test.mjs'],['scripts/live-draft.test.mjs'],['scripts/dashboards.test.mjs'],['scripts/photo-crop.test.mjs'],['scripts/live-score-elo.test.mjs'],['scripts/rally-service.test.mjs'],['scripts/demo.test.mjs'],['scripts/release-three.test.mjs'],['scripts/account-deletion.test.mjs']];
 for(const args of suites){const result=spawnSync(process.execPath,args,{cwd:fileURLToPath(new URL('..',import.meta.url)),stdio:'inherit'});if(result.error)throw result.error;if(result.status!==0)process.exit(result.status??1);}
 console.log('Reliability checks passed: sessions, redirects, live-score recovery, scoring, registration, verification, retries and demo isolation.');

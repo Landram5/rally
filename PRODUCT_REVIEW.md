@@ -94,3 +94,14 @@ Check-in remains attendance only. Unchecked entrants remain in the draw, and the
 The profile cropper now has a circular preview, one styled continuous zoom control, reset, drag/pan, focal-point two-pointer pinch zoom and keyboard movement/zoom. Image export and file limits stay the same. Mobile navigation is portaled outside the changing tab flex layout, and mobile fields use 16px text to avoid automatic iPhone focus zoom.
 
 Verification: TypeScript, lint, build and the reliability suite pass, including scope/deadline/attendance checks, compact/full dashboard parity, continuous crop geometry and edge bounds. Browser checks verified direct fixture scoring, profile crop keyboard controls and export, and the bottom bar at the same viewport edge across all six tabs at 390px width. Actual iPhone pinch, keyboard, rotation and Home Screen behavior remain device verification items. See ROADMAP.md for the next releases.
+
+
+## Release three — registration and record ownership
+
+Implemented visitor registration, waitlists, local QR invitations, approved guest claims and private correction/dispute histories. The sample demo includes a full Visiting Player Open, a guest claim and a match review, with account-menu access to Records & requests. This completes the previously proposed audit/correction and guest-ownership features.
+
+Review improvements: no implicit club membership from visitor registration; queue insertion order is stable for same-time joins; direct guest additions cannot jump waiting players; account deletion releases a place fairly; merges reject identity collisions and stale organizer permissions; source score snapshots survive regular corrections and tournament resets. Claimed identities retain the account's photo/Rally ID and public guest links keep working. In-page identity confirmation replaces a native browser confirmation. Mobile QR invitations stack their content and review sheets scroll within the viewport.
+
+Validation uses synthetic demo edits and temporary SQLite databases. Production requests are inspected read-only; no real tournament, guest claim, match correction or identity merge was fabricated. Before broad use, pilot a real event with visiting players, scan an invitation on an actual iPhone, and have two organizers verify a guest identity and resolve a disputed result. Browser-sized checks do not substitute for Home Screen device testing.
+
+Deliberate limits: automatic merges stop if both identities share a tournament or opposed each other; resolving such historical duplicates needs an organizer-led repair. Regular corrections edit scores, not players/date/format. Tournament corrections remain in the draw. This is an in-app review/notification workflow; email/push preferences and club ladders/seasons remain release four. Summary/rating replay still reads authorized history server-side, so aggregation caching remains a scale priority.

@@ -2,7 +2,7 @@ import {eventLogistics,optionalText,optionalInstant,registrationClosed} from './
 import {suggestSeeds,type SeedMatch} from './seeding';
 import {AppError} from './rally-errors';
 import {createDraw,recordFixture,resetFixture,withdrawPlayer,outcome,type Draw} from './tournament-engine';
-type Tournament={registration_closes_at:string|null;starts_at:string|null;check_in_open:number;id:string;name:string;club_id:string;date:string;format:string;capacity:number;status:string;best_of:number;state_json:string|null;revision:number;last_operation:string|null;created_by:string|null;deleted_at:string|null};
+type Tournament={allow_visitors:number;registration_closes_at:string|null;starts_at:string|null;check_in_open:number;id:string;name:string;club_id:string;date:string;format:string;capacity:number;status:string;best_of:number;state_json:string|null;revision:number;last_operation:string|null;created_by:string|null;deleted_at:string|null};
 const bad=(status:number,message:string):never=>{throw new AppError(status,message)};
 const validId=(v:unknown)=>{if(typeof v!=='string'||!v||v.length>80||!/^[a-zA-Z0-9_-]+$/.test(v))bad(400,'Invalid identifier.');return v as string};
 export async function tournamentAction(db:D1Database,user:{id:string},body:Record<string,unknown>){
@@ -28,11 +28,25 @@ export async function tournamentAction(db:D1Database,user:{id:string},body:Recor
  const participants=(await q('SELECT player_id FROM entries WHERE tournament_id=? ORDER BY created_at,id',eventId).all<{player_id:string}>()).results.map(e=>e.player_id);
  const before:Draw|null=event.state_json?JSON.parse(event.state_json):null;let after=before,status=event.status,bestOf=event.best_of,capacity=event.capacity;const extra:D1PreparedStatement[]=[];
  const guard='EXISTS (SELECT 1 FROM tournaments WHERE id=? AND last_operation=?)';
- if(action==='set_event_logistics'){
+ if(action==='set_registration_policy'){
+  if(!isAdmin)bad(403,'Only an organizer can change registration.');if(event.status!=='registration')bad(409,'Registration settings are locked after play starts.');if(typeof body.allowVisitors!=='boolean')bad(400,'Choose visiting-player registration.');
+  extra.push(q(`UPDATE tournaments SET allow_visitors=? WHERE id=? AND ${guard}`,body.allowVisitors?1:0,eventId,eventId,operationId));
+ }else if(action==='join_waitlist'||action==='leave_waitlist'){
+  const playerId=validId(body.playerId);if(playerId!==user.id&&!isAdmin)bad(403,'Only an organizer can change another player’s waitlist entry.');if(event.status!=='registration')bad(409,'The draw is locked.');
+  if(action==='join_waitlist'){
+   if(registrationClosed(event))bad(409,'Registration is closed.');if(participants.includes(playerId))bad(409,'Already registered.');
+   const host=await q("SELECT id FROM memberships WHERE club_id=? AND player_id=? AND status='active'",event.club_id,playerId).first();
+   if(!host&&!event.allow_visitors)bad(403,'This event is for host-club members.');
+   if(!await q('SELECT id FROM profiles WHERE id=? AND deleted_at IS NULL',playerId).first())bad(400,'Player unavailable.');
+   if(participants.length<capacity&&!await q('SELECT id FROM tournament_waitlist WHERE tournament_id=?',eventId).first())bad(409,'A place is available. Register instead.');
+   extra.push(q(`INSERT INTO tournament_waitlist(id,tournament_id,player_id,created_at) SELECT ?,?,?,? WHERE ${guard} ON CONFLICT(tournament_id,player_id) DO NOTHING`,crypto.randomUUID(),eventId,playerId,new Date().toISOString(),eventId,operationId));
+  }else extra.push(q(`DELETE FROM tournament_waitlist WHERE tournament_id=? AND player_id=? AND ${guard}`,eventId,playerId,eventId,operationId));
+ }else if(action==='set_event_logistics'){
+
   if(!isAdmin)bad(403,'Only an organizer can edit event logistics.');if(event.status==='completed')bad(409,'This event is completed.');const values=eventLogistics(body);
   extra.push(q(`UPDATE tournaments SET registration_closes_at=?,starts_at=?,check_in_open=? WHERE id=? AND ${guard}`,values.registration_closes_at,values.starts_at,values.check_in_open,eventId,eventId,operationId));
  }else if(action==='set_check_in'){
-  const playerId=validId(body.playerId);if(!isAdmin&&playerId!==user.id)bad(403,'Only an organizer can check in another player.');if(!isAdmin&&!membership)bad(403,'Active host-club membership is required.');if(event.status==='completed'||!event.check_in_open)bad(409,'Check-in is closed.');if(!participants.includes(playerId))bad(400,'Register before checking in.');if(typeof body.checkedIn!=='boolean')bad(400,'Choose a check-in status.');
+  const playerId=validId(body.playerId);if(!isAdmin&&playerId!==user.id)bad(403,'Only an organizer can check in another player.');if(event.status==='completed'||!event.check_in_open)bad(409,'Check-in is closed.');if(!participants.includes(playerId))bad(400,'Register before checking in.');if(typeof body.checkedIn!=='boolean')bad(400,'Choose a check-in status.');
   extra.push(q(`UPDATE entries SET checked_in_at=? WHERE tournament_id=? AND player_id=? AND ${guard}`,body.checkedIn?new Date().toISOString():null,eventId,playerId,eventId,operationId));
  }else if(action==='set_fixture_plan'){
   if(!isAdmin)bad(403,'Only an organizer can schedule matches.');const fixtureId=validId(body.fixtureId);if(event.status!=='active'||!before?.fixtures.some(f=>f.id===fixtureId&&(f.status==='ready'||f.status==='waiting')))bad(409,'Schedule an upcoming match in an active draw.');const court=optionalText(body.court,'Court',60),startsAt=optionalInstant(body.startsAt,'match time');
@@ -46,6 +60,7 @@ export async function tournamentAction(db:D1Database,user:{id:string},body:Recor
   if(!isAdmin)bad(403,'Only an organizer can add a guest.');
   if(registrationClosed(event))bad(409,'Registration is closed.');
   if(participants.length>=capacity)bad(409,'This tournament is full. Increase its player limit first.');
+  if(await q('SELECT id FROM tournament_waitlist WHERE tournament_id=?',eventId).first())bad(409,'Promote waiting players before adding a guest.');
   if(typeof body.name!=='string'||!body.name.trim()||body.name.trim().length>60)bad(400,'Enter a guest name of 1–60 characters.');
   const playerId=crypto.randomUUID(),created=new Date().toISOString();
   extra.push(q(`INSERT INTO profiles (id,name,created_at) SELECT ?,?,? WHERE ${guard}`,playerId,(body.name as string).trim(),created,eventId,operationId));
@@ -56,7 +71,9 @@ export async function tournamentAction(db:D1Database,user:{id:string},body:Recor
   const playerId=validId(body.playerId);if(!isAdmin&&playerId!==user.id)bad(403,'Only an organizer can change another player’s entry.');
   if(action==='enter_tournament'){
    if(registrationClosed(event))bad(409,'The registration deadline has passed.');
-   if(!await q("SELECT id FROM memberships WHERE club_id=? AND player_id=? AND status='active'",event.club_id,playerId).first())bad(403,'The player must be an active member of the host club.');
+   if(!await q("SELECT id FROM memberships WHERE club_id=? AND player_id=? AND status='active'",event.club_id,playerId).first()&&!event.allow_visitors)bad(403,'This event is for host-club members.');
+   if(!await q('SELECT id FROM profiles WHERE id=? AND deleted_at IS NULL',playerId).first())bad(400,'Player unavailable.');
+   if(!participants.includes(playerId)&&await q('SELECT id FROM tournament_waitlist WHERE tournament_id=?',eventId).first())bad(409,'Players are waiting for a place. Join the waitlist.');
    if(!participants.includes(playerId)&&participants.length>=event.capacity)bad(409,'This tournament is full.');
    extra.push(q(`INSERT INTO entries (id,tournament_id,player_id,created_at) SELECT ?,?,?,? WHERE ${guard} ON CONFLICT(tournament_id,player_id) DO NOTHING`,crypto.randomUUID(),eventId,playerId,new Date().toISOString(),eventId,operationId));
   }else extra.push(q(`DELETE FROM entries WHERE tournament_id=? AND player_id=? AND ${guard}`,eventId,playerId,eventId,operationId));
@@ -72,7 +89,7 @@ export async function tournamentAction(db:D1Database,user:{id:string},body:Recor
     if(action==='score_fixture'){
      if(event.status!=='active')bad(409,'This tournament is completed. Reset a result before changing it.');
      after=recordFixture(before!,validId(body.fixtureId),body.games,body.forfeitWinner===undefined?undefined:validId(body.forfeitWinner));
-    }else if(action==='reset_fixture')after=resetFixture(before!,validId(body.fixtureId));
+    }else if(action==='reset_fixture'){if(typeof body.note!=='string'||!body.note.trim()||body.note.trim().length>500)bad(400,'Explain the reset in 1–500 characters.');after=resetFixture(before!,validId(body.fixtureId));}
     else if(action==='withdraw_player'){
      if(event.status!=='active')bad(409,'Only active tournaments accept withdrawals.');
      after=withdrawPlayer(before!,validId(body.playerId));
@@ -83,18 +100,28 @@ export async function tournamentAction(db:D1Database,user:{id:string},body:Recor
  }
  const now=new Date().toISOString(),afterJson=after?JSON.stringify(after):null;
  if(afterJson&&new TextEncoder().encode(afterJson).length>800000)bad(400,'This draw exceeds the current event storage limit. Split the field into smaller divisions.');
- const privileged=['set_event_logistics','set_fixture_plan','set_capacity','add_tournament_guest','start_tournament','score_fixture','reset_fixture','withdraw_player'].includes(action)||(['set_check_in','enter_tournament','remove_entry'].includes(action)&&body.playerId!==user.id);
- const statements=[q(`UPDATE tournaments SET state_json=?,status=?,best_of=?,capacity=?,rating_weight=CASE WHEN ? THEN (SELECT CASE WHEN count(DISTINCT e.player_id)>=2 AND count(DISTINCT m.club_id)>=2 THEN 3 ELSE 2 END FROM entries e JOIN memberships m ON m.player_id=e.player_id JOIN clubs c ON c.id=m.club_id JOIN profiles p ON p.id=e.player_id WHERE e.tournament_id=tournaments.id AND m.status='active' AND m.role!='guest' AND c.approval_status='approved' AND p.deleted_at IS NULL) ELSE rating_weight END,revision=revision+1,last_operation=? WHERE id=? AND revision=? AND deleted_at IS NULL AND (?=0 OR EXISTS (SELECT 1 FROM memberships WHERE club_id=tournaments.club_id AND player_id=? AND status='active' AND role IN ('owner','admin','board'))) AND (?=0 OR (registration_closes_at IS NULL OR registration_closes_at>?)) AND (?=0 OR (check_in_open=1 AND status!='completed' AND EXISTS (SELECT 1 FROM memberships WHERE club_id=tournaments.club_id AND player_id=? AND status='active')))`,afterJson,status,bestOf,capacity,action==='start_tournament'?1:0,operationId,eventId,event.revision,privileged?1:0,user.id,['enter_tournament','add_tournament_guest'].includes(action)?1:0,now,action==='set_check_in'&&!isAdmin?1:0,user.id),...extra];
+ const privileged=['set_registration_policy','set_event_logistics','set_fixture_plan','set_capacity','add_tournament_guest','start_tournament','score_fixture','reset_fixture','withdraw_player'].includes(action)||(['set_check_in','enter_tournament','remove_entry','join_waitlist','leave_waitlist'].includes(action)&&body.playerId!==user.id);
+ const statements=[q(`UPDATE tournaments SET state_json=?,status=?,best_of=?,capacity=?,rating_weight=CASE WHEN ? THEN (SELECT CASE WHEN count(DISTINCT e.player_id)>=2 AND count(DISTINCT m.club_id)>=2 THEN 3 ELSE 2 END FROM entries e JOIN memberships m ON m.player_id=e.player_id JOIN clubs c ON c.id=m.club_id JOIN profiles p ON p.id=e.player_id WHERE e.tournament_id=tournaments.id AND m.status='active' AND m.role!='guest' AND c.approval_status='approved' AND p.deleted_at IS NULL) ELSE rating_weight END,revision=revision+1,last_operation=? WHERE id=? AND revision=? AND deleted_at IS NULL AND (?=0 OR EXISTS (SELECT 1 FROM memberships WHERE club_id=tournaments.club_id AND player_id=? AND status='active' AND role IN ('owner','admin','board'))) AND (?=0 OR (registration_closes_at IS NULL OR registration_closes_at>?)) AND (?=0 OR (check_in_open=1 AND status!='completed' AND EXISTS (SELECT 1 FROM entries WHERE tournament_id=tournaments.id AND player_id=?)))`,afterJson,status,bestOf,capacity,action==='start_tournament'?1:0,operationId,eventId,event.revision,privileged?1:0,user.id,['enter_tournament','add_tournament_guest','join_waitlist'].includes(action)?1:0,now,action==='set_check_in'&&!isAdmin?1:0,user.id),...extra];
+ if(['remove_entry','set_capacity','set_event_logistics','leave_waitlist'].includes(action)&&!registrationClosed(action==='set_event_logistics'?{...event,...eventLogistics(body)}:event)){
+  const queue=(await q("SELECT w.id,w.player_id FROM tournament_waitlist w JOIN profiles p ON p.id=w.player_id WHERE w.tournament_id=? AND p.deleted_at IS NULL AND NOT EXISTS (SELECT 1 FROM account_deletions ad WHERE ad.auth_id=p.auth_id) ORDER BY w.created_at,w.rowid",eventId).all<{id:string;player_id:string}>()).results;
+  const count=participants.length-(action==='remove_entry'&&participants.includes(String(body.playerId))?1:0),slots=Math.max(0,capacity-count);
+  for(const queued of queue.filter(w=>action!=='leave_waitlist'||w.player_id!==body.playerId).slice(0,slots)){statements.push(q(`INSERT INTO entries(id,tournament_id,player_id,created_at) SELECT ?,?,?,? WHERE ${guard} ON CONFLICT(tournament_id,player_id) DO NOTHING`,crypto.randomUUID(),eventId,queued.player_id,now,eventId,operationId));statements.push(q(`DELETE FROM tournament_waitlist WHERE id=? AND ${guard}`,queued.id,eventId,operationId));}
+ }
+ if(action==='start_tournament')statements.push(q(`DELETE FROM tournament_waitlist WHERE tournament_id=? AND ${guard}`,eventId,eventId,operationId));
  // Every mutation after the compare-and-swap uses the same operation guard.
  // A stale writer therefore cannot partially update fixtures, standings or history.
  if(after){for(const fixture of after.fixtures){
   const old=before?.fixtures.find(f=>f.id===fixture.id);if(JSON.stringify(old)===JSON.stringify(fixture))continue;
   const matchId=`t_${eventId}_${fixture.id}`;
+  const original=await q('SELECT * FROM matches WHERE id=?',matchId).first<Record<string,unknown>>();
+  const history=(snapshot:Record<string,unknown>,label:string)=>q(`INSERT INTO match_history(id,match_id,actor_id,action,note,before_json,after_json,created_at) SELECT ?,?,?,?,?,?,?,? WHERE ${guard}`,crypto.randomUUID(),matchId,user.id,label,typeof body.note==='string'?body.note.trim():label==='recorded'?'Official tournament result recorded.':'Updated through the tournament draw.',JSON.stringify(original??{games:'[]',status:'unrecorded'}),JSON.stringify(snapshot),now,eventId,operationId);
   if(fixture.status==='played'){
-   statements.push(q(`INSERT INTO matches (id,club_id,a,b,games,best_of,played_on,status,submitted_by,confirmed_by,tournament_id,created_at) SELECT ?,?,?,?,?,?,?,'confirmed',?,?,?,? WHERE ${guard} ON CONFLICT(id) DO UPDATE SET a=excluded.a,b=excluded.b,games=excluded.games,best_of=excluded.best_of,played_on=excluded.played_on,status='confirmed',submitted_by=excluded.submitted_by,confirmed_by=excluded.confirmed_by`,matchId,event.club_id,fixture.a,fixture.b,JSON.stringify(fixture.games),bestOf,now.slice(0,10),user.id,user.id,eventId,now,eventId,operationId));
+   statements.push(q(`INSERT INTO matches (id,club_id,a,b,games,best_of,played_on,status,submitted_by,confirmed_by,tournament_id,created_at) SELECT ?,?,?,?,?,?,?,'confirmed',?,?,?,? WHERE ${guard} ON CONFLICT(id) DO UPDATE SET a=excluded.a,b=excluded.b,games=excluded.games,best_of=excluded.best_of,played_on=excluded.played_on,status='confirmed',revision=matches.revision+1,submitted_by=excluded.submitted_by,confirmed_by=excluded.confirmed_by`,matchId,event.club_id,fixture.a,fixture.b,JSON.stringify(fixture.games),bestOf,now.slice(0,10),user.id,user.id,eventId,now,eventId,operationId));
+   statements.push(history({...original,a:fixture.a,b:fixture.b,games:JSON.stringify(fixture.games),status:'confirmed'},original?'replaced':'recorded'));
    statements.push(q(`INSERT INTO audit (id,match_id,actor_id,action,created_at) SELECT ?,?,?,?,? WHERE ${guard}`,crypto.randomUUID(),matchId,user.id,'tournament_result',now,eventId,operationId));
   }else if(old?.status==='played'){
-   statements.push(q(`UPDATE matches SET status='voided' WHERE id=? AND tournament_id=? AND ${guard}`,matchId,eventId,eventId,operationId));
+   statements.push(q(`UPDATE matches SET status='voided',revision=revision+1 WHERE id=? AND tournament_id=? AND ${guard}`,matchId,eventId,eventId,operationId));
+   statements.push(history({...original,status:'voided'},'reset'));
    statements.push(q(`INSERT INTO audit (id,match_id,actor_id,action,created_at) SELECT ?,?,?,?,? WHERE ${guard}`,crypto.randomUUID(),matchId,user.id,'tournament_reset',now,eventId,operationId));
   }
  }}

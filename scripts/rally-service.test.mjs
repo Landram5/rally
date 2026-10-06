@@ -3,7 +3,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {readFileSync,writeFileSync,mkdirSync,rmSync,readdirSync} from 'node:fs';
 import ts from 'typescript';
 mkdirSync('.test-runtime',{recursive:true});
-for(const name of ['dashboards','clubhouse-summary','rally','activity-pages','logistics','notifications','profile-photo','account-write-guard','account-deletion','rally-service','tournament-service','tournament-engine','match-rules','rally-errors','seeding','public-rally']){
+for(const name of ['record-ownership','dashboards','clubhouse-summary','rally','activity-pages','logistics','notifications','profile-photo','account-write-guard','account-deletion','rally-service','tournament-service','tournament-engine','match-rules','rally-errors','seeding','public-rally']){
  const compiled=ts.transpileModule(readFileSync(`lib/${name}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText.replace(/from ['"]\.\/([^'"]+)['"]/g, "from './$1.mjs'");
  writeFileSync(`.test-runtime/${name}.mjs`,compiled);
 }
@@ -165,13 +165,13 @@ await act('owner-auth',payload);await act('owner-auth',payload);
 assert.equal((await service.read('owner-auth')).matches.filter(m=>m.tournament_id==='event-one'&&m.status==='confirmed').length,1);
 await assert.rejects(act('owner-auth',{...payload,operationId:crypto.randomUUID()}),e=>e.status===409);
 await assert.rejects(act('owner-auth',{action:'void_match',id:`t_event-one_${t.state.fixtures[0].id}`}),e=>e.status===409);
-await go('reset_fixture',{fixtureId:t.state.fixtures[0].id});
+await go('reset_fixture',{note:'Correcting a score',fixtureId:t.state.fixtures[0].id});
 assert.equal((await service.read('owner-auth')).matches.filter(m=>m.tournament_id==='event-one'&&m.status==='confirmed').length,0);
 for(;;){t=(await service.read('owner-auth')).tournaments.find(t=>t.id==='event-one');const f=t.state.fixtures.find(f=>f.status==='ready');if(!f)break;await go('score_fixture',{fixtureId:f.id,games:[[11,7],[11,8]]})}
 assert.equal((await service.read('owner-auth')).tournaments.find(t=>t.id==='event-one').status,'completed');
 const publicPlayer=await getPublicPlayer(db,owner);assert.equal(publicPlayer.name,'Owner');assert.ok(publicPlayer.matches.every(m=>m.opponentId&&m.clubName));
 const publicEvent=await getPublicTournament(db,'event-one');assert.equal(publicEvent.name,'Club Open');assert.equal(publicEvent.entrants.length,4);assert.ok(publicEvent.state);
-await go('reset_fixture',{fixtureId:t.state.fixtures[0].id});
+await go('reset_fixture',{note:'Correcting a score',fixtureId:t.state.fixtures[0].id});
 assert.equal((await service.read('owner-auth')).tournaments.find(t=>t.id==='event-one').status,'active');
 // Two stale writers must not commit conflicting results or duplicate statistics.
 t=(await service.read('owner-auth')).tournaments.find(t=>t.id==='event-one');
@@ -185,7 +185,7 @@ for(const p of [owner,member,opponent,'guest-one','guest-two'])await go('enter_t
 await go('start_tournament',{seeds:[owner,member,opponent,'guest-one','guest-two'],bestOf:3},'owner-auth','knockout');
 let k;for(;;){k=(await service.read('owner-auth')).tournaments.find(t=>t.id==='knockout');const f=k.state.fixtures.find(f=>f.status==='ready');if(!f)break;await go('score_fixture',{fixtureId:f.id,games:[[11,7],[11,8]]},'owner-auth','knockout')}
 assert.equal(k.status,'completed');assert.equal((await service.read('owner-auth')).matches.filter(m=>m.tournament_id==='knockout'&&m.status==='confirmed').length,4);
-await go('reset_fixture',{fixtureId:'r1m2'},'owner-auth','knockout');
+await go('reset_fixture',{note:'Correcting a score',fixtureId:'r1m2'},'owner-auth','knockout');
 k=(await service.read('owner-auth')).tournaments.find(t=>t.id==='knockout');
 assert.equal(k.status,'active');assert.equal((await service.read('owner-auth')).matches.filter(m=>m.tournament_id==='knockout'&&m.status==='confirmed').length,1);
 await go('withdraw_player',{playerId:'guest-one'},'owner-auth','knockout');
@@ -196,7 +196,7 @@ await go('start_tournament',{seeds:[owner,member,opponent,'guest-one'],bestOf:3}
 let d;for(;;){d=(await service.read('owner-auth')).tournaments.find(t=>t.id==='double');const f=d.state.fixtures.find(f=>f.status==='ready');if(!f)break;await go('score_fixture',{fixtureId:f.id,games:[[11,7],[11,8]]},'owner-auth','double')}
 assert.equal(d.status,'completed');assert.equal((await service.read('owner-auth')).matches.filter(m=>m.tournament_id==='double'&&m.status==='confirmed').length,6);
 assert.equal(d.state.fixtures.find(f=>f.id==='gf2').status,'bye');
-await go('reset_fixture',{fixtureId:'w1m1'},'owner-auth','double');
+await go('reset_fixture',{note:'Correcting a score',fixtureId:'w1m1'},'owner-auth','double');
 assert.equal((await service.read('owner-auth')).tournaments.find(t=>t.id==='double').status,'active');
 await act('owner-auth',{action:'create_tournament',id:'bronze',clubId:'club-one',name:'Bronze Match',date:'2026-10-01',format:'Single elimination',capacity:4});
 for(const p of [owner,member,opponent,'guest-one'])await go('enter_tournament',{playerId:p},'owner-auth','bronze');
@@ -239,7 +239,7 @@ assert.equal(cross.rating_weight,3,'locked weight survives membership changes');
 await go('score_fixture',{fixtureId:cross.state.fixtures.find(f=>f.status==='ready').id,games:[[11,7],[11,8]]},'owner-auth','cross-rating');
 assert.equal((await service.read('owner-auth')).matches.find(m=>m.tournament_id==='cross-rating').tournament_weight,3,'official results carry persisted multiplier');
 cross=(await service.read('owner-auth')).tournaments.find(t=>t.id==='cross-rating');
-await go('reset_fixture',{fixtureId:cross.state.fixtures.find(f=>f.status==='played').id},'owner-auth','cross-rating');
+await go('reset_fixture',{note:'Correcting a score',fixtureId:cross.state.fixtures.find(f=>f.status==='played').id},'owner-auth','cross-rating');
 assert.equal(sql.prepare("SELECT rating_weight FROM tournaments WHERE id='cross-rating'").get().rating_weight,3,'reset cannot reclassify a draw');
 console.log('Passed: cross-club registration preview, atomic weight snapshot, membership-change stability, weighted official results and reset stability.');
 
@@ -269,7 +269,7 @@ assert.deepEqual(sql.prepare('SELECT id,status FROM matches WHERE tournament_id 
 await act('owner-auth',removal); // An identical network retry is safe.
 assert.equal(sql.prepare("SELECT count(*) n FROM audit WHERE action='tournament_deleted'").get().n,4);
 await assert.rejects(act('owner-auth',{...removal,operationId:crypto.randomUUID(),revision:removal.revision+1}),e=>e.status===404);
-await assert.rejects(act('owner-auth',{action:'reset_fixture',id:'bronze',fixtureId:'r1m1',operationId:crypto.randomUUID()}),e=>e.status===404);
+await assert.rejects(act('owner-auth',{action:'reset_fixture',note:'Correcting a recorded score',id:'bronze',fixtureId:'r1m1',operationId:crypto.randomUUID()}),e=>e.status===404);
 // A creator keeps deletion rights after demotion, but must still be an active member.
 sql.prepare("UPDATE memberships SET role='admin' WHERE club_id='club-one' AND player_id=?").run(member);
 await act('member-auth',{action:'create_tournament',id:'creator-event',clubId:'club-one',name:'Creator event',date:'2026-10-06',format:'Single elimination',capacity:4,created_by:owner});

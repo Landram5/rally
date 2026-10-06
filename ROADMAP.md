@@ -9,9 +9,9 @@ Release 1 is deployed: recoverable live scoring, clear profile navigation, inter
 - Profile cropping: Discord-style circular preview, one polished continuous zoom control, smooth focal-point pinch zoom and drag; keyboard access and reset.
 - iPhone navigation: keep the bottom bar anchored on Overview, Players, Matches, Clubs, Tournaments and Inbox. Verify tab changes, scrolling, search focus, rotation and Home Screen safe areas on a device.
 
-## Release 3 — registration and record ownership
+## Release 3 — registration and record ownership (deployed; device checks pending)
 
-Visiting-player registration without host-club membership, waitlists, QR invitations, guest account claims, and corrections/disputes with readable audit history. Preserve ownership checks and shared records.
+Implemented organizer opt-in for visiting-player registration, FIFO waitlists with automatic promotion, copy/download QR invitations, organizer-approved guest claims, and private match reviews with score snapshots and required reset reasons. Try /demo/records and Visiting Player Open in the sample demo. Real-device QR scanning and a real organizer/player pilot remain verification items.
 
 ## Release 4 — club competition and communication
 

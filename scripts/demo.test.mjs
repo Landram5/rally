@@ -21,7 +21,7 @@ let event=data.tournaments.find(t=>t.id==='test-event'),fixture=event.state.fixt
 data=applyDemoAction(data,{action:'score_fixture',id:event.id,revision:event.revision,fixtureId:fixture.id,games:[[11,7],[11,8]]});
 assert.equal(data.matches.filter(m=>m.tournament_id===event.id).length,1);
 assert.throws(()=>applyDemoAction(data,{action:'score_fixture',id:event.id,revision:event.revision,fixtureId:fixture.id,games:[[11,7],[11,8]]}),/draw changed/);
-event=data.tournaments.find(t=>t.id==='test-event');data=applyDemoAction(data,{action:'reset_fixture',id:event.id,revision:event.revision,fixtureId:fixture.id});assert.equal(data.matches.filter(m=>m.tournament_id===event.id).length,0);
+event=data.tournaments.find(t=>t.id==='test-event');data=applyDemoAction(data,{action:'reset_fixture',note:'Correcting a recorded score',id:event.id,revision:event.revision,fixtureId:fixture.id});assert.equal(data.matches.filter(m=>m.tournament_id===event.id).length,0);
 assert.equal(seed.tournaments.some(t=>t.id==='test-event'),false);
 assert.throws(()=>applyDemoAction(seed,{action:'record_match',id:'invalid',clubId:'harbor',a:'alex',b:'jordan',bestOf:3,games:[[11,10],[11,7]],date:'2026-10-05'}),/win by two/);
 assert.throws(()=>applyDemoAction(seed,{action:'record_match',clubId:'harbor',a:'alex',b:'jamie',bestOf:3,games:[[11,7],[11,8]],date:'2026-10-05'}),/active club players/);
@@ -82,3 +82,13 @@ logistics=applyDemoAction(logistics,{action:'set_check_in',id:'autumn',playerId:
 const liveFixture=logistics.tournaments.find(t=>t.id==='live').state.fixtures.find(f=>f.status==='ready');logistics=applyDemoAction(logistics,{action:'set_fixture_plan',id:'live',fixtureId:liveFixture.id,court:'Table 2',startsAt:'2099-10-10T18:30:00Z'});assert.equal(logistics.tournaments.find(t=>t.id==='live').fixturePlans[0].court,'Table 2');
 logistics=applyDemoAction(logistics,{action:'set_event_logistics',id:'autumn',registrationClosesAt:'2000-01-01T00:00:00Z',checkInOpen:false});assert.throws(()=>applyDemoAction(logistics,{action:'enter_tournament',id:'autumn',playerId:'riley'}),/closed/);assert.throws(()=>applyDemoAction(logistics,{action:'set_check_in',id:'autumn',playerId:'alex',checkedIn:true}),/closed/);
 console.log('Demo event details, deadlines, check-in, fixture plans and isolation passed.');
+
+{
+ let data=createDemoData(),t=data.tournaments.find(t=>t.id==='visitors');
+ data=applyDemoAction(data,{action:'join_waitlist',id:t.id,playerId:'alex',revision:t.revision});assert.equal(data.tournaments.find(t=>t.id==='visitors').waitlist.find(w=>w.player_id==='alex').position,3);
+ t=data.tournaments.find(t=>t.id==='visitors');data=applyDemoAction(data,{action:'remove_entry',id:t.id,playerId:'jordan',revision:t.revision});assert.ok(data.entries.some(e=>e.tournament_id==='visitors'&&e.player_id==='casey'));
+ data=applyDemoAction(data,{action:'review_guest_claim',id:'sample-claim',status:'approved',confirmation:'MERGE'});assert.equal(data.ownership.claims[0].status,'approved');assert.equal(data.players.some(p=>p.id==='visiting-guest'),false);
+ const m=data.matches.find(m=>m.id==='pending-sample');data=applyDemoAction(data,{action:'correct_match',matchId:m.id,revision:0,note:'Checked with both players.',games:[[8,11],[9,11]]});assert.equal(data.matchHistory[0].action,'corrected');
+ data=applyDemoAction(data,{action:'resolve_match_review',id:'sample-review',matchId:m.id,status:'resolved',note:'Scores corrected.'});assert.equal(data.ownership.reviews[0].status,'resolved');assert.equal(createDemoData().ownership.reviews[0].status,'pending','sample changes remain isolated');
+}
+console.log('Demo visiting-player queue, promotions, guest claims and audited match corrections passed.');

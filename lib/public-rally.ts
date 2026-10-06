@@ -13,7 +13,7 @@ export type PublicPlayer={
  matches:PublicPlayerMatch[];
 };
 
-export type PublicTournament={
+export type PublicTournament={allowVisitors?:boolean;waitlistCount?:number;
  id:string;name:string;date:string;format:string;capacity:number;
  registrationClosesAt?:string|null;startsAt?:string|null;fixturePlans?:{fixture_id:string;court:string;starts_at:string|null}[];status:'registration'|'active'|'completed';bestOf:number;revision:number;
  club:{id:string;name:string;location:string};
@@ -41,7 +41,7 @@ export async function getPublicDirectory(db:D1Database,view:'tournaments'|'playe
 }
 
 export async function getPublicPlayer(db:D1Database,playerId:string):Promise<PublicPlayer|null>{
- if(!validId(playerId))return null;
+ if(!validId(playerId))return null;const alias=await db.prepare('SELECT merged_into FROM profiles WHERE id=?').bind(playerId).first<{merged_into:string|null}>();if(alias?.merged_into)return getPublicPlayer(db,alias.merged_into);
  const profile=await db.prepare('SELECT p.id,p.name,p.bio,p.auth_id IS NULL AS is_guest,ph.updated_at AS photo_version FROM profiles p LEFT JOIN profile_photos ph ON ph.player_id=p.id WHERE p.id=? AND p.deleted_at IS NULL').bind(playerId).first<{id:string;name:string;is_guest:number;bio:string;photo_version:string|null}>();
  if(!profile)return null;
  const clubs=(await db.prepare("SELECT c.id,c.name,c.location FROM clubs c JOIN memberships m ON m.club_id=c.id WHERE m.player_id=? AND m.status='active' AND c.approval_status='approved' ORDER BY c.name").bind(playerId).all<{id:string;name:string;location:string}>()).results;
@@ -51,9 +51,10 @@ export async function getPublicPlayer(db:D1Database,playerId:string):Promise<Pub
 
 export async function getPublicTournament(db:D1Database,tournamentId:string):Promise<PublicTournament|null>{
  if(!validId(tournamentId))return null;
- const event=await db.prepare("SELECT t.*,c.name AS club_name,c.location AS club_location FROM tournaments t JOIN clubs c ON c.id=t.club_id WHERE t.id=? AND t.deleted_at IS NULL AND c.approval_status='approved'").bind(tournamentId).first<{id:string;name:string;club_id:string;date:string;format:string;capacity:number;status:'registration'|'active'|'completed';best_of:number;revision:number;state_json:string|null;registration_closes_at:string|null;starts_at:string|null;club_name:string;club_location:string}>();
+ const event=await db.prepare("SELECT t.*,c.name AS club_name,c.location AS club_location FROM tournaments t JOIN clubs c ON c.id=t.club_id WHERE t.id=? AND t.deleted_at IS NULL AND c.approval_status='approved'").bind(tournamentId).first<{id:string;name:string;club_id:string;date:string;format:string;capacity:number;status:'registration'|'active'|'completed';best_of:number;revision:number;state_json:string|null;registration_closes_at:string|null;starts_at:string|null;allow_visitors:number;club_name:string;club_location:string}>();
  if(!event)return null;
  const entrants=(await db.prepare('SELECT p.id,p.name,p.auth_id IS NULL AS is_guest FROM entries e JOIN profiles p ON p.id=e.player_id WHERE e.tournament_id=? ORDER BY e.created_at,e.id').bind(tournamentId).all<{id:string;name:string;is_guest:number}>()).results;
  const fixturePlans=(await db.prepare('SELECT fixture_id,court,starts_at FROM tournament_fixture_plans WHERE tournament_id=?').bind(tournamentId).all<{fixture_id:string;court:string;starts_at:string|null}>()).results;
- return {fixturePlans,registrationClosesAt:event.registration_closes_at,startsAt:event.starts_at,id:event.id,name:event.name,date:event.date,format:event.format,capacity:event.capacity,status:event.status,bestOf:event.best_of,revision:event.revision,club:{id:event.club_id,name:event.club_name,location:event.club_location},entrants:entrants.map(p=>({...p,isGuest:!!p.is_guest})),state:event.state_json?JSON.parse(event.state_json):null};
+ const waitlistCount=(await db.prepare('SELECT count(*) n FROM tournament_waitlist WHERE tournament_id=?').bind(tournamentId).first<{n:number}>())?.n??0;
+ return {allowVisitors:!!event.allow_visitors,waitlistCount,fixturePlans,registrationClosesAt:event.registration_closes_at,startsAt:event.starts_at,id:event.id,name:event.name,date:event.date,format:event.format,capacity:event.capacity,status:event.status,bestOf:event.best_of,revision:event.revision,club:{id:event.club_id,name:event.club_name,location:event.club_location},entrants:entrants.map(p=>({...p,isGuest:!!p.is_guest})),state:event.state_json?JSON.parse(event.state_json):null};
 }

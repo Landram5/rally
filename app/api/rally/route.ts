@@ -1,6 +1,7 @@
 import {env} from 'cloudflare:workers';
 import {getAuthenticatedUser} from '@/lib/auth';
 import {readActivityPage} from '@/lib/activity-pages';
+import {matchRecord} from '@/lib/record-ownership';
 import {ratingHistory} from '@/lib/seeding';
 import {AppError,makeService} from '@/lib/rally-service';
 export const dynamic='force-dynamic';
@@ -11,9 +12,10 @@ function error(e:unknown){if(e instanceof AppError)return response({error:e.mess
 export async function GET(request:Request){try{const query=new URL(request.url).searchParams,user=await getAuthenticatedUser(),siteAdmin=!!user&&isSiteAdmin(user.email),view=query.get('view');
  if(view==='members'||view==='matches'||view==='tournaments')return response(await readActivityPage(env.DB,user?.id??null,{view,club:query.get('club')??'all',search:query.get('search')??'',role:query.get('role')??'all',status:query.get('status')??'all',page:Number(query.get('page')??1),match:query.get('match')??'',isSiteAdmin:siteAdmin}));
  if(!user)return response({error:'Sign in to open the Rally clubhouse.'},401);
+ if(view==='match-record'){const profile=await env.DB.prepare('SELECT id FROM profiles WHERE auth_id=? AND deleted_at IS NULL').bind(user.id).first<{id:string}>();if(!profile)return response({error:'Create your player profile first.'},403);return response(await matchRecord(env.DB,profile.id,query.get('match')??''));}
  const data=await service().read(user.id,{isSiteAdmin:siteAdmin,compact:query.get('compact')==='1'&&!view,clubId:query.get('clubScope')??undefined});
  if(view==='rating'){const player=query.get('player')??'',club=query.get('club')??'all';if(!data.players.some(p=>p.id===player))return response({error:'Player unavailable.'},404);return response(ratingHistory(club==='all'?data.matches:data.matches.filter(m=>m.club_id===club),player));}
- if(view==='event'){const id=query.get('event'),event=data.tournaments.find(t=>t.id===id);if(!event)return response({error:'Tournament unavailable.'},404);return response({event,entries:data.entries.filter(e=>e.tournament_id===id),memberships:data.memberships.filter(m=>m.club_id===event.club_id),players:data.players.filter(p=>data.memberships.some(m=>m.club_id===event.club_id&&m.player_id===p.id)||data.entries.some(e=>e.tournament_id===id&&e.player_id===p.id))});}
+ if(view==='event'){const id=query.get('event'),event=data.tournaments.find(t=>t.id===id);if(!event)return response({error:'Tournament unavailable.'},404);return response({event,entries:data.entries.filter(e=>e.tournament_id===id),memberships:data.memberships.filter(m=>m.club_id===event.club_id),players:data.players.filter(p=>data.memberships.some(m=>m.club_id===event.club_id&&m.player_id===p.id)||data.entries.some(e=>e.tournament_id===id&&e.player_id===p.id)||event.waitlist?.some((w:{player_id:string})=>w.player_id===p.id))});}
  return response({...data,account:{email:user.email,displayName:user.displayName,emailVerified:user.emailVerified},isSiteAdmin:siteAdmin});
  }catch(e){return error(e)}}
 export async function POST(request:Request){try{
