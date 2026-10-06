@@ -34,7 +34,7 @@
 
 - Public player and tournament discovery with search and filters.
 - Guest account claims.
-- Table/time scheduling, divisions, and organizer audit-history UI.
+- Tournament divisions and organizer audit-history UI; table/time scheduling is available.
 - Offline-friendly score entry and background synchronization.
 
 ## Validation
@@ -70,3 +70,15 @@ Production was backed up to .local-backups/production-before-inbox-20261006.sql 
 Player panels now include rating history from the same replay used by standings. Expand each match to inspect opponent rating, expected win chance, original points and today's time-weighted contribution. History uses all authorized clubs, rather than the current standings club filter. Public profile pages remain limited to their existing public result data.
 
 The clubhouse polls visible activity every 30 seconds and refreshes on focus/resume, pausing during editing. The Inbox also provides manual Refresh. A request version prevents older refresh results from replacing newer saves. Run node scripts/rating-history.test.mjs, node scripts/activity-refresh.test.mjs and node scripts/live-score-elo.test.mjs for related coverage.
+
+## Club logistics, event operations and activity pagination — October 6, 2026
+
+Migration 0013 adds public club venue, meeting times, contact and joining instructions; tournament registration deadlines, start times and check-in; entrant check-in timestamps; and court/time plans keyed by fixture. Owners edit club information. Existing organizer roles edit event details and fixture plans; players check themselves in when the organizer opens check-in. New entries and guest registration stop at the deadline. Existing entries can still be managed and the draw started. Server-side revision, identity and role checks enforce these rules atomically.
+
+Date inputs submit native form values, normalize to UTC and display in the viewer's device time zone. Public event pages show saved schedules with round/fixture labels. Event detail and scheduling forms start collapsed. Check-in notices appear only for entered active club members who have not checked in.
+
+The clubhouse uses compact summaries plus on-demand rating/event details. Matches, club rosters and event lists load 20 records per database page with stable ordering and visibility filters. All-history summary statistics preserve standings and head-to-head totals; they are not calculated from the first page. Club reads and post-edit refreshes are scoped to the selected club. Compact catalogs omit player bios/Rally IDs and full draws. Full authorized match history is still read server-side to replay ratings; catalog pagination and cached aggregates remain future scale work.
+
+Rating history adds a trend chart and an all-clubs/individual-club scope selector. The rating rules are unchanged. Inbox verification links select the exact match, which identifies its submitter and eligible verifier. The demo seeds club details, event logistics and check-in notices, and supports the same operations without changing production records.
+
+Regression coverage is in rally-service, demo, notifications, account-deletion, rating-history and live-score-elo tests. Production club checks caught a Server Component serialization restriction: internal null-prototype aggregation dictionaries must be converted to plain objects before passing page props. The service test now guards that boundary.

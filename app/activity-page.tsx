@@ -1,0 +1,14 @@
+'use client';
+/* eslint-disable react-hooks/set-state-in-effect */
+import {useEffect,useRef,useState,type ReactNode} from 'react';
+import {Button} from '@/components/ui/button';
+type Page<T>={items:T[];page:number;total:number;hasMore:boolean};
+export default function ActivityPage<T>({view,query='',demo=false,demoItems=[],refreshKey,render,preview=false}:{preview?:boolean;view:'members'|'matches'|'tournaments';query?:string;demo?:boolean;demoItems?:T[];refreshKey:unknown;render:(items:T[])=>ReactNode}){
+ const container=useRef<HTMLDivElement>(null),scrollRequested=useRef(false);
+ const [page,setPage]=useState(1),[data,setData]=useState<Page<T>>({items:[],page:1,total:0,hasMore:false}),[loading,setLoading]=useState(!demo),[error,setError]=useState(''),[loadedKey,setLoadedKey]=useState(''),[attempt,setAttempt]=useState(0);const requestKey=`${view}?${query}&page=${page}`;
+ useEffect(()=>{scrollRequested.current=false;setPage(1)},[query]);
+ useEffect(()=>{if(!loading&&scrollRequested.current){scrollRequested.current=false;container.current?.scrollIntoView({block:'start'});}},[page,loading]);
+ useEffect(()=>{if(demo)return;let current=true;const controller=new AbortController();setLoading(true);setError('');const timer=window.setTimeout(()=>{fetch(`/api/rally?view=${view}&page=${page}&${query}`,{cache:'no-store',signal:controller.signal}).then(async r=>{const body=await r.json() as Page<T>&{error?:string};if(!r.ok)throw new Error(body.error||'Could not load this page.');if(current){if(!body.items.length&&page>1&&body.total>0){setPage(Math.max(1,Math.ceil(body.total/20)));return;}setData(body);setLoadedKey(requestKey);}}).catch(e=>{if(current)setError(e instanceof Error?e.message:'Could not load this page.');}).finally(()=>{if(current)setLoading(false);});},200);return()=>{current=false;window.clearTimeout(timer);controller.abort();}},[view,query,page,demo,refreshKey,attempt,requestKey]);
+ const result=demo?{items:demoItems.slice((page-1)*20,page*20),page,total:demoItems.length,hasMore:page*20<demoItems.length}:data;
+ return <div className="activity-page" ref={container}>{error?<p role="alert" className="auth-error">{error}</p>:loading&&loadedKey!==requestKey?<p role="status">Loading…</p>:<>{!preview&&result.items.length>0&&<p className="page-count">Showing {(result.page-1)*20+1}–{(result.page-1)*20+result.items.length} of {result.total}</p>}{render(result.items)}{!result.items.length&&<p className="empty">No results match this view.</p>}</>}{!preview&&<div className="page-controls">{page>1&&<Button variant="outline" disabled={loading} onClick={()=>{scrollRequested.current=true;setPage(p=>p-1)}}>Previous page</Button>}{result.hasMore&&<Button variant="outline" disabled={loading} onClick={()=>{scrollRequested.current=true;setPage(p=>p+1)}}>Next page</Button>}{error&&<Button variant="outline" onClick={()=>{setPage(1);setAttempt(n=>n+1)}}>Retry loading</Button>}</div>}</div>;
+}

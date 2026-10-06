@@ -1,0 +1,11 @@
+'use client';
+import {fixtureLabel} from '@/lib/fixture-label';
+import {useState} from 'react';
+import {Button} from '@/components/ui/button';
+import type {Tournament} from './tournament-panel';
+import {TimeLabel,localInput,utcInput} from './time-label';
+export default function FixtureSchedule({event:t,name,admin,busy,act}:{event:Tournament;name:(id:string|null)=>string;admin:boolean;busy:boolean;act:(p:Record<string,unknown>,message:string)=>Promise<boolean>}){
+ const [editing,setEditing]=useState<string|null>(null),[court,setCourt]=useState(''),[time,setTime]=useState('');
+ const fixtures=t.state?.fixtures.filter(f=>f.status==='ready'||f.status==='waiting')??[];
+ return <details className="fixture-schedules"><summary>Match schedule · {fixtures.length} upcoming</summary>{fixtures.map(f=>{const plan=t.fixturePlans?.find(p=>p.fixture_id===f.id);return <article key={f.id}><span className="badge">{fixtureLabel(f,t.format)}</span><h4>{name(f.a)} vs {name(f.b)}</h4><p>{plan?.court||'Court to be assigned'}{plan?.starts_at&&<> · <TimeLabel value={plan.starts_at}/></>}</p>{admin&&t.status==='active'&&editing!==f.id&&<Button variant="outline" size="sm" disabled={busy} onClick={()=>{setEditing(f.id);setCourt(plan?.court??'');setTime(localInput(plan?.starts_at))}}>Assign court / time</Button>}{editing===f.id&&<form className="logistics-form" onSubmit={async e=>{e.preventDefault();const fields=new FormData(e.currentTarget);if(await act({action:'set_fixture_plan',id:t.id,revision:t.revision,operationId:crypto.randomUUID(),fixtureId:f.id,court:String(fields.get('court')??''),startsAt:utcInput(String(fields.get('time')??''))},'Match schedule saved.'))setEditing(null)}}><label htmlFor="fixture-court">Court / table</label><input id="fixture-court" name="court" maxLength={60} value={court} onChange={e=>setCourt(e.target.value)} disabled={busy}/><label htmlFor="fixture-time">Match time (your device time zone)</label><input id="fixture-time" name="time" type="datetime-local" defaultValue={time} disabled={busy}/><div className="club-buttons"><Button disabled={busy} type="submit">Save match schedule</Button><Button variant="ghost" type="button" onClick={()=>setEditing(null)}>Cancel</Button></div></form>}</article>})}{!fixtures.length&&<p>No upcoming matches.</p>}</details>;
+}

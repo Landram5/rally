@@ -57,3 +57,21 @@ Rating history now appears in the clubhouse player panel. Review reduced the fir
 The Inbox now refreshes visible activity every 30 seconds and on focus/resume, with a manual Refresh control. Polling pauses during editing; stale responses cannot replace a newer mutation. It remains an in-app current-activity feed with no email or push delivery. Rating history on public profiles would need a dedicated public rating scope to avoid exposing private club data or producing misleading totals from only one player's matches. Database pagination and real iPhone Home Screen verification remain priorities.
 
 Suggested next product work: club venue/contact/meeting schedules; tournament check-in, match time and court assignments; notification delivery preferences.
+
+## Follow-up: club logistics, tournament operations and scale
+
+The user reports the iPhone experience looks good for now, so the remaining proposed improvements are implemented: public club venue/schedule/contact/join details; event deadlines/start times/check-in; per-fixture court/time assignments; exact-match verification links and verifier names; a scoped rating chart; and database pagination for members, matches and events. These supersede the earlier scheduling, roster-pagination and club-read limitations. Email/push and divisions were not part of this round.
+
+Review fixes: date controls now submit the displayed native value and preserve it when another field changes; expired events consistently say registration closed; rating-scope labels are explicitly associated; waiting fixtures include round/third-place labels; paging returns to the start of the list; club refresh stays scoped after a mutation. An authenticated real-club check caught a server serialization error that the demo did not exercise. Safe aggregation maps are now converted to plain objects at the Server Component boundary, with regression coverage and a successful production recheck.
+
+The design keeps organizer forms collapsed, stores times as UTC and labels displayed local times. Club contact information is public and labeled accordingly in the editor. No production club details, tournaments, matches or check-in records were fabricated for testing. Demo edits were reset after verification.
+
+Remaining product decisions, in suggested order:
+
+1. Pilot a real club tournament with actual organizers and players. Check deadline handling, attendance, table assignments, scoring and verification together. Check-in currently records attendance; it does not automatically exclude unchecked players from the draw.
+2. Cache rating/standings aggregates and paginate the lightweight player catalog if usage grows. Database pages reduce transferred history, but the summary/rating replay still reads all authorized history server-side.
+3. Add organizer audit-history viewing and a clear correction/dispute workflow. Audit data already exists; a readable interface would help resolve disagreements.
+4. Guest account claims, with ownership checks so existing guest results can follow a new account safely.
+5. Optional notification delivery preferences before adding email/push. The current Inbox remains current activity rather than a permanent notification archive.
+
+The rating chart shows up to 20 match updates plus today's rating. Aging is reflected at the next plotted update rather than as a continuous daily curve. Appearance remains local to each browser, and original photo files are not retained for later recropping.

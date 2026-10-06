@@ -1,0 +1,7 @@
+'use client';
+import type {RatingChange} from '@/lib/seeding';
+export default function RatingTrend({changes,rating,asOf}:{changes:RatingChange[];rating:number;asOf:string}){
+ const recent=changes.slice(0,20).reverse();if(!recent.length)return null;
+ const samples=[{date:recent[0].date,value:recent[0].before},...recent.map(c=>({date:c.date,value:c.after})),{date:asOf,value:rating}];const values=samples.map(p=>p.value),min=Math.floor(Math.min(...values)/25)*25-25,max=Math.ceil(Math.max(...values)/25)*25+25,first=Date.parse(samples[0].date),last=Date.parse(asOf),x=(date:string)=>40+(Date.parse(date)-first)/Math.max(last-first,86400000)*290,y=(value:number)=>110-(value-min)/(max-min)*90;
+ return <figure className="rating-trend"><svg viewBox="0 0 360 150" role="img" aria-label={`Rating trend from ${samples[0].date} to ${asOf}, current rating ${Math.round(rating)}`}><text x="2" y="24">{max}</text><text x="2" y="112">{min}</text><line x1="40" x2="330" y1="110" y2="110" stroke="currentColor" opacity=".25"/><polyline points={samples.map(p=>`${x(p.date)},${y(p.value)}`).join(' ')} fill="none" stroke="currentColor" strokeWidth="2.5"/>{samples.map((p,i)=><circle key={i} cx={x(p.date)} cy={y(p.value)} r="3" fill="currentColor"><title>{p.date}: {p.value.toFixed(1)}</title></circle>)}<text x="40" y="139">{samples[0].date}</text><text x="330" y="139" textAnchor="end">Today</text></svg><figcaption>Last {recent.length} match updates and today’s rating. Aging between matches is reflected at the next plotted update.</figcaption></figure>;
+}

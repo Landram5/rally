@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
 import ts from 'typescript';
 mkdirSync('.test-runtime',{recursive:true});
-for(const name of ['notifications','demo-state','rally','match-rules','tournament-engine','seeding']){
+for(const name of ['rally-errors','logistics','notifications','demo-state','rally','match-rules','tournament-engine','seeding']){
  const code=ts.transpileModule(readFileSync(`lib/${name}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText.replace(/from ['"]\.\/([^'"]+)['"]/g,"from './$1.mjs'");
  writeFileSync(`.test-runtime/${name}.mjs`,code);
 }
@@ -76,3 +76,9 @@ assert.equal(readDemo.notifications.find(n=>n.id===firstNotice.id).read,true);
 assert.equal(seed.notifications.find(n=>n.id===firstNotice.id).read,false);
 assert.ok(applyDemoAction(seed,{action:'mark_notifications_read'}).notifications.every(n=>n.read));
 console.log('Demo inbox read state, mark-all and isolation passed.');
+
+let logistics=applyDemoAction(seed,{action:'set_event_logistics',id:'autumn',registrationClosesAt:'2099-10-10T16:00:00Z',startsAt:'2099-10-10T18:00:00Z',checkInOpen:true});
+logistics=applyDemoAction(logistics,{action:'set_check_in',id:'autumn',playerId:'alex',checkedIn:true});assert.ok(logistics.tournaments.find(t=>t.id==='autumn').checkedIn.includes('alex'));assert.equal(seed.tournaments.find(t=>t.id==='autumn').checkedIn.includes('alex'),false);
+const liveFixture=logistics.tournaments.find(t=>t.id==='live').state.fixtures.find(f=>f.status==='ready');logistics=applyDemoAction(logistics,{action:'set_fixture_plan',id:'live',fixtureId:liveFixture.id,court:'Table 2',startsAt:'2099-10-10T18:30:00Z'});assert.equal(logistics.tournaments.find(t=>t.id==='live').fixturePlans[0].court,'Table 2');
+logistics=applyDemoAction(logistics,{action:'set_event_logistics',id:'autumn',registrationClosesAt:'2000-01-01T00:00:00Z',checkInOpen:false});assert.throws(()=>applyDemoAction(logistics,{action:'enter_tournament',id:'autumn',playerId:'riley'}),/closed/);assert.throws(()=>applyDemoAction(logistics,{action:'set_check_in',id:'autumn',playerId:'alex',checkedIn:true}),/closed/);
+console.log('Demo event details, deadlines, check-in, fixture plans and isolation passed.');

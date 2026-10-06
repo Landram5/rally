@@ -3,7 +3,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {readFileSync,writeFileSync,mkdirSync,rmSync,readdirSync} from 'node:fs';
 import ts from 'typescript';
 mkdirSync('.test-runtime',{recursive:true});
-for(const name of ['notifications','profile-photo','account-write-guard','account-deletion','rally-service','tournament-service','tournament-engine','match-rules','rally-errors','seeding','public-rally']){
+for(const name of ['clubhouse-summary','rally','activity-pages','logistics','notifications','profile-photo','account-write-guard','account-deletion','rally-service','tournament-service','tournament-engine','match-rules','rally-errors','seeding','public-rally']){
  const compiled=ts.transpileModule(readFileSync(`lib/${name}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText.replace(/from ['"]\.\/([^'"]+)['"]/g, "from './$1.mjs'");
  writeFileSync(`.test-runtime/${name}.mjs`,compiled);
 }
@@ -342,6 +342,57 @@ assert.equal(new Set([...firstPage.players,...secondPage.players].map(p=>p.id)).
 sql.prepare("UPDATE profiles SET deleted_at='2026-10-06',name='Deleted player' WHERE id='directory-0'").run();
 assert.equal((await getPublicDirectory(db,'players','Deleted player')).players.length,0,'deleted identities excluded');
 console.log('Passed: public discovery hides pending clubs and unverified results, parameterized literal search, pagination and deleted profiles.');
+
+// Practical club fields and event operations must survive storage, respect roles and deadlines.
+await act('owner-auth',{action:'update_club',clubId:'club-one',name:'Club One',location:'Baltimore',bio:'Club bio',venue:'Community hall',meeting_schedule:'Tuesdays 6 PM',contact:'club@example.test',joining_info:'Request membership first.'});
+assert.equal((await service.read(null)).clubs.find(c=>c.id==='club-one').venue,'Community hall');
+await act('owner-auth',{action:'update_club',clubId:'club-one',name:'Club One',location:'Baltimore',bio:'Revised bio'});
+assert.equal((await service.read(null)).clubs.find(c=>c.id==='club-one').venue,'Community hall','older clients preserve optional fields');
+await assert.rejects(act('member-auth',{action:'update_club',clubId:'club-one',name:'Club One',location:'Baltimore',bio:'',venue:'Wrong'}),e=>e.status===403);
+await act('owner-auth',{action:'create_tournament',id:'logistics-event',clubId:'club-one',name:'Scheduled Event',date:'2099-10-10',format:'Single elimination',capacity:8});
+await assert.rejects(go('set_event_logistics',{startsAt:'2099-02-30T10:00:00Z'},'owner-auth','logistics-event'),e=>e.status===400);
+await assert.rejects(go('set_event_logistics',{startsAt:'2099-10-10T10:00:00Z',registrationClosesAt:'2099-10-10T12:00:00Z'},'owner-auth','logistics-event'),e=>e.status===400);
+await assert.rejects(go('set_event_logistics',{checkInOpen:true},'member-auth','logistics-event'),e=>e.status===403);
+await go('set_event_logistics',{registrationClosesAt:'2000-01-01T12:00:00Z',startsAt:'2099-10-10T18:00:00Z',checkInOpen:true},'owner-auth','logistics-event');
+await assert.rejects(go('enter_tournament',{playerId:member},'member-auth','logistics-event'),e=>e.status===409);
+await assert.rejects(go('add_tournament_guest',{name:'Late guest'},'owner-auth','logistics-event'),e=>e.status===409);
+await go('set_event_logistics',{registrationClosesAt:'2099-10-10T16:00:00Z',startsAt:'2099-10-10T18:00:00Z',checkInOpen:true},'owner-auth','logistics-event');
+await go('enter_tournament',{playerId:member},'member-auth','logistics-event');await go('enter_tournament',{playerId:owner},'owner-auth','logistics-event');
+await assert.rejects(go('set_check_in',{playerId:owner,checkedIn:true},'member-auth','logistics-event'),e=>e.status===403);
+await go('set_check_in',{playerId:member,checkedIn:true},'member-auth','logistics-event');
+assert.ok((await service.read('member-auth')).tournaments.find(t=>t.id==='logistics-event').checkedIn.includes(member));
+await go('set_check_in',{playerId:member,checkedIn:false},'member-auth','logistics-event');assert.equal(sql.prepare('SELECT checked_in_at FROM entries WHERE tournament_id=? AND player_id=?').get('logistics-event',member).checked_in_at,null);
+await go('start_tournament',{seeds:[member,owner],bestOf:3},'owner-auth','logistics-event');
+const logisticsDraw=JSON.parse(sql.prepare('SELECT state_json FROM tournaments WHERE id=?').get('logistics-event').state_json),ready=logisticsDraw.fixtures.find(f=>f.status==='ready');
+await assert.rejects(go('set_fixture_plan',{fixtureId:ready.id,court:'Table 1'},'member-auth','logistics-event'),e=>e.status===403);
+await go('set_fixture_plan',{fixtureId:ready.id,court:'Table 1',startsAt:'2099-10-10T18:30:00Z'},'owner-auth','logistics-event');
+assert.equal((await getPublicTournament(db,'logistics-event')).fixturePlans[0].court,'Table 1');
+assert.equal((await getPublicTournament(db,'logistics-event')).startsAt,'2099-10-10T18:00:00.000Z');
+await assert.rejects(go('set_fixture_plan',{fixtureId:'missing',court:'Table 2'},'owner-auth','logistics-event'),e=>e.status===409);
+const staleLogisticsRevision=sql.prepare('SELECT revision FROM tournaments WHERE id=?').get('logistics-event').revision;
+await go('set_event_logistics',{checkInOpen:false},'owner-auth','logistics-event');await assert.rejects(go('set_check_in',{playerId:member,checkedIn:true},'member-auth','logistics-event'),e=>e.status===409);
+await assert.rejects(act('owner-auth',{action:'set_fixture_plan',id:'logistics-event',revision:staleLogisticsRevision,operationId:crypto.randomUUID(),fixtureId:ready.id,court:'Stale'}),e=>e.status===409);
+console.log('Passed club details, preserved fields, event deadline validation/enforcement, check-in identity, scheduling permissions, public plans and stale writers.');
+const {readActivityPage}=await import('../.test-runtime/activity-pages.mjs');
+const roster1=await readActivityPage(db,null,{view:'members',club:'club-one',page:1}),roster2=await readActivityPage(db,null,{view:'members',club:'club-one',page:2});assert.equal(roster1.items.length,20);assert.ok(roster1.hasMore);assert.equal(new Set([...roster1.items,...roster2.items].map(p=>p.id)).size,roster1.items.length+roster2.items.length);
+assert.equal((await readActivityPage(db,null,{view:'members',club:'club-one',search:'%'})).items.length,0);
+assert.equal((await readActivityPage(db,null,{view:'members',club:'club-one',role:'owner'})).items.length,1);
+await assert.rejects(readActivityPage(db,null,{view:'matches'}),e=>e.status===401);
+const full=await service.read('owner-auth'),compact=await service.read('owner-auth',{compact:true});assert.ok(compact.matches.length<=20);assert.equal(compact.summaries.all.confirmed,full.matches.filter(m=>m.status==='confirmed').length);assert.equal(compact.summaries['club-one'].confirmed,full.matches.filter(m=>m.club_id==='club-one'&&m.status==='confirmed').length);assert.ok(compact.tournaments.every(t=>t.state===null));assert.deepEqual(compact.notifications,full.notifications,'compact reads preserve ready-match notifications');const {stats}=await import('../.test-runtime/rally.mjs');const converted=full.matches.map(m=>({id:m.id,a:m.a,b:m.b,games:m.games,date:m.played_on,club:m.club_id,status:m.status,kind:m.tournament_id?'Tournament':'Club play'}));for(const p of full.players)if(compact.summaries.all.stats[p.id])assert.deepEqual(compact.summaries.all.stats[p.id],stats(p.id,converted));
+const pageMatch=full.matches.find(m=>m.status==='pending');if(pageMatch){const focused=await readActivityPage(db,'owner-auth',{view:'matches',match:pageMatch.id});assert.equal(focused.items.length,1);assert.equal(focused.items[0].id,pageMatch.id);}
+const pagedEvents=await readActivityPage(db,null,{view:'tournaments',club:'club-one',status:'upcoming'});assert.ok(pagedEvents.items.every(t=>t.status!=='completed'));assert.ok(pagedEvents.items.every(t=>!('state_json' in t)));
+const scoped=await service.read(null,{clubId:'club-one',compact:true});assert.ok(scoped.clubs.every(c=>c.id==='club-one'));assert.equal(scoped.memberships.length,0);assert.equal(scoped.summaries['club-one'].confirmed,compact.summaries['club-one'].confirmed);
+// Public club props cross the Server Component boundary: null-prototype maps
+// aggregate safely but must become plain objects before React serializes them.
+assert.equal(Object.getPrototypeOf(scoped.summaries),Object.prototype);
+for(const summary of Object.values(scoped.summaries)){
+ assert.equal(Object.getPrototypeOf(summary.stats),Object.prototype);
+ assert.equal(Object.getPrototypeOf(summary.opponents),Object.prototype);
+ for(const opponents of Object.values(summary.opponents))assert.equal(Object.getPrototypeOf(opponents),Object.prototype);
+}
+await act('page-private-auth',{action:'save_profile',name:'Private organizer'});await act('page-private-auth',{action:'create_club',id:'page-private-club',name:'Private club',location:'Baltimore'});await act('page-private-auth',{action:'create_tournament',id:'page-private-event',clubId:'page-private-club',name:'Private event',date:'2099-10-10',format:'Round robin',capacity:4});
+assert.equal((await readActivityPage(db,null,{view:'members',club:'page-private-club'})).total,0);assert.equal((await readActivityPage(db,'member-auth',{view:'members',club:'page-private-club'})).total,0);assert.equal((await readActivityPage(db,'page-private-auth',{view:'members',club:'page-private-club'})).total,1);assert.equal((await readActivityPage(db,null,{view:'tournaments',club:'page-private-club'})).total,0);assert.equal((await readActivityPage(db,'page-private-auth',{view:'tournaments',club:'page-private-club'})).total,1);assert.equal((await service.read(null,{clubId:'page-private-club',compact:true})).clubs.length,0);
+console.log('Passed server-side member/event/result pagination, literal search, anonymous visibility, focused results, scoped club reads and full-history compact summaries.');
 sql.close();console.log('Passed: arbitrary integer capacity, capacity edits, atomic no-account guest registration, guest permissions, statistic-based auto seeds, post-start registration lock.');
 
 {

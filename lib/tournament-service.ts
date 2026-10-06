@@ -1,7 +1,8 @@
+import {eventLogistics,optionalText,optionalInstant,registrationClosed} from './logistics';
 import {suggestSeeds,type SeedMatch} from './seeding';
 import {AppError} from './rally-errors';
 import {createDraw,recordFixture,resetFixture,withdrawPlayer,outcome,type Draw} from './tournament-engine';
-type Tournament={id:string;name:string;club_id:string;date:string;format:string;capacity:number;status:string;best_of:number;state_json:string|null;revision:number;last_operation:string|null;created_by:string|null;deleted_at:string|null};
+type Tournament={registration_closes_at:string|null;starts_at:string|null;check_in_open:number;id:string;name:string;club_id:string;date:string;format:string;capacity:number;status:string;best_of:number;state_json:string|null;revision:number;last_operation:string|null;created_by:string|null;deleted_at:string|null};
 const bad=(status:number,message:string):never=>{throw new AppError(status,message)};
 const validId=(v:unknown)=>{if(typeof v!=='string'||!v||v.length>80||!/^[a-zA-Z0-9_-]+$/.test(v))bad(400,'Invalid identifier.');return v as string};
 export async function tournamentAction(db:D1Database,user:{id:string},body:Record<string,unknown>){
@@ -27,14 +28,23 @@ export async function tournamentAction(db:D1Database,user:{id:string},body:Recor
  const participants=(await q('SELECT player_id FROM entries WHERE tournament_id=? ORDER BY created_at,id',eventId).all<{player_id:string}>()).results.map(e=>e.player_id);
  const before:Draw|null=event.state_json?JSON.parse(event.state_json):null;let after=before,status=event.status,bestOf=event.best_of,capacity=event.capacity;const extra:D1PreparedStatement[]=[];
  const guard='EXISTS (SELECT 1 FROM tournaments WHERE id=? AND last_operation=?)';
- if(action==='set_capacity'){
+ if(action==='set_event_logistics'){
+  if(!isAdmin)bad(403,'Only an organizer can edit event logistics.');if(event.status==='completed')bad(409,'This event is completed.');const values=eventLogistics(body);
+  extra.push(q(`UPDATE tournaments SET registration_closes_at=?,starts_at=?,check_in_open=? WHERE id=? AND ${guard}`,values.registration_closes_at,values.starts_at,values.check_in_open,eventId,eventId,operationId));
+ }else if(action==='set_check_in'){
+  const playerId=validId(body.playerId);if(!isAdmin&&playerId!==user.id)bad(403,'Only an organizer can check in another player.');if(!isAdmin&&!membership)bad(403,'Active host-club membership is required.');if(event.status==='completed'||!event.check_in_open)bad(409,'Check-in is closed.');if(!participants.includes(playerId))bad(400,'Register before checking in.');if(typeof body.checkedIn!=='boolean')bad(400,'Choose a check-in status.');
+  extra.push(q(`UPDATE entries SET checked_in_at=? WHERE tournament_id=? AND player_id=? AND ${guard}`,body.checkedIn?new Date().toISOString():null,eventId,playerId,eventId,operationId));
+ }else if(action==='set_fixture_plan'){
+  if(!isAdmin)bad(403,'Only an organizer can schedule matches.');const fixtureId=validId(body.fixtureId);if(event.status!=='active'||!before?.fixtures.some(f=>f.id===fixtureId&&(f.status==='ready'||f.status==='waiting')))bad(409,'Schedule an upcoming match in an active draw.');const court=optionalText(body.court,'Court',60),startsAt=optionalInstant(body.startsAt,'match time');
+  extra.push(q(`INSERT INTO tournament_fixture_plans(tournament_id,fixture_id,court,starts_at) SELECT ?,?,?,? WHERE ${guard} ON CONFLICT(tournament_id,fixture_id) DO UPDATE SET court=excluded.court,starts_at=excluded.starts_at`,eventId,fixtureId,court,startsAt,eventId,operationId));
+ }else if(action==='set_capacity'){
   if(!isAdmin)bad(403,'Only an organizer can change the player limit.');
   if(event.status!=='registration')bad(409,'The player limit is locked after play starts.');
   if(!Number.isSafeInteger(body.capacity)||(body.capacity as number)<Math.max(2,participants.length))bad(400,'Enter a whole number of at least 2, not smaller than the current field.');
   capacity=body.capacity as number;
  }else if(action==='add_tournament_guest'){
   if(!isAdmin)bad(403,'Only an organizer can add a guest.');
-  if(event.status!=='registration')bad(409,'Registration is closed.');
+  if(registrationClosed(event))bad(409,'Registration is closed.');
   if(participants.length>=capacity)bad(409,'This tournament is full. Increase its player limit first.');
   if(typeof body.name!=='string'||!body.name.trim()||body.name.trim().length>60)bad(400,'Enter a guest name of 1–60 characters.');
   const playerId=crypto.randomUUID(),created=new Date().toISOString();
@@ -45,6 +55,7 @@ export async function tournamentAction(db:D1Database,user:{id:string},body:Recor
   if(event.status!=='registration')bad(409,'Registration is closed. The draw is locked.');
   const playerId=validId(body.playerId);if(!isAdmin&&playerId!==user.id)bad(403,'Only an organizer can change another player’s entry.');
   if(action==='enter_tournament'){
+   if(registrationClosed(event))bad(409,'The registration deadline has passed.');
    if(!await q("SELECT id FROM memberships WHERE club_id=? AND player_id=? AND status='active'",event.club_id,playerId).first())bad(403,'The player must be an active member of the host club.');
    if(!participants.includes(playerId)&&participants.length>=event.capacity)bad(409,'This tournament is full.');
    extra.push(q(`INSERT INTO entries (id,tournament_id,player_id,created_at) SELECT ?,?,?,? WHERE ${guard} ON CONFLICT(tournament_id,player_id) DO NOTHING`,crypto.randomUUID(),eventId,playerId,new Date().toISOString(),eventId,operationId));
@@ -72,7 +83,8 @@ export async function tournamentAction(db:D1Database,user:{id:string},body:Recor
  }
  const now=new Date().toISOString(),afterJson=after?JSON.stringify(after):null;
  if(afterJson&&new TextEncoder().encode(afterJson).length>800000)bad(400,'This draw exceeds the current event storage limit. Split the field into smaller divisions.');
- const statements=[q(`UPDATE tournaments SET state_json=?,status=?,best_of=?,capacity=?,rating_weight=CASE WHEN ? THEN (SELECT CASE WHEN count(DISTINCT e.player_id)>=2 AND count(DISTINCT m.club_id)>=2 THEN 3 ELSE 2 END FROM entries e JOIN memberships m ON m.player_id=e.player_id JOIN clubs c ON c.id=m.club_id JOIN profiles p ON p.id=e.player_id WHERE e.tournament_id=tournaments.id AND m.status='active' AND m.role!='guest' AND c.approval_status='approved' AND p.deleted_at IS NULL) ELSE rating_weight END,revision=revision+1,last_operation=? WHERE id=? AND revision=? AND deleted_at IS NULL`,afterJson,status,bestOf,capacity,action==='start_tournament'?1:0,operationId,eventId,event.revision),...extra];
+ const privileged=['set_event_logistics','set_fixture_plan','set_capacity','add_tournament_guest','start_tournament','score_fixture','reset_fixture','withdraw_player'].includes(action)||(['set_check_in','enter_tournament','remove_entry'].includes(action)&&body.playerId!==user.id);
+ const statements=[q(`UPDATE tournaments SET state_json=?,status=?,best_of=?,capacity=?,rating_weight=CASE WHEN ? THEN (SELECT CASE WHEN count(DISTINCT e.player_id)>=2 AND count(DISTINCT m.club_id)>=2 THEN 3 ELSE 2 END FROM entries e JOIN memberships m ON m.player_id=e.player_id JOIN clubs c ON c.id=m.club_id JOIN profiles p ON p.id=e.player_id WHERE e.tournament_id=tournaments.id AND m.status='active' AND m.role!='guest' AND c.approval_status='approved' AND p.deleted_at IS NULL) ELSE rating_weight END,revision=revision+1,last_operation=? WHERE id=? AND revision=? AND deleted_at IS NULL AND (?=0 OR EXISTS (SELECT 1 FROM memberships WHERE club_id=tournaments.club_id AND player_id=? AND status='active' AND role IN ('owner','admin','board'))) AND (?=0 OR (registration_closes_at IS NULL OR registration_closes_at>?)) AND (?=0 OR (check_in_open=1 AND status!='completed' AND EXISTS (SELECT 1 FROM memberships WHERE club_id=tournaments.club_id AND player_id=? AND status='active')))`,afterJson,status,bestOf,capacity,action==='start_tournament'?1:0,operationId,eventId,event.revision,privileged?1:0,user.id,['enter_tournament','add_tournament_guest'].includes(action)?1:0,now,action==='set_check_in'&&!isAdmin?1:0,user.id),...extra];
  // Every mutation after the compare-and-swap uses the same operation guard.
  // A stale writer therefore cannot partially update fixtures, standings or history.
  if(after){for(const fixture of after.fixtures){

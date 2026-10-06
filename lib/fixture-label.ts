@@ -1,0 +1,2 @@
+import type {Fixture} from './tournament-engine';
+export function fixtureLabel(f:Fixture,format:string){if(f.id==='third')return 'Third place';if(f.bracket==='final')return f.id==='gf2'?'Bracket reset':'Grand final';if(f.bracket)return `${f.bracket==='winners'?'Winners':'Elimination'} · Round ${f.bracketRound} · Match ${f.slot+1}`;return format==='Round robin'?`Match ${f.slot+1}`:`Round ${f.round} · Match ${f.slot+1}`;}

@@ -1,12 +1,21 @@
 import {env} from 'cloudflare:workers';
 import {getAuthenticatedUser} from '@/lib/auth';
+import {readActivityPage} from '@/lib/activity-pages';
+import {ratingHistory} from '@/lib/seeding';
 import {AppError,makeService} from '@/lib/rally-service';
 export const dynamic='force-dynamic';
 function service(){if(!env.DB)throw new Error('Database unavailable');return makeService(env.DB)}
 function isSiteAdmin(email:string){return (env.RALLY_ADMIN_EMAILS??'').split(',').some(value=>value.trim().toLowerCase()===email.toLowerCase())}
 function response(data:unknown,status=200){return Response.json(data,{status,headers:{'Cache-Control':'private, no-store','Vary':'Cookie'}})}
 function error(e:unknown){if(e instanceof AppError)return response({error:e.message},e.status);console.error('Rally data error',e);return response({error:'Your data is temporarily unavailable. Please try again.'},503)}
-export async function GET(){try{const user=await getAuthenticatedUser();if(!user)return response({error:'Sign in to open the Rally clubhouse.'},401);const siteAdmin=isSiteAdmin(user.email);return response({...await service().read(user.id,{isSiteAdmin:siteAdmin}),account:{email:user.email,displayName:user.displayName,emailVerified:user.emailVerified},isSiteAdmin:siteAdmin})}catch(e){return error(e)}}
+export async function GET(request:Request){try{const query=new URL(request.url).searchParams,user=await getAuthenticatedUser(),siteAdmin=!!user&&isSiteAdmin(user.email),view=query.get('view');
+ if(view==='members'||view==='matches'||view==='tournaments')return response(await readActivityPage(env.DB,user?.id??null,{view,club:query.get('club')??'all',search:query.get('search')??'',role:query.get('role')??'all',status:query.get('status')??'all',page:Number(query.get('page')??1),match:query.get('match')??'',isSiteAdmin:siteAdmin}));
+ if(!user)return response({error:'Sign in to open the Rally clubhouse.'},401);
+ const data=await service().read(user.id,{isSiteAdmin:siteAdmin,compact:query.get('compact')==='1'&&!view,clubId:query.get('clubScope')??undefined});
+ if(view==='rating'){const player=query.get('player')??'',club=query.get('club')??'all';if(!data.players.some(p=>p.id===player))return response({error:'Player unavailable.'},404);return response(ratingHistory(club==='all'?data.matches:data.matches.filter(m=>m.club_id===club),player));}
+ if(view==='event'){const id=query.get('event'),event=data.tournaments.find(t=>t.id===id);if(!event)return response({error:'Tournament unavailable.'},404);return response({event,entries:data.entries.filter(e=>e.tournament_id===id),memberships:data.memberships.filter(m=>m.club_id===event.club_id),players:data.players.filter(p=>data.memberships.some(m=>m.club_id===event.club_id&&m.player_id===p.id)||data.entries.some(e=>e.tournament_id===id&&e.player_id===p.id))});}
+ return response({...data,account:{email:user.email,displayName:user.displayName,emailVerified:user.emailVerified},isSiteAdmin:siteAdmin});
+ }catch(e){return error(e)}}
 export async function POST(request:Request){try{
  const origin=request.headers.get('origin');if(!origin||origin!==new URL(request.url).origin)return response({error:'Request origin not allowed.'},403);
  if(!request.headers.get('content-type')?.startsWith('application/json'))return response({error:'JSON required.'},415);

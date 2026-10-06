@@ -17,3 +17,12 @@ const completed={...active,tournaments:[{...active.tournaments[0],status:'comple
 assert.ok(notificationsFor(completed,[],false,'2026-10-06').some(n=>n.id==='completed-open-3'));
 assert.equal(notificationsFor(completed,[],false,'2026-12-06').some(n=>n.kind==='tournament'),false);
 console.log('Inbox eligibility, pending match resolution, membership/fullness, starts, ready fixtures, read status and result ageing passed.');
+
+assert.equal(notificationsFor(data,[],false,'2026-10-06').find(n=>n.kind==='match').href,'/clubhouse?tab=matches&match=one');
+assert.equal(notificationsFor({...data,tournaments:[{...data.tournaments[0],registration_closes_at:'2000-01-01T00:00:00.000Z'}]},[],false,'2026-10-06').some(n=>n.kind==='registration'),false);
+const checkin={...active,tournaments:[{...active.tournaments[0],check_in_open:1,checkedIn:[]}]};
+assert.ok(notificationsFor(checkin,[],false,'2026-10-06').some(n=>n.id==='checkin-open'));
+assert.equal(notificationsFor({...checkin,memberships:[]},[],false,'2026-10-06').some(n=>n.id==='checkin-open'),false);
+assert.equal(notificationsFor({...checkin,tournaments:[{...checkin.tournaments[0],checkedIn:['a']}]},[],false,'2026-10-06').some(n=>n.id==='checkin-open'),false);
+assert.equal(notificationsFor({...checkin,tournaments:[{...checkin.tournaments[0],status:'completed'}]},[],false,'2026-10-06').some(n=>n.id==='checkin-open'),false);
+console.log('Check-in notices require current entry, active membership and an open event, and disappear after check-in.');
