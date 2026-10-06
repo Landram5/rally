@@ -15,5 +15,5 @@ export default function PublicAccount(){
   refresh();window.addEventListener('focus',resume);document.addEventListener('visibilitychange',resume);
   return()=>{current=false;controller.abort();window.removeEventListener('focus',resume);document.removeEventListener('visibilitychange',resume)};
  },[]);
- return account?<AccountMenu name={account.displayName} profileHref={account.profileId?`/players/${account.profileId}`:undefined} onProfile={()=>router.push('/account')}/>:<AccountMenu anonymous/>;
+ return account?<AccountMenu name={account.displayName} profileHref={account.profileId?`/players/${account.profileId}`:undefined} onProfile={()=>router.push('/account')}/>:<AccountMenu anonymous={account===null} pending={account===undefined}/>;
 }
