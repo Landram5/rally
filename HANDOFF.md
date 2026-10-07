@@ -13,6 +13,13 @@ Template:
 - Don't touch:
 ```
 
+## 2026-10-07 — Claude — deploy rule and pending branches
+- Branch/commit: `claude/agent-setup`
+- Changed: `AGENTS.md` and `CLAUDE.md` now say Codex is the only deployer, and must `git pull` main before each deploy.
+- Waiting for the owner to merge: `claude/agent-setup` (agent docs) and `claude/match-header-logo` (tab and Home Screen icons now match the header logo; release note `RELEASE_LOGO_MATCH_2026-10-07.md`).
+- Codex, please: after the owner merges `claude/match-header-logo`, pull `main` and include it in your next deploy. Existing Home Screen installs keep the old icon until re-added.
+- Don't touch: `.dev.vars`, production D1, Supabase settings without the owner's go-ahead.
+
 ## 2026-10-07 — Claude — agent setup and service check
 - Branch/commit: `claude/agent-setup`
 - Changed: added `AGENTS.md`, `CLAUDE.md`, `HANDOFF.md`. No application code changed.
