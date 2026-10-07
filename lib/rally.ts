@@ -31,9 +31,10 @@ export function pairs(entrants:string[],format:string):[string,string|null][] {
  const size=2**Math.ceil(Math.log2(entrants.length));const padded:(string|null)[]=[...entrants,...Array(size-entrants.length).fill(null)];
  return Array.from({length:size/2},(_,i)=>[padded[i]!,padded[size-1-i]]);
 }
+const scorePool:[number,number][][]=[[[11,6],[11,9]],[[8,11],[11,7],[9,11]],[[11,9],[7,11],[12,10]],[[11,4],[11,8]],[[7,11],[9,11]],[[11,8],[9,11],[11,6]],[[12,10],[11,7]],[[11,13],[11,6],[7,11]],[[11,5],[11,3]],[[9,11],[11,9],[8,11]],[[13,11],[8,11],[11,9]],[[5,11],[8,11]]];
 export const initialMatches:Match[]=Array.from({length:28},(_,i)=>{
  const a=players[i%8].id,b=players[(i%8+1+Math.floor(i/8))%8].id;
- const games:[number,number][]=i%3===0?[[8,11],[11,7],[9,11]]:i%3===1?[[11,6],[11,9]]:[[11,9],[7,11],[12,10]];
+ const games=scorePool[(i*5+2)%scorePool.length];
  return {id:`m${i}`,a,b,games,date:`2026-09-${String(28-Math.floor(i/3)).padStart(2,'0')}`,club:players[i%8].club,status:'confirmed',kind:'Club play'};
 });
 export const initialTournaments:Tournament[]=[{id:'fall-open',name:'Fall Open',club:'harbor',date:'2026-10-10',location:'Baltimore, MD',format:'Single elimination',capacity:16,entrants:players.slice(0,6).map(p=>p.id),status:'Registration open'},{id:'friday-round-robin',name:'Friday Round Robin',club:'metro',date:'2026-10-02',location:'Columbia, MD',format:'Round robin',capacity:8,entrants:players.slice(2).map(p=>p.id),status:'Registration open'},{id:'club-championship',name:'Club Championship',club:'harbor',date:'2026-10-24',location:'Baltimore, MD',format:'Single elimination',capacity:16,entrants:players.slice(0,4).map(p=>p.id),status:'Upcoming'}];
