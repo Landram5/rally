@@ -1,3 +1,4 @@
+import SupportFooter from './support-footer';
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import "./dark.css";
@@ -53,7 +54,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="antialiased"><AppearanceProvider>{children}<PersistentMobileNavigation/><AnnouncementBanner/><PwaRegistration /></AppearanceProvider></body>
+      <body className="antialiased"><AppearanceProvider>{children}<SupportFooter/><PersistentMobileNavigation/><AnnouncementBanner/><PwaRegistration /></AppearanceProvider></body>
     </html>
   );
 }

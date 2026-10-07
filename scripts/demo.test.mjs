@@ -92,3 +92,17 @@ console.log('Demo event details, deadlines, check-in, fixture plans and isolatio
  data=applyDemoAction(data,{action:'resolve_match_review',id:'sample-review',matchId:m.id,status:'resolved',note:'Scores corrected.'});assert.equal(data.ownership.reviews[0].status,'resolved');assert.equal(createDemoData().ownership.reviews[0].status,'pending','sample changes remain isolated');
 }
 console.log('Demo visiting-player queue, promotions, guest claims and audited match corrections passed.');
+
+const {notificationsFor}=await import('../.test-runtime/notifications.mjs');
+const source={...createDemoData(),matches:[{id:'needs-verification',a:'alex',b:'jordan',canConfirm:true}],announcements:[{id:'club-note',club_id:'harbor',title:'Practice',body:'Tonight',created_at:'2026-10-06T12:00:00Z',clubName:'Harbor'}]};
+const notices=notificationsFor(source,[],true,'2026-10-06');
+assert.equal(notices.find(n=>n.id==='match-needs-verification').actionNeeded,true);
+assert.equal(notices.find(n=>n.id==='announcement-club-note').href,'/clubs/harbor?section=announcements');
+assert.equal(notices.find(n=>n.id==='announcement-club-note').date,'2026-10-06T12:00:00Z');
+const readNotices=notificationsFor(source,['match-needs-verification'],true,'2026-10-06');
+assert.equal(readNotices.find(n=>n.id==='match-needs-verification').read,true);
+assert.equal(readNotices.find(n=>n.id==='match-needs-verification').actionNeeded,true);
+assert.ok(!notificationsFor({...source,matches:[]},[],true,'2026-10-06').some(n=>n.id==='match-needs-verification'));
+assert.ok(notices.filter(n=>n.id.startsWith('entry-')||n.id.startsWith('completed-')).every(n=>!n.actionNeeded));
+assert.ok(notices.filter(n=>n.id.startsWith('checkin-')||n.id.startsWith('fixture-')).every(n=>n.actionNeeded));
+console.log('Inbox tasks retain action status after reading, disappear after resolution, and distinguish informational updates.');
