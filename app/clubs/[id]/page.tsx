@@ -1,8 +1,13 @@
+import type {Metadata} from 'next';
 import {env} from 'cloudflare:workers';
 import ClubPage from '@/app/club-page';
 import {makeService} from '@/lib/rally-service';
 import type {Data} from '@/app/rally-app';
 export const dynamic='force-dynamic';
+export async function generateMetadata({params}:{params:Promise<{id:string}>}):Promise<Metadata>{
+ const {id}=await params;
+ return {alternates:{canonical:`/clubs/${encodeURIComponent(id)}`}};
+}
 export default async function Page({params}:{params:Promise<{id:string}>}){
  const {id}=await params;
  const all={...await makeService(env.DB).read(null,{clubId:id,compact:true}),account:null,isSiteAdmin:false} as unknown as Data;

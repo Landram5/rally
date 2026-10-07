@@ -21,7 +21,7 @@ async function tournament(id:string){return env.DB?getPublicTournament(env.DB,id
 
 export async function generateMetadata({params}:Props):Promise<Metadata>{
  const t=await tournament((await params).id);
- return t?{title:`${t.name} · Rally tournament`,description:`Follow the field, draw, and results for ${t.name} at ${t.club.name}.`}:{title:'Tournament not found · Rally'};
+ return t?{title:`${t.name} · Rally tournament`,description:`Follow the field, draw, and results for ${t.name} at ${t.club.name}.`,alternates:{canonical:`/tournaments/${encodeURIComponent(t.id)}`}}:{title:'Tournament not found · Rally'};
 }
 
 export default async function PublicTournamentPage({params}:Props){

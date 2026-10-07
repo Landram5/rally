@@ -456,3 +456,5 @@ input[type=date]::-webkit-date-and-time-value,input[type=datetime-local]::-webki
 .player-performance .profile-help{font-size:.8rem;line-height:1.5;color:#738078}
 .player-performance>label{margin-top:16px;max-width:420px}
 @media(max-width:700px){.player-performance{padding:18px 16px}.performance-controls{grid-template-columns:minmax(0,1fr);gap:14px}.performance-legend{grid-template-columns:minmax(0,1fr)}.performance-chart{padding:10px 4px 4px}}
+
+@media(max-width:700px){.club-detail>.club-back-link{margin-bottom:0}.club-detail>.panel{margin-top:16px}.club-detail-hero .club-detail-heading{margin-bottom:0}}
