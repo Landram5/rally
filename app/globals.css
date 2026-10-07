@@ -406,3 +406,29 @@ main{padding-top:24px;padding-bottom:28px}
 @media print{body *{visibility:hidden!important}.tournament-print-sheet,.tournament-print-sheet *{visibility:visible!important}.tournament-print-sheet{display:block!important;position:absolute;left:0;top:0;width:100%;padding:16px;color:#000;background:#fff}.tournament-print-sheet table{width:100%;border-collapse:collapse;font-size:11px;margin:16px 0}.tournament-print-sheet th,.tournament-print-sheet td{border:1px solid #777;padding:10px;text-align:left}.tournament-print-sheet tr{break-inside:avoid}.tournament-print-sheet h1{font-size:26px}.tournament-print-sheet h2{margin:16px 0;font-size:18px}}
 
 @media(max-width:700px){.club-section-tabs [role=tab]:nth-child(5){grid-column:auto}.club-section-tabs [role=tab]:last-child:nth-child(odd){grid-column:1/-1}}
+
+/* Constrain native iOS controls and scroll containers to their available width. */
+html{overflow-x:hidden;overscroll-behavior-x:none}
+body{width:100%;max-width:100%;overscroll-behavior-x:none}
+.dialog-scroll-area{width:100%;min-width:0;overflow-x:hidden}
+.form-stack,.form-stack>*{min-width:0;max-width:100%}
+input[type=date],input[type=datetime-local]{display:block;box-sizing:border-box;min-width:0;max-width:100%;min-inline-size:0;-webkit-appearance:none;appearance:none}
+input[type=date]::-webkit-date-and-time-value,input[type=datetime-local]::-webkit-date-and-time-value{min-width:0;text-align:left}
+.player-search-trigger span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.player-search-inline{width:100%;min-width:0;max-width:100%}
+.player-search-options{width:100%;min-width:0;margin-top:6px;border:1px solid var(--border);border-radius:8px;background:var(--popover);color:var(--popover-foreground);overflow:hidden}
+.player-search-options [cmdk-list]{max-height:220px;overflow-y:auto;overscroll-behavior:contain}
+.player-search-options [cmdk-input]{font-size:16px;min-height:44px}
+.player-search-options [cmdk-item]{min-height:44px;gap:10px}
+.player-search-options [cmdk-item] span{flex:1;min-width:0;overflow-wrap:anywhere}
+@media(max-width:767px){
+ .match-filter-grid input{width:100%;max-width:100%;min-width:0}
+ .match-filter-grid .player-search-trigger{height:48px}
+ .form-two,.game-input,.game-header{min-width:0}
+ .form-two{grid-template-columns:minmax(0,1fr)}
+ .game-input,.game-header{grid-template-columns:40px minmax(0,1fr) minmax(0,1fr) 38px}
+ .game-input input,.form-stack input,.form-stack select{min-width:0;max-width:100%}
+}
+
+.match-filter-grid .picker{min-width:0;max-width:100%}
+@media(max-width:767px){.tournament-match-filters>.player-search-inline{grid-column:1/-1;min-width:0;width:100%}}
