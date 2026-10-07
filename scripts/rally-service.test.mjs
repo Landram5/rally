@@ -27,6 +27,11 @@ assert.equal(sql.prepare('SELECT image_data FROM profile_photos WHERE player_id=
 assert.equal(sql.prepare('SELECT count(*) AS n FROM profile_photos WHERE player_id=?').get(owner).n,0,'cannot upload for someone else');
 assert.match((await service.read('member-auth')).players.find(p=>p.id===member).photo_url,/^\/api\/players\/.*\/photo\?v=/);
 assert.ok((await getPublicPlayer(db,member)).photoUrl,'photo visible on public profile');
+assert.equal((await service.read('member-auth',{compact:true})).me.profileComplete,false,'photo alone does not complete profile');
+await act('member-auth',{action:'save_profile',name:'Member',bio:'Club player'});
+assert.equal((await service.read('member-auth',{compact:true})).me.profileComplete,true,'compact clubhouse retains profile completion');
+await act('member-auth',{action:'save_profile',name:'Member',bio:' '});
+assert.equal((await service.read('member-auth',{compact:true})).me.profileComplete,false,'blank bio is incomplete');
 await act('member-auth',{action:'save_profile',name:'Member'});
 assert.equal(sql.prepare('SELECT count(*) AS n FROM profile_photos WHERE player_id=?').get(member).n,1,'editing name preserves photo');
 for(const invalid of ['data:image/svg+xml;base64,PHN2Zz4=','data:image/jpeg;base64,AAAA',false,'data:image/jpeg;base64,'+'A'.repeat(240024)]){

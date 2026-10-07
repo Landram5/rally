@@ -437,3 +437,5 @@ input[type=date]::-webkit-date-and-time-value,input[type=datetime-local]::-webki
 .match-filter-grid>label,.match-filter-grid>div{grid-template-columns:minmax(0,1fr)}
 .match-date-filter input{inline-size:100%;min-inline-size:0;max-inline-size:100%}
 @media(max-width:767px){.match-filter-grid>.match-date-filter{grid-column:1/-1}}
+
+.onboarding-checklist>div>button{width:44px;min-width:44px;display:grid;place-items:center;text-decoration:none}
