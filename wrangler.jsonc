@@ -17,6 +17,11 @@
       "migrations_dir": "drizzle"
     }
   ],
+  "ratelimits": [
+    {"name":"WRITE_LIMITER","namespace_id":"71001","simple":{"limit":500,"period":60}},
+    {"name":"AUTH_LIMITER","namespace_id":"71002","simple":{"limit":10,"period":60}},
+    {"name":"USER_WRITE_LIMITER","namespace_id":"71003","simple":{"limit":60,"period":60}}
+  ],
   "observability": {"enabled": true},
   "triggers": {"crons": ["*/5 * * * *"]}
 }

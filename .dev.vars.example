@@ -3,3 +3,7 @@ SUPABASE_PUBLISHABLE_KEY=sb_publishable_your_key
 RALLY_ADMIN_EMAILS=admin@example.com
 # Server-only secret for account deletion. Never add this to browser/iOS code.
 SUPABASE_SECRET_KEY=sb_secret_your_key
+
+# Turnstile: public site key; secret stays server-side. Supabase Auth CAPTCHA must use this widget.
+TURNSTILE_SITE_KEY=your-public-turnstile-site-key
+TURNSTILE_SECRET_KEY=your-turnstile-secret

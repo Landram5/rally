@@ -1,0 +1,15 @@
+import {AppError} from './rally-errors';
+import {calculateRatings,initialRating,compareRatedPlayers,ESTABLISHED_MATCHES,RATING_MODEL_VERSION,type SeedMatch} from './seeding';
+export function csv(rows:unknown[][]){return '\uFEFF'+rows.map(row=>row.map(value=>{const text=String(value??'');return '"'+(/^[\t\r\n]|^\s*[=+\-@]/.test(text)?"'":'')+text.replaceAll('"','""')+'"';}).join(',')).join('\r\n')+'\r\n';}
+export async function clubExport(db:D1Database,authId:string,clubId:string,kind:string,asOf=new Date().toISOString().slice(0,10)){
+ if(!/^[a-zA-Z0-9_-]{1,80}$/.test(clubId)||!['roster','results','ratings'].includes(kind))throw new AppError(400,'Choose a club and an export type.');
+ const allowed=await db.prepare("SELECT 1 FROM memberships m JOIN profiles p ON p.id=m.player_id WHERE p.auth_id=? AND p.deleted_at IS NULL AND m.club_id=? AND m.status='active' AND m.role IN ('owner','admin')").bind(authId,clubId).first();
+ if(!allowed)throw new AppError(403,'Only this club’s owner and administrators can export its data.');
+ const roster=(await db.prepare('SELECT p.id,p.name,p.rally_id,p.initial_rating,m.role,m.status,m.created_at FROM memberships m JOIN profiles p ON p.id=m.player_id WHERE m.club_id=? AND p.deleted_at IS NULL ORDER BY p.name,p.id').bind(clubId).all<{id:string;name:string;rally_id:string|null;initial_rating:number|null;role:string;status:string;created_at:string}>()).results;
+ if(kind==='roster')return csv([['Player ID','Rally ID','Name','Role','Membership status','Joined'],...roster.map(p=>[p.id,p.rally_id,p.name,p.role,p.status,p.created_at])]);
+ const matches=(await db.prepare('SELECT m.*,pa.name AS a_name,pb.name AS b_name,pa.initial_rating AS a_initial_rating,pb.initial_rating AS b_initial_rating,t.name AS tournament_name,t.rating_weight AS tournament_weight FROM matches m LEFT JOIN profiles pa ON pa.id=m.a LEFT JOIN profiles pb ON pb.id=m.b LEFT JOIN tournaments t ON t.id=m.tournament_id WHERE m.club_id=? AND t.deleted_at IS NULL ORDER BY m.played_on,m.created_at,m.id').bind(clubId).all<SeedMatch&{a_name:string;b_name:string;tournament_name:string|null}>()).results;
+ if(kind==='results')return csv([['Match ID','Date','Player one ID','Player one','Player two ID','Player two','Games','Best of','Status','Tournament ID','Tournament'],...matches.map(m=>[m.id,m.played_on,m.a,m.a_name,m.b,m.b_name,m.games,m.best_of,m.status,m.tournament_id,m.tournament_name])]);
+ const estimates=Object.fromEntries(roster.filter(p=>p.initial_rating!=null).map(p=>[p.id,p.initial_rating!])),ratings=calculateRatings(matches,asOf,estimates);
+ const ranked=roster.filter(p=>p.status==='active').map(p=>({...p,...(ratings.get(p.id)??{rating:initialRating(p.initial_rating),played:0,wins:0,distinctOpponents:0})})).sort((a,b)=>compareRatedPlayers(a,b)||a.name.localeCompare(b.name));
+ return csv([['Rank','Player ID','Rally ID','Name','Rally rating','Matches','Wins','Losses','Distinct opponents','Provisional','As of','Rating model'],...ranked.map((p,i)=>[i+1,p.id,p.rally_id,p.name,Math.round(p.rating),p.played,p.wins,p.played-p.wins,p.distinctOpponents,p.played<ESTABLISHED_MATCHES?'Yes':'No',asOf,RATING_MODEL_VERSION])]);
+}
