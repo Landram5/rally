@@ -381,3 +381,15 @@ main{padding-top:24px;padding-bottom:28px}
 
 .member-role-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;flex-shrink:0}.member-edit-button{min-height:44px;padding:8px 12px;border-radius:8px;font-size:14px;font-weight:600;color:var(--foreground);background:var(--background);border:1px solid var(--border)}.member-edit-button:focus-visible{outline:3px solid var(--ring);outline-offset:2px}
 @media(max-width:400px){.member-role-actions{max-width:130px}.club-member-row .person{flex:1}}
+
+/* Keep creation forms and their close action within the visible, safe viewport. */
+[data-slot=dialog-content].form-dialog{display:flex;flex-direction:column;overflow:hidden}
+.form-dialog .dialog-pinned-header{flex-shrink:0;padding:20px 68px 16px 20px;border-bottom:1px solid var(--border)}
+.form-dialog .dialog-pinned-header [data-slot=dialog-header]{padding-right:0}
+.form-dialog .dialog-scroll-area{min-height:0;max-height:none;flex:1;overflow-y:auto;padding:18px 20px 24px}
+.form-dialog [data-slot=dialog-close]{width:44px;height:44px;top:10px;right:10px;background:var(--background);color:var(--foreground);border-color:var(--border)}
+@media(max-width:700px){
+ [data-slot=dialog-content].form-dialog{top:calc(var(--visible-top,0px) + max(12px,env(safe-area-inset-top)))!important;left:max(12px,env(safe-area-inset-left))!important;width:calc(100% - max(12px,env(safe-area-inset-left)) - max(12px,env(safe-area-inset-right)))!important;max-width:480px!important;max-height:calc(var(--visible-height,100dvh) - max(12px,env(safe-area-inset-top)) - max(12px,env(safe-area-inset-bottom)))!important}
+ .form-dialog .dialog-pinned-header{padding:18px 64px 14px 16px}
+ .form-dialog .dialog-scroll-area{padding:16px;scroll-padding-block:16px}
+}

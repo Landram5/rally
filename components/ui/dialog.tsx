@@ -52,10 +52,12 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  header,
   style,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
+  header?: React.ReactNode
 }) {
   const viewportStyle = useVisibleViewport()
   return (
@@ -70,6 +72,7 @@ function DialogContent({
         {...props}
         style={{...viewportStyle,...style}}
       >
+        {header && <div className="dialog-pinned-header">{header}</div>}
         <div className="dialog-scroll-area">{children}</div>
         {showCloseButton && (
           <DialogPrimitive.Close
