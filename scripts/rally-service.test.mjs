@@ -393,6 +393,37 @@ for(const summary of Object.values(scoped.summaries)){
 await act('page-private-auth',{action:'save_profile',name:'Private organizer'});await act('page-private-auth',{action:'create_club',id:'page-private-club',name:'Private club',location:'Baltimore'});await act('page-private-auth',{action:'create_tournament',id:'page-private-event',clubId:'page-private-club',name:'Private event',date:'2099-10-10',format:'Round robin',capacity:4});
 assert.equal((await readActivityPage(db,null,{view:'members',club:'page-private-club'})).total,0);assert.equal((await readActivityPage(db,'member-auth',{view:'members',club:'page-private-club'})).total,0);assert.equal((await readActivityPage(db,'page-private-auth',{view:'members',club:'page-private-club'})).total,1);assert.equal((await readActivityPage(db,null,{view:'tournaments',club:'page-private-club'})).total,0);assert.equal((await readActivityPage(db,'page-private-auth',{view:'tournaments',club:'page-private-club'})).total,1);assert.equal((await service.read(null,{clubId:'page-private-club',compact:true})).clubs.length,0);
 console.log('Passed server-side member/event/result pagination, literal search, anonymous visibility, focused results, scoped club reads and full-history compact summaries.');
+
+// No membership is needed to record, find, verify, or rate an unaffiliated game.
+await act('free-one',{action:'save_profile',name:'Free One'});
+await act('free-two',{action:'save_profile',name:'Free Two'});
+const freeOne=await uid('free-one'),freeTwo=await uid('free-two');
+const freeResult={action:'record_match',id:'free-game',clubId:'unaffiliated',a:freeOne,b:freeTwo,bestOf:1,games:[[11,8]],date:'2026-10-01'};
+assert.ok((await service.read('free-one',{compact:true})).players.some(p=>p.id===freeTwo));
+assert.equal((await service.read('free-one')).clubs.some(c=>c.id==='unaffiliated'),false);
+await assert.rejects(act('member-auth',freeResult),e=>e.status===403);
+await assert.rejects(act('free-one',{...freeResult,b:'guest-one'}),e=>e.status===400);
+await act('free-one',freeResult);await act('free-one',freeResult);
+await assert.rejects(act('free-one',{...freeResult,date:'2026-10-02'}),e=>e.status===409);
+await assert.rejects(act('free-one',{action:'confirm_match',id:'free-game'}),e=>e.status===403);
+await assert.rejects(act('member-auth',{action:'confirm_match',id:'free-game'}),e=>e.status===403);
+assert.equal((await readActivityPage(db,'free-two',{view:'matches',match:'free-game'})).items[0].canConfirm,true);
+assert.ok((await service.read('free-two',{compact:true})).notifications.some(n=>n.id==='match-free-game'));
+await act('free-two',{action:'confirm_match',id:'free-game'});
+assert.equal((await getPublicPlayer(db,freeOne)).matches[0].clubName,'Unaffiliated');
+assert.equal((await service.read(null)).matches.find(m=>m.id==='free-game').best_of,1);
+assert.equal(sql.prepare('SELECT count(*) n FROM memberships WHERE player_id IN (?,?)').get(freeOne,freeTwo).n,0);
+await assert.rejects(act('free-one',{action:'request_join',clubId:'unaffiliated'}),e=>e.status===400);
+assert.equal((await service.read('free-one',{compact:true})).summaries.all.ratings[freeOne].rating,402.64);
+await act('owner-auth',{action:'create_tournament',id:'free-tournament',clubId:'club-one',name:'Free tournament',date:'2026-10-01',format:'Round robin',capacity:2});
+await act('owner-auth',{action:'set_registration_policy',id:'free-tournament',allowVisitors:true});
+for(const playerId of [owner,freeOne])await act('owner-auth',{action:'enter_tournament',id:'free-tournament',playerId});
+assert.equal((await service.read('owner-auth')).tournaments.find(t=>t.id==='free-tournament').rating_weight,2);
+await act('owner-auth',{action:'start_tournament',id:'free-tournament',seeds:[owner,freeOne],bestOf:3});
+assert.equal(sql.prepare("SELECT rating_weight FROM tournaments WHERE id='free-tournament'").get().rating_weight,2);
+assert.deepEqual(sql.prepare('PRAGMA foreign_key_check').all(),[]);
+console.log('Passed: unaffiliated recording, permissions, confirmation, public history, 33% ratings, no memberships and single-club tournament weighting.');
+
 sql.close();console.log('Passed: arbitrary integer capacity, capacity edits, atomic no-account guest registration, guest permissions, statistic-based auto seeds, post-start registration lock.');
 
 {

@@ -50,7 +50,7 @@ function fixture(){
  assert.equal(one("SELECT role FROM memberships WHERE player_id='other'").role,'owner');
  assert.equal(one("SELECT role FROM memberships WHERE player_id='owner'").role,'admin');
  await beginDeletion(db,'owner-auth','keep_results');
- assert.equal(one('SELECT COUNT(*) n FROM clubs').n,1);sql.close();
+ assert.equal(one('SELECT COUNT(*) n FROM clubs').n,2,'the transferred club and reserved unaffiliated scope survive deletion');sql.close();
 }
 {
  const {db,one,run,sql}=fixture();await beginDeletion(db,'player-auth','keep_results');
@@ -82,7 +82,7 @@ function fixture(){
  assert.equal(await getPublicPlayer(db,'player'),null);
  assert.equal(one('SELECT COUNT(*) n FROM matches').n,5);
  assert.equal(one('SELECT COUNT(*) n FROM tournaments').n,3);
- assert.equal(one('SELECT COUNT(*) n FROM clubs').n,1);
+ assert.equal(one('SELECT COUNT(*) n FROM clubs').n,2,'the club and reserved unaffiliated scope survive history removal');
  const rows=sql.prepare('SELECT id,a,b FROM matches ORDER BY id').all();
  assert.notEqual(rows[0].a,rows[1].a);assert.equal(rows[2].a,rows[3].a);assert.notEqual(rows[3].a,rows[4].a);
  assert.ok(rows.every(r=>r.b==='other'));

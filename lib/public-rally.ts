@@ -41,7 +41,7 @@ export async function getPublicDirectory(db:D1Database,view:'tournaments'|'playe
 }
 
 export async function getPublicPlayer(db:D1Database,playerId:string):Promise<PublicPlayer|null>{
- if(!validId(playerId))return null;const alias=await db.prepare('SELECT merged_into FROM profiles WHERE id=?').bind(playerId).first<{merged_into:string|null}>();if(alias?.merged_into)return getPublicPlayer(db,alias.merged_into);
+ if(!validId(playerId)||playerId==='rally-unaffiliated-system')return null;const alias=await db.prepare('SELECT merged_into FROM profiles WHERE id=?').bind(playerId).first<{merged_into:string|null}>();if(alias?.merged_into)return getPublicPlayer(db,alias.merged_into);
  const profile=await db.prepare('SELECT p.id,p.name,p.bio,p.auth_id IS NULL AS is_guest,ph.updated_at AS photo_version FROM profiles p LEFT JOIN profile_photos ph ON ph.player_id=p.id WHERE p.id=? AND p.deleted_at IS NULL').bind(playerId).first<{id:string;name:string;is_guest:number;bio:string;photo_version:string|null}>();
  if(!profile)return null;
  const clubs=(await db.prepare("SELECT c.id,c.name,c.location FROM clubs c JOIN memberships m ON m.club_id=c.id WHERE m.player_id=? AND m.status='active' AND c.approval_status='approved' ORDER BY c.name").bind(playerId).all<{id:string;name:string;location:string}>()).results;

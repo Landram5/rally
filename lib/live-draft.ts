@@ -15,7 +15,7 @@ function snapshot(value:unknown,bestOf:number):value is ScoreSnapshot{
 export function parseLiveDraft(raw:string|null,owner:string):LiveMatchDraft|null{
  if(!raw||raw.length>2_000_000)return null;
  try{const d=JSON.parse(raw) as LiveMatchDraft;
-  if(d.version!==1||d.owner!==owner||!['id','clubId','a','b'].every(k=>typeof d[k as keyof LiveMatchDraft]==='string'&&/^[a-zA-Z0-9_-]{1,80}$/.test(d[k as keyof LiveMatchDraft] as string))||d.a===d.b||![3,5,7].includes(d.bestOf)||typeof d.swapped!=='boolean')return null;
+  if(d.version!==1||d.owner!==owner||!['id','clubId','a','b'].every(k=>typeof d[k as keyof LiveMatchDraft]==='string'&&/^[a-zA-Z0-9_-]{1,80}$/.test(d[k as keyof LiveMatchDraft] as string))||d.a===d.b||![1,3,5,7].includes(d.bestOf)||typeof d.swapped!=='boolean')return null;
   if(typeof d.date!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(d.date)||!Number.isFinite(Date.parse(d.date))||new Date(d.date).toISOString().slice(0,10)!==d.date||typeof d.updatedAt!=='string'||!Number.isFinite(Date.parse(d.updatedAt)))return null;
   if(!snapshot(d.state,d.bestOf)||!Array.isArray(d.state.history)||d.state.history.length>14000||!d.state.history.every(s=>snapshot(s,d.bestOf)))return null;
   return d;

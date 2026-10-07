@@ -17,3 +17,6 @@ assert.equal(parseLiveDraft('broken json','owner'),null);assert.equal(parseLiveD
 assert.throws(()=>storeLiveDraft({...storage,setItem:()=>{throw new Error('Quota exhausted')}},draft));
 storeLiveDraft(storage,draft,true);assert.ok(memory.has(draftKey('owner',true)));assert.equal(loadLiveDraft(storage,'owner'),null);
 console.log('Passed: deuce recovery, completion/undo recovery, stable retry ID, account/demo isolation, acknowledgment cleanup, corrupt-data rejection and storage failures.');
+
+let singleState=newLiveScore();for(let i=0;i<11;i++)singleState=addLivePoint(singleState,0,1);
+assert.ok(parseLiveDraft(JSON.stringify({...draft,clubId:'unaffiliated',bestOf:1,state:singleState}),'owner'));
