@@ -22,6 +22,23 @@ Before calling work done: TypeScript, `pnpm lint`, `pnpm build`, and the test sc
 
 - Prefer running single/isolated tests rather than the entire test suite.
 - Only test the specific file or block modified.
+- Before anything is merged to `main` (which deploys to production), run the full set once: `pnpm test:reliability`, `pnpm lint` and `pnpm build`.
+
+## Coding Rules
+
+- Write the minimum amount of code that solves the problem. Nothing speculative.
+- Do not add features, error handling for impossible scenarios, or config abstractions beyond what was specifically asked.
+- Exceptions: always validate and handle failures where outside data comes in (user input, sign-in and permissions, the database, the network, browser storage). Tests for changed behavior and new migrations are required work, not extras.
+
+## Suggestions
+
+If you think something should be added or changed, because it would improve the user experience, look better, make the product more useful, or prevent a future issue, do not build it unprompted.
+
+- Pause and ask the owner before working on it. Every ask includes an **Accept all** option (a plain reply of "accept all" is enough).
+- "Accept all" covers only the batch of suggestions in that message, not future ones.
+- Once accepted, implement it and tell the owner it was implemented. Don't ask again for that batch.
+- If the owner isn't available, don't wait. Write the suggestion in `HANDOFF.md` and carry on with the original task.
+- Bugs, security problems and data-loss risks are different: flag them to the owner right away, marked **urgent**, instead of queuing them with ordinary suggestions.
 
 ## Hard rules
 

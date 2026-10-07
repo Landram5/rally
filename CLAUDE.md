@@ -10,3 +10,4 @@ Claude-specific notes:
 
 - Prefer running single/isolated tests rather than the entire test suite.
 - Only test the specific file or block modified.
+- Before anything is merged to `main` (which deploys to production), run the full set once: `pnpm test:reliability`, `pnpm lint` and `pnpm build`.

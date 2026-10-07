@@ -13,6 +13,11 @@ Template:
 - Don't touch:
 ```
 
+## 2026-10-07 — Claude — coding rules
+- Branch/commit: `claude/agent-setup`
+- Changed: added Coding Rules and Suggestions sections to `AGENTS.md` (minimum code, ask before suggestions with an Accept all option, urgent issues flagged immediately). Workflow Constraints in `AGENTS.md` and `CLAUDE.md` now require one full run (`pnpm test:reliability`, lint, build) before merging to `main`.
+- Suggestions waiting for the owner: none yet. If the owner is away, write suggestions here.
+
 ## 2026-10-07 — Claude — Cloudflare connected to GitHub
 - Branch/commit: `claude/agent-setup`
 - Changed: Cloudflare Workers Builds is now connected to `Landram5/rally` (branch `main`) with build `pnpm run build` and deploy `npx wrangler deploy --config dist/server/wrangler.json`. Merging to `main` now deploys. `AGENTS.md` / `CLAUDE.md` updated to match (this replaces the earlier "Codex is the only deployer" note below).
