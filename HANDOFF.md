@@ -1,6 +1,17 @@
+# Codex handoff — 2026-10-07 — notifications
+
+- Branch: `codex/notifications`, stacked on safety PR #2. Owns notification preferences/delivery/device API, service worker push handlers and sign-out device cleanup. Claude's leaderboard, demo sources, rating displays and sharing cards remain untouched.
+- Added: email (Resend provisional provider) and encrypted Web Push from three existing inbox events. Default-off channel preferences; server-verified opt-ins; verified Auth email; current-device permission controls; persistent dedup/retries; lease against overlapping scans; deletion cleanup. No real delivery or production configuration.
+- Migration: `0020_notification_delivery.sql` applied locally only. Production requires owner go-ahead plus export before dependent merge.
+- Limits: five subscribed accounts per scan, three pending deliveries each; five devices per account; five retries within 23 hours. Scans run after successful Rally/session writes and each five-minute cron. Busy-event timing is not guaranteed; event-targeted queueing remains a delivery limitation.
+- Checked: new isolated delivery suite, full reliability, lint, build and TypeScript passed. Read-state mutation failed as expected; restored suite passed. Local demo account renders/saves channel opt-ins, mobile width 375 = scroll width 375. Anonymous local push API returns 401. Physical-device delivery, signed-in push permission and provider integration still unchecked.
+- Rollout: read RELEASE_NOTIFICATIONS_2026-10-07.md. Email provider choice and coordinated CAPTCHA production approval are pending from Adam. Sender domain/API key and VAPID secure setup pending. Do not merge this branch until migration/configuration/UI review are coordinated.
+- Next: sessions (weekly/skip, maybe/guest, capacity waitlist), then tournament operations. No doubles. Do not deploy from this checkout; main merges deploy via Workers Builds.
+- Preexisting untracked CLAUDE_HANDOFF.md remains untouched.
+
+---
+
 # Codex handoff — 2026-10-07 — safety
-
-
 
 - Branch: `codex/safety`, based on `main` at `056583f`. Scope: write limits, Turnstile, private club CSV exports and security dependency patches. No doubles.
 
@@ -22,27 +33,17 @@
 
 - Preexisting untracked `CLAUDE_HANDOFF.md` is not part of this PR.
 
-
-
 ---
-
-
 
 # Handoff log
 
-
-
 Newest entry first. Each agent (Codex or Claude) adds an entry when it stops. Keep it short and factual.
-
-
 
 Template:
 
-
-
 ```
 
-## YYYY-MM-DD â€” <agent> â€” <topic>
+## YYYY-MM-DD — <agent> — <topic>
 
 - Branch/commit:
 
@@ -56,9 +57,7 @@ Template:
 
 ```
 
-
-
-## 2026-10-07 â€” Claude â€” coding rules
+## 2026-10-07 — Claude — coding rules
 
 - Branch/commit: `claude/agent-setup`
 
@@ -66,9 +65,7 @@ Template:
 
 - Suggestions waiting for the owner: none yet. If the owner is away, write suggestions here.
 
-
-
-## 2026-10-07 â€” Claude â€” Cloudflare connected to GitHub
+## 2026-10-07 — Claude — Cloudflare connected to GitHub
 
 - Branch/commit: `claude/agent-setup`
 
@@ -80,9 +77,7 @@ Template:
 
 - Don't touch: `.dev.vars`, production D1, Supabase settings without the owner's go-ahead.
 
-
-
-## 2026-10-07 â€” Claude â€” deploy rule and pending branches
+## 2026-10-07 — Claude — deploy rule and pending branches
 
 - Branch/commit: `claude/agent-setup`
 
@@ -94,9 +89,7 @@ Template:
 
 - Don't touch: `.dev.vars`, production D1, Supabase settings without the owner's go-ahead.
 
-
-
-## 2026-10-07 â€” Claude â€” agent setup and service check
+## 2026-10-07 — Claude — agent setup and service check
 
 - Branch/commit: `claude/agent-setup`
 
@@ -108,7 +101,7 @@ Template:
 
   - Cloudflare Worker `rally-table-tennis`, last modified 2026-10-07 19:02 UTC. Deploys are run by the owner from their PC with Wrangler (`pnpm deploy`); merging to GitHub does not deploy.
 
-  - D1 `rally-table-tennis` (id in `wrangler.jsonc`): 36 tables, all 20 migrations (0000â€“0019) applied, latest `0019_unaffiliated_play` on 2026-10-07 17:40 UTC. Nothing pending.
+  - D1 `rally-table-tennis` (id in `wrangler.jsonc`): 36 tables, all 20 migrations (0000–0019) applied, latest `0019_unaffiliated_play` on 2026-10-07 17:40 UTC. Nothing pending.
 
   - Supabase project "Rally" (ref `jzkimmldjarjhlxunfbu`, us-east-1, Postgres 17), healthy; used for Auth only.
 
@@ -121,7 +114,6 @@ Template:
   - Real-iPhone checks listed in `CONSOLIDATION.md` are still open.
 
 - Don't touch: `.dev.vars`, production D1, Supabase settings without the owner's go-ahead.
-
 
 ---
 
