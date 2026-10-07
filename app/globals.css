@@ -450,7 +450,7 @@ input[type=date]::-webkit-date-and-time-value,input[type=datetime-local]::-webki
 .performance-legend>div{padding:16px 18px;background:#f8faf8;border:1px solid #dfe6e0;border-radius:12px;align-content:start}
 .performance-legend small{font-size:.8rem;color:#738078}
 .performance-chart{margin:16px 0;padding:14px 12px 6px;border:1px solid #dfe6e0;border-radius:12px;background:#fbfcfb}
-.performance-chart svg .performance-empty{fill:var(--muted-foreground);font-size:15px}
+.performance-chart svg .performance-empty{fill:var(--muted-foreground);font-size:15px;paint-order:stroke;stroke:#fbfcfb;stroke-width:6px}
 .player-performance>p[role=status]{margin:16px 0;padding:12px 14px;background:#edf2e8;border-radius:10px;font-size:.875rem}
 .player-performance>p.error{margin:16px 0 0}
 .player-performance .profile-help{font-size:.8rem;line-height:1.5;color:#738078}
