@@ -13,6 +13,13 @@ Template:
 - Don't touch:
 ```
 
+## 2026-10-07 — Claude — Cloudflare connected to GitHub
+- Branch/commit: `claude/agent-setup`
+- Changed: Cloudflare Workers Builds is now connected to `Landram5/rally` (branch `main`) with build `pnpm run build` and deploy `npx wrangler deploy --config dist/server/wrangler.json`. Merging to `main` now deploys. `AGENTS.md` / `CLAUDE.md` updated to match (this replaces the earlier "Codex is the only deployer" note below).
+- Not yet verified: no build has run. The first merge to `main` will be the first build; check Cloudflare > Worker > Deployments, and note the version ID in the release note. If it fails (for example pnpm or env vars on the build machine), Codex's `pnpm deploy` from the PC remains the fallback.
+- Pending pull requests for the owner to merge: `claude/agent-setup` (agent docs) and `claude/match-header-logo` (tab and Home Screen icons; release note `RELEASE_LOGO_MATCH_2026-10-07.md`). Merging each will trigger a production deploy.
+- Don't touch: `.dev.vars`, production D1, Supabase settings without the owner's go-ahead.
+
 ## 2026-10-07 — Claude — deploy rule and pending branches
 - Branch/commit: `claude/agent-setup`
 - Changed: `AGENTS.md` and `CLAUDE.md` now say Codex is the only deployer, and must `git pull` main before each deploy.

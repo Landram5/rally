@@ -26,7 +26,7 @@ Before calling work done: TypeScript, `pnpm lint`, `pnpm build`, and the test sc
 ## Hard rules
 
 1. **Never read, print, commit or move secrets.** `.dev.vars`, `.env*` and anything holding keys stay local and ignored. `SUPABASE_SECRET_KEY` is server-only and must never reach browser or iOS code. Only `.dev.vars.example` (placeholders) is committed.
-2. **Production is live, and Codex is the only deployer.** Codex deploys from the owner's PC (`pnpm deploy`), then commits, pushes and writes the release note. Claude never deploys. Remote migrations (`pnpm db:migrate:remote`) and any change to production D1 or Supabase settings still need the owner's explicit go-ahead in that session. Export a backup before any remote migration (past backups go to `.local-backups/`, which is gitignored).
+2. **Production is live.** Cloudflare Workers Builds is connected to `Landram5/rally` (branch `main`): every push or merge to `main` builds and deploys to rallytt.net. Remote migrations (`pnpm db:migrate:remote`) and any change to production D1 or Supabase settings still need the owner's explicit go-ahead in that session. Claude never runs a deploy itself; it only opens pull requests.
 3. **Migrations are append-only.** Add a new numbered file in `drizzle/`; never edit one that has been applied.
 4. **Authorization is server-side.** Every write goes through the existing club/tournament permission checks. Client state and stored cookies are never proof of identity.
 5. **Don't commit local state:** `.codex/`, `.agents/`, `.sites-runtime/`, `.test-runtime/`, `.local-backups/`, `.wrangler/`, `dist/`, `node_modules/` are ignored for a reason.
@@ -40,10 +40,11 @@ Before calling work done: TypeScript, `pnpm lint`, `pnpm build`, and the test sc
 
 ## Deploying
 
-- Merging to `main` on GitHub does **not** deploy. Production only changes when Codex runs `pnpm deploy`.
-- Before every deploy, Codex runs `git pull` on `main` so work merged from Claude's branches is included, then runs the validation commands above. Never deploy from a stale local copy.
-- Claude opens pull requests from `claude/<topic>` branches and notes in `HANDOFF.md` anything waiting to be merged or deployed.
-- The release note names the deployed Worker version ID, as in the existing `RELEASE_*.md` files.
+- **How it works:** pushing or merging to `main` triggers a Cloudflare build (`pnpm run build`, then `npx wrangler deploy --config dist/server/wrangler.json`). Other branches only upload preview versions; they don't go live. Build history is in the Cloudflare dashboard (Worker `rally-table-tennis` → Deployments).
+- **Status:** connected 2026-10-07; the first build has **not** been verified yet. Until a build succeeds and the release note records its version, Codex may still run `pnpm deploy` from the owner's PC as the fallback. After that, Codex should only push, not also run `pnpm deploy`, so the same code isn't deployed twice.
+- **Migrations come first:** a new file in `drizzle/` must be applied to production D1 (with an export beforehand and the owner's go-ahead) *before* the code that needs it is merged to `main`.
+- **Pull before you work:** run `git pull` on `main` before starting, so work merged from Claude's branches is included.
+- Release notes name the deployed Worker version ID, as in the existing `RELEASE_*.md` files.
 
 ## Handing work between agents
 
