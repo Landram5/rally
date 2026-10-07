@@ -432,3 +432,8 @@ input[type=date]::-webkit-date-and-time-value,input[type=datetime-local]::-webki
 
 .match-filter-grid .picker{min-width:0;max-width:100%}
 @media(max-width:767px){.tournament-match-filters>.player-search-inline{grid-column:1/-1;min-width:0;width:100%}}
+
+/* Safari date controls need a constrained inner grid track as well as input width. */
+.match-filter-grid>label,.match-filter-grid>div{grid-template-columns:minmax(0,1fr)}
+.match-date-filter input{inline-size:100%;min-inline-size:0;max-inline-size:100%}
+@media(max-width:767px){.match-filter-grid>.match-date-filter{grid-column:1/-1}}

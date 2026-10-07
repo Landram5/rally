@@ -14,3 +14,8 @@ Validation: TypeScript, lint and production build passed. Browser checks at 390p
 Actual iPhone Safari/Home Screen keyboard and overscroll behavior remain to be checked on-device. Reduced desktop viewport height is not an iPhone keyboard simulation. No production match or account data was modified during testing.
 
 Local proof images: `.local-backups/screenshots/mobile-filters-2026-10-07.png` and `mobile-player-picker-2026-10-07.png`.
+
+## Follow-up: date overlap
+
+The user reported iPhone date overlap persisted after the initial release. Added a constrained `minmax(0,1fr)` inner grid track to filter labels and switched date filters to separate full-width mobile rows. Published version `80097b10-64a0-4750-b754-fee91554e3d2`.
+TypeScript, lint and build passed. Live browser at 390px measured each date input at 347px, matching its parent; vertical bounds 400–446 and 491–537 did not overlap. Actual iPhone confirmation remains pending.
