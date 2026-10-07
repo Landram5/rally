@@ -16,7 +16,12 @@ Rally (https://rallytt.net) is a table tennis club and tournament platform: Next
 - `pnpm deploy` builds and deploys the Worker to production
 - Tests: `pnpm test:reliability` and `pnpm test:account-deletion`; other suites are `node scripts/<name>.test.mjs` (see `DEVELOPMENT.md` → Validation)
 
-Before calling work done: TypeScript, `pnpm lint`, `pnpm build`, and the relevant test scripts must pass.
+Before calling work done: TypeScript, `pnpm lint`, `pnpm build`, and the test script covering the code you changed must pass (see Workflow Constraints).
+
+## Workflow Constraints
+
+- Prefer running single/isolated tests rather than the entire test suite.
+- Only test the specific file or block modified.
 
 ## Hard rules
 
