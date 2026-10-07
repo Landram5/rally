@@ -439,3 +439,20 @@ input[type=date]::-webkit-date-and-time-value,input[type=datetime-local]::-webki
 @media(max-width:767px){.match-filter-grid>.match-date-filter{grid-column:1/-1}}
 
 .onboarding-checklist>div>button{width:44px;min-width:44px;display:grid;place-items:center;text-decoration:none}
+
+/* Player statistics panel: padded card, labelled controls, stat cards and a framed chart that is always drawn. */
+.player-performance{padding:24px}
+.player-performance h2{margin:0}
+.performance-controls{margin:18px 0 0;align-items:end}
+.player-performance label,.performance-comparison>span{font-size:.8rem;font-weight:600;color:var(--muted-foreground)}
+.player-performance select,.performance-comparison .player-search-trigger{font-size:16px;font-weight:400;color:var(--foreground)}
+.performance-legend{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin:20px 0}
+.performance-legend>div{padding:16px 18px;background:#f8faf8;border:1px solid #dfe6e0;border-radius:12px;align-content:start}
+.performance-legend small{font-size:.8rem;color:#738078}
+.performance-chart{margin:16px 0;padding:14px 12px 6px;border:1px solid #dfe6e0;border-radius:12px;background:#fbfcfb}
+.performance-chart svg .performance-empty{fill:var(--muted-foreground);font-size:15px;paint-order:stroke;stroke:#fbfcfb;stroke-width:6px}
+.player-performance>p[role=status]{margin:16px 0;padding:12px 14px;background:#edf2e8;border-radius:10px;font-size:.875rem}
+.player-performance>p.error{margin:16px 0 0}
+.player-performance .profile-help{font-size:.8rem;line-height:1.5;color:#738078}
+.player-performance>label{margin-top:16px;max-width:420px}
+@media(max-width:700px){.player-performance{padding:18px 16px}.performance-controls{grid-template-columns:minmax(0,1fr);gap:14px}.performance-legend{grid-template-columns:minmax(0,1fr)}.performance-chart{padding:10px 4px 4px}}
