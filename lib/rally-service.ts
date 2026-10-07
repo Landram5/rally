@@ -1,3 +1,4 @@
+import {readSessions} from './club-sessions';
 import {readOwnership,ownershipAction} from './record-ownership';
 import {dashboardsFor} from './dashboards';
 import {cachedSummaries,summaryVersion} from './summary-cache';
@@ -55,11 +56,12 @@ export function makeService(database:D1Database){
   const readIds=self?(await all<{notification_id:string}>('SELECT notification_id FROM notification_reads WHERE player_id=?',self.id)).map(r=>r.notification_id):[];
   const dashboards=dashboardsFor(result as unknown as Parameters<typeof dashboardsFor>[0]);
   const preferences=self?await readPreferences(db,self.id):undefined;
+  const sessions=self?await readSessions(db,self.id,scope||undefined):[];
   const announcements=self?await readAnnouncements(db,self.id):[];
-  const notifications=notificationsFor({...result,ownership,preferences,announcements} as unknown as Parameters<typeof notificationsFor>[0],readIds);
+  const notifications=notificationsFor({...result,ownership,preferences,announcements,sessions} as unknown as Parameters<typeof notificationsFor>[0],readIds);
   if(access.compact){const summaries=await cachedSummaries(db,visibleMatches as unknown as Parameters<typeof cachedSummaries>[1],cs.map(c=>c.id),version,self?'authenticated':'public');const visibleMemberships=scope?result.memberships.filter(m=>m.player_id===self?.id||m.status==='pending'):result.memberships;const visiblePeople=new Set(visibleMemberships.map(m=>m.player_id));if(self)visiblePeople.add(self.id);
-   return {...result,memberships:visibleMemberships,players:(scope?result.players.filter(p=>visiblePeople.has(p.id)):result.players).map(p=>({id:p.id,name:p.name,is_guest:p.is_guest,is_deleted:p.is_deleted,photo_url:p.photo_url,initial_rating:p.initial_rating,initial_rating_revision:p.initial_rating_revision})),summaries,eventCounts:Object.fromEntries(['all',...cs.map(c=>c.id)].map(id=>[id,id==='all'?ts.length:ts.filter(t=>t.club_id===id).length])),matches:result.matches.slice(0,20),tournaments:result.tournaments.slice(0,20).map(t=>({...t,entry_count:es.filter(e=>e.tournament_id===t.id).length,state:null,seedStats:[],fixturePlans:[]})),entries:result.entries.filter(e=>e.player_id===self?.id),notifications,dashboards,ownership,preferences};}
-  return {...result,notifications,dashboards,ownership,preferences};
+   return {...result,memberships:visibleMemberships,players:(scope?result.players.filter(p=>visiblePeople.has(p.id)):result.players).map(p=>({id:p.id,name:p.name,is_guest:p.is_guest,is_deleted:p.is_deleted,photo_url:p.photo_url,initial_rating:p.initial_rating,initial_rating_revision:p.initial_rating_revision})),summaries,eventCounts:Object.fromEntries(['all',...cs.map(c=>c.id)].map(id=>[id,id==='all'?ts.length:ts.filter(t=>t.club_id===id).length])),matches:result.matches.slice(0,20),tournaments:result.tournaments.slice(0,20).map(t=>({...t,entry_count:es.filter(e=>e.tournament_id===t.id).length,state:null,seedStats:[],fixturePlans:[]})),entries:result.entries.filter(e=>e.player_id===self?.id),notifications,dashboards,ownership,preferences,sessions};}
+  return {...result,notifications,dashboards,ownership,preferences,sessions};
  },
  async act(authId:string,body:Record<string,unknown>,access:Access={}){
   const db=guardAccountWrites(database,authId);

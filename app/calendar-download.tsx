@@ -1,0 +1,3 @@
+'use client';
+import {calendarEvent} from '@/lib/calendar-event';
+export default function CalendarDownload({id,title,start,end,location='',description='',href}:{id:string;title:string;start:string;end:string;location?:string;description?:string;href:string}){return <button type="button" className="dashboard-link" onClick={()=>{const url=URL.createObjectURL(new Blob([calendarEvent({id,title,start,end,location,description,url:new URL(href,window.location.origin).toString()})],{type:'text/calendar;charset=utf-8'}));const link=document.createElement('a');link.href=url;link.download='rally-event.ics';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}}>Add to calendar · 30-minute alert</button>}
