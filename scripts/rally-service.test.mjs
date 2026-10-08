@@ -8,7 +8,7 @@ for(const name of ['club-seasons','notification-preferences','summary-cache','fe
  writeFileSync(`.test-runtime/${name}.mjs`,compiled);
 }
 const {makeService,scoreError}=await import('../.test-runtime/rally-service.mjs');
-const {getPublicPlayer,getPublicTournament,getPublicDirectory}=await import('../.test-runtime/public-rally.mjs');
+const {getPublicPlayer,getPublicTournament,getPublicDirectory,getPublicHeadToHead}=await import('../.test-runtime/public-rally.mjs');
 const path='.test-runtime/test-data.sqlite';rmSync(path,{force:true});let sql;
 function open(){sql=new DatabaseSync(path);sql.exec('PRAGMA foreign_keys=ON');}
 open();for(const f of readdirSync('drizzle').filter(f=>f.endsWith('.sql')).sort())sql.exec(readFileSync('drizzle/'+f,'utf8'));
@@ -134,6 +134,13 @@ assert.equal((await service.read('member-auth')).matches[0].status,'pending');
 await assert.rejects(act('member-auth',{action:'confirm_match',id:'match-one'}),e=>e.status===403);
 await assert.rejects(act('outsider-auth',{action:'confirm_match',id:'match-one'}),e=>e.status===403);
 await act('opponent-auth',{action:'confirm_match',id:'match-one'});
+{
+ const profile=await getPublicPlayer(db,member),shown=profile.matches.find(m=>m.id==='match-one');
+ assert.equal(typeof shown.ratingChange,'number','public player match shows its rating change');
+ const pair=await getPublicHeadToHead(db,member,opponent),flipped=await getPublicHeadToHead(db,opponent,member);
+ assert.equal(pair.meetings.length,1);assert.deepEqual(pair.meetings[0].games,[[11,8],[11,9]]);assert.deepEqual(flipped.meetings[0].games,[[8,11],[9,11]],'games are listed from the first player');
+ assert.equal(await getPublicHeadToHead(db,member,member),null);assert.equal(await getPublicHeadToHead(db,member,'missing-player'),null);assert.equal(await getPublicHeadToHead(db,member,"x' OR '1'='1"),null,'invalid ids are rejected');
+}
 assert.equal((await service.read('member-auth')).matches[0].status,'confirmed');
 await assert.rejects(act('member-auth',{action:'void_match',id:'match-one'}),e=>e.status===403);
 await act('owner-auth',{action:'void_match',id:'match-one'});

@@ -468,3 +468,5 @@ input[type=date]::-webkit-date-and-time-value,input[type=datetime-local]::-webki
 .trend-tournament-marker{fill:none;stroke:currentColor;stroke-width:1.5}.trend-upset-marker{fill:#d98e04}.trend-legend{display:flex;flex-wrap:wrap;gap:6px 18px;margin:8px 0;font-size:.85rem;color:var(--muted-foreground)}.trend-legend span{display:inline-flex;align-items:center;gap:6px}
 
 .rating-trend .trend-legend svg{width:14px;height:14px;flex:none}
+
+.h2h-players{display:flex;align-items:center;gap:16px;flex-wrap:wrap}.h2h-players a{display:grid;justify-items:center;gap:6px;text-decoration:none;color:inherit}.head-to-head-hero{align-items:center}.share-link{display:flex;align-items:center;gap:12px;flex-wrap:wrap}

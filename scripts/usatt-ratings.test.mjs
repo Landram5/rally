@@ -3,7 +3,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {readFileSync,writeFileSync,mkdirSync,readdirSync} from 'node:fs';
 import ts from 'typescript';
 mkdirSync('.test-runtime',{recursive:true});
-for(const name of ['club-seasons','notification-preferences','summary-cache','feedback-progress','record-ownership','dashboards','clubhouse-summary','rally','activity-pages','match-changes','match-filters','logistics','notifications','profile-photo','account-write-guard','account-deletion','announcements','club-sessions','weekly-sessions','rally-service','tournament-service','tournament-scheduling','tournament-engine','match-rules','rally-errors','seeding','public-rally'])writeFileSync(`.test-runtime/${name}.mjs`,ts.transpileModule(readFileSync(`lib/${name}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText.replace(/from ['"]\.\/([^'"]+)['"]/g,"from './$1.mjs'"));
+for(const name of ['club-seasons','notification-preferences','summary-cache','feedback-progress','record-ownership','dashboards','clubhouse-summary','rally','activity-pages','match-changes','head-to-head','match-filters','logistics','notifications','profile-photo','account-write-guard','account-deletion','announcements','club-sessions','weekly-sessions','rally-service','tournament-service','tournament-scheduling','tournament-engine','match-rules','rally-errors','seeding','public-rally'])writeFileSync(`.test-runtime/${name}.mjs`,ts.transpileModule(readFileSync(`lib/${name}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText.replace(/from ['"]\.\/([^'"]+)['"]/g,"from './$1.mjs'"));
 const {makeService}=await import('../.test-runtime/rally-service.mjs');
 const {readActivityPage}=await import('../.test-runtime/activity-pages.mjs');
 const {calculateRatings,ratingHistory,performanceEstimate,pointExchange,suggestSeeds}=await import('../.test-runtime/seeding.mjs');
@@ -93,4 +93,12 @@ function fixture(){
  for(const player of ['p','q','r'])for(const c of ratingHistory(sample,player,'2026-10-07').changes)assert.equal(shown[c.matchId][player],Math.round(c.delta*10)/10,'displayed change equals the rating history change');
  assert.equal(shown.rc4,undefined,'pending results show no rating change');
  assert.deepEqual(Object.keys(shown.rc1).sort(),['p','q'],'both players receive a displayed change');
+}{
+ const {headToHeadSummary}=await import('../.test-runtime/head-to-head.mjs');
+ const meet=[{id:'h1',playedOn:'2026-09-01',games:[[11,5],[11,8]],clubName:'C',tournamentId:null},{id:'h2',playedOn:'2026-09-10',games:[[7,11],[9,11]],clubName:'C',tournamentId:null},{id:'h3',playedOn:'2026-09-20',games:[[11,9],[8,11],[11,7]],clubName:'C',tournamentId:'t'}];
+ const s=headToHeadSummary(meet);
+ assert.equal(s.played,3);assert.equal(s.aWins,2);assert.equal(s.bWins,1);assert.equal(s.aGames,4);assert.equal(s.bGames,3);
+ assert.equal(s.last.id,'h3','most recent meeting is last');assert.deepEqual(s.streak,{holder:'a',length:1});
+ assert.equal(s.marginPerGame,Math.round((meet.flatMap(m=>m.games).reduce((n,g)=>n+g[0]-g[1],0))/7*10)/10);
+ const none=headToHeadSummary([]);assert.equal(none.played,0);assert.equal(none.last,null);assert.equal(none.streak.holder,null);
 }console.log('USATT-style ratings passed exchange boundaries, published adjustment examples, initial anchors, provisional evidence, tournament multipliers, adjustments/decay, floors, chronological replay, seasons, estimate permissions, audit/idempotency, stale/revoked writes, cache invalidation, public privacy and guest merges.');
