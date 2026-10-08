@@ -635,3 +635,39 @@ a.directory-card:hover, .event-card:hover, .club-card:hover, .leaderboard-row:ho
   [data-slot="tabs-list"][data-variant="line"] [data-slot="tabs-trigger"][data-state="active"] svg { color: var(--text-brand); }
   [data-slot="tabs-list"][data-variant="line"] [data-slot="tabs-trigger"]::after { display: none; }
 }
+/* ───────────────────────── 15. SPACING AND MOTION PASS ───────────────────────── */
+/* Segmented tabs: no underline bar (it read as a black line under the active chip). */
+.section-tabs [data-slot="tabs-trigger"]::after,
+[data-slot="tabs-list"][data-variant="default"] [data-slot="tabs-trigger"]::after { display: none; }
+.section-tabs, [data-slot="tabs-list"][data-variant="default"] { gap: 4px; }
+
+/* Vertical rhythm: sections and stacked blocks never touch. */
+.public-page > * + *, .public-directory > * + * { margin-top: 20px; }
+.public-page > nav.breadcrumbs + *, .public-page > .club-back-link + * { margin-top: 12px; }
+.panel + .panel, .panel + section, section + .panel, .panel-heading + * { margin-top: 0; }
+.panel + .panel { margin-top: 20px; }
+.rating-trend + p, .rating-summary + *, .rating-trend > * + * { margin-top: 12px; }
+.rating-trend .trend-legend { margin: 12px 0; }
+.rating-scope { margin: 12px 0; }
+.rating-history > * + * { margin-top: 14px; }
+.rating-point-controls { display: flex; flex-wrap: wrap; gap: 8px; }
+.directory-filters, .match-filter-grid { gap: 16px; }
+.directory-count { margin: 14px 0; }
+.club-grid, .directory-grid { gap: 20px; }
+.page-heading { margin-bottom: 20px; }
+
+/* Motion: a clearly visible but still quick entrance and hover response. */
+@keyframes rise-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+.panel, .directory-card, .leaderboard-list > li, .stat-card, .event-card, .club-card, .session-card, .standing-card, .match-row {
+  animation: rise-in 420ms var(--ease-out) both;
+}
+.directory-grid > :nth-child(1), .club-grid > :nth-child(1) { animation-delay: 0ms; }
+.directory-grid > :nth-child(2), .club-grid > :nth-child(2), .leaderboard-list > li:nth-child(2) { animation-delay: 70ms; }
+.directory-grid > :nth-child(3), .club-grid > :nth-child(3), .leaderboard-list > li:nth-child(3) { animation-delay: 140ms; }
+.directory-grid > :nth-child(4), .club-grid > :nth-child(4), .leaderboard-list > li:nth-child(4) { animation-delay: 210ms; }
+.directory-grid > :nth-child(n+5), .club-grid > :nth-child(n+5), .leaderboard-list > li:nth-child(n+5) { animation-delay: 280ms; }
+a.directory-card, .event-card, .club-card, .leaderboard-row { transition: transform 200ms var(--ease-out), border-color 200ms var(--ease-out), background 200ms var(--ease-out); }
+a.directory-card:hover, .event-card:hover, .club-card:hover, .leaderboard-row:hover { transform: translateY(-3px); }
+[data-slot="tabs-content"] { animation: rise-in 300ms var(--ease-out) both; }
+[data-slot="button"]:hover:not(:disabled), .primary-action:hover:not(:disabled) { transform: translateY(-1px); }
+[data-slot="button"]:active:not(:disabled), .primary-action:active:not(:disabled) { transform: scale(0.97); }
