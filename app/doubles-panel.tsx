@@ -7,6 +7,8 @@ import {Dialog,DialogContent,DialogDescription,DialogHeader,DialogTitle} from '@
 import CleanSelect from './clean-select';
 import PlayerSearchPicker from './player-search-picker';
 import type {DoublesFeedItem} from '@/lib/doubles';
+import DoublesProfileCard from './doubles-profile';
+import DoublesStandingsView from './doubles-standings';
 type Person={id:string;name:string};
 const today=()=>new Date().toLocaleDateString('en-CA');
 const dateLabel=(d:string)=>new Date(d+'T12:00:00Z').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',timeZone:'UTC'});
@@ -15,7 +17,8 @@ async function post(payload:Record<string,unknown>){
  const body=await r.json().catch(()=>({})) as {error?:string};if(!r.ok)throw new Error(body.error||'Could not save your changes.');return body;
 }
 // Doubles results: two players per side. Singles ratings and statistics are never affected by these matches.
-export default function DoublesPanel({me,clubs,membersOf}:{me:string;clubs:{id:string;name:string}[];membersOf:(clubId:string)=>Person[]}){
+export default function DoublesPanel({me,clubs,membersOf,onProfile}:{me:string;clubs:{id:string;name:string}[];membersOf:(clubId:string)=>Person[];onProfile?:(id:string)=>void}){
+ const [view,setView]=useState<'matches'|'standings'|'mine'>('matches');
  const [filter,setFilter]=useState('all'),[items,setItems]=useState<DoublesFeedItem[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState(''),[open,setOpen]=useState(false),[busy,setBusy]=useState(false);
  const [club,setClub]=useState(clubs[0]?.id??''),[a1,setA1]=useState(me),[a2,setA2]=useState(''),[b1,setB1]=useState(''),[b2,setB2]=useState(''),[date,setDate]=useState(today()),[bestOf,setBestOf]=useState('3'),[games,setGames]=useState<[string,string][]>([['',''],['','']]),[formError,setFormError]=useState('');
  const requestId=useRef('');
@@ -40,14 +43,14 @@ export default function DoublesPanel({me,clubs,membersOf}:{me:string;clubs:{id:s
  const tally=(m:DoublesFeedItem)=>m.games.reduce<[number,number]>((t,g)=>{t[g[0]>g[1]?0:1]++;return t},[0,0]);
  return <section className="panel doubles-panel" aria-label="Doubles matches">
   <div className="panel-heading"><div><h2>Doubles</h2><p>Two players per side. Doubles results have their own rating and never change your singles rating.</p></div><Button onClick={begin} disabled={!clubs.length}><Plus size={16}/>Record doubles</Button></div>
-  <div className="doubles-filter"><CleanSelect aria-label="Doubles club" value={filter} onChange={e=>setFilter(e.target.value)}><option value="all">All my clubs</option>{clubs.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</CleanSelect></div>
+  <div className="doubles-views" role="tablist" aria-label="Doubles sections">{([['matches','Matches'],['standings','Standings'],['mine','My rating']] as const).map(([v,l])=><button key={v} type="button" role="tab" aria-selected={view===v} className={view===v?'active':''} onClick={()=>setView(v)}>{l}</button>)}</div>`n  {view==="standings"&&<DoublesStandingsView clubs={clubs} onProfile={onProfile}/>}{view==="mine"&&<DoublesProfileCard playerId={me} self/>}`n  {view==="matches"&&<>`n  <div className="doubles-filter"><CleanSelect aria-label="Doubles club" value={filter} onChange={e=>setFilter(e.target.value)}><option value="all">All my clubs</option>{clubs.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</CleanSelect></div>
   {error&&<p className="auth-error" role="alert">{error}</p>}
   {loading?<p role="status" className="doubles-empty">Loading doubles matches…</p>:items.length?<ul className="doubles-list">{items.map(m=>{const t=tally(m),aWon=t[0]>t[1];return <li key={m.id} className={`doubles-row status-${m.status}`}>
    <div className="doubles-sides"><span className={aWon?'doubles-winner':''}>{side(m,'a')}</span><span className="versus">vs</span><span className={!aWon?'doubles-winner':''}>{side(m,'b')}</span></div>
    <div className="doubles-score"><strong>{t[0]} : {t[1]}</strong><small>{m.games.map(g=>g.join('–')).join(' · ')}</small></div>
    <div className="doubles-meta"><span>{dateLabel(m.played_on)} · {m.clubName}</span><small className={'status-'+m.status}>{m.status==='confirmed'?'Confirmed':m.status==='voided'?'Voided':'Awaiting confirmation'}</small></div>
    {(m.canConfirm||m.canVoid)&&<div className="doubles-actions">{m.canConfirm&&<Button size="sm" onClick={()=>void act('confirm_doubles_match',m.id,'Result confirmed.')}>Confirm result</Button>}{m.canVoid&&<Button size="sm" variant="ghost" onClick={()=>void act('void_doubles_match',m.id,'Result voided.')}>{m.status==='pending'?'Withdraw':'Void'}</Button>}</div>}
-  </li>})}</ul>:<p className="doubles-empty">No doubles matches yet. Record one after you play.</p>}
+  </li>})}</ul>:<p className="doubles-empty">No doubles matches yet. Record one after you play.</p>}</>}
   <Dialog open={open} onOpenChange={o=>{if(!busy)setOpen(o)}}><DialogContent><DialogHeader><DialogTitle>Record a doubles match</DialogTitle><DialogDescription>Side A is your team. An opponent confirms the result before it counts.</DialogDescription></DialogHeader>
    <form className="form-stack doubles-form" onSubmit={e=>void submit(e)}>
     <label>Club<CleanSelect value={club} onChange={e=>{setClub(e.target.value);setA2('');setB1('');setB2('')}}>{clubs.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</CleanSelect></label>

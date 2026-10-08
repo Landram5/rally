@@ -51,8 +51,10 @@ export async function readDoublesMatches(db:D1Database,viewer:string,clubId:stri
  return rows.map(m=>({...m,games:JSON.parse(m.games) as [number,number][]}));
 }
 // Doubles ratings, replayed from every confirmed doubles match. Players may start from a singles estimate.
+// Confirmed doubles results with the tournament's rating weight, so cross-club events count 3x exactly as in singles.
+export const CONFIRMED_DOUBLES="SELECT d.id,d.club_id,d.a1,d.a2,d.b1,d.b2,d.games,d.best_of,d.played_on,d.status,d.tournament_id,d.created_at,t.rating_weight tournament_weight FROM doubles_matches d LEFT JOIN tournaments t ON t.id=d.tournament_id WHERE d.status='confirmed'";
 export async function readDoublesRatings(db:D1Database,starts:Record<string,number>={},asOf=new Date().toISOString().slice(0,10)){
- const rows=(await db.prepare("SELECT id,club_id,a1,a2,b1,b2,games,best_of,played_on,status,tournament_id,created_at FROM doubles_matches WHERE status='confirmed'").all<DoublesMatch>()).results;
+ const rows=(await db.prepare(CONFIRMED_DOUBLES).all<DoublesMatch>()).results;
  return replayDoubles(rows,asOf,starts);
 }
 export type DoublesFeedItem=Omit<SavedDoubles,'games'>&{games:[number,number][];names:Record<string,string>;canConfirm:boolean;canVoid:boolean;clubName:string};
@@ -64,7 +66,7 @@ export async function readDoublesFeed(db:D1Database,viewer:string,clubId:string,
  return rows.map(({club_name,n_a1,n_a2,n_b1,n_b2,is_admin,...m})=>({...m,games:JSON.parse(m.games) as [number,number][],names:{[m.a1]:n_a1,[m.a2]:n_a2,[m.b1]:n_b1,[m.b2]:n_b2},canConfirm:canConfirmDoubles(m,viewer,!!is_admin),canVoid:m.status!=='voided'&&(!!is_admin||(m.submitted_by===viewer&&m.status==='pending')),clubName:club_name}));
 }// Seeds for a doubles draw: strongest team first, by the average of the two players' doubles ratings (400 when unrated).
 export async function suggestTeamSeeds(db:D1Database,teams:{id:string;p1:string;p2:string}[]):Promise<string[]>{
- const rows=(await db.prepare("SELECT id,club_id,a1,a2,b1,b2,games,best_of,played_on,status,tournament_id,created_at FROM doubles_matches WHERE status='confirmed'").all<DoublesMatch>()).results;
+ const rows=(await db.prepare(CONFIRMED_DOUBLES).all<DoublesMatch>()).results;
  const {ratings}=replayDoubles(rows),strength=(t:{p1:string;p2:string})=>((ratings.get(t.p1)?.rating??400)+(ratings.get(t.p2)?.rating??400))/2;
  return teams.map((t,i)=>({t,i,s:strength(t)})).sort((a,b)=>b.s-a.s||a.i-b.i).map(x=>x.t.id);
 }

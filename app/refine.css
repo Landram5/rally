@@ -1081,3 +1081,20 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; -webkit-tap-highl
 .team-entrant a:hover { text-decoration: underline; }
 .doubles-entry { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: center; }
 @media (max-width: 600px) { .doubles-entry { grid-template-columns: 1fr; } }
+
+/* ───────────────────────── 26. DOUBLES RATINGS ───────────────────────── */
+.doubles-views { display: flex; gap: 6px; margin: 14px 0 16px; overflow-x: auto; }
+.doubles-views button { border: 0; background: var(--surface-2, transparent); color: var(--text-muted, inherit); padding: 8px 14px; border-radius: 10px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.doubles-views button.active, .doubles-views button[aria-selected="true"] { background: var(--brand-600); color: #fff; }
+.doubles-rank, .doubles-partners { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 4px; }
+.doubles-rank li { display: grid; grid-template-columns: 28px 1fr auto auto; align-items: center; gap: 12px; padding: 10px 4px; border-bottom: 1px solid var(--border, rgba(127,127,127,.2)); }
+.doubles-rank .rank { color: var(--text-muted, inherit); font-variant-numeric: tabular-nums; }
+.doubles-rank small { color: var(--text-muted, inherit); min-width: 70px; text-align: right; }
+.doubles-partners li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 4px; border-bottom: 1px solid var(--border, rgba(127,127,127,.2)); }
+.doubles-profile { margin-top: 16px; }
+.doubles-profile h4, .doubles-standings h4 { margin: 18px 0 6px; font-size: .95rem; }
+.doubles-trend { margin: 12px 0 0; }
+.doubles-trend svg { width: 100%; height: auto; overflow: visible; }
+.doubles-trend svg text { font-size: 10px; fill: currentColor; opacity: .6; }
+.doubles-trend figcaption { font-size: .85rem; margin-top: 6px; color: var(--text-muted, inherit); }
+.doubles-standings .leaderboard-scope { margin-bottom: 12px; }
