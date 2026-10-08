@@ -1,7 +1,7 @@
 import {AppError} from './rally-errors';
 import {optionalInstant,optionalText} from './logistics';
 import {expandWeeklySessions,weeklyInstant,type WeeklyTemplate} from './weekly-sessions';
-export type ClubSession={id:string;club_id:string;clubName:string;title:string;location:string;notes:string;starts_at:string;ends_at:string;capacity:number|null;status:'scheduled'|'cancelled';revision:number;created_at:string;updated_at:string;canManage:boolean;attendees:{id:string;name:string;guests?:number}[];rsvp:'going'|'not_going'|'maybe'|'waitlisted'|null;guests?:number;waitlistPosition?:number|null;waitlistCount?:number;maybeCount?:number;repeat_weekly?:number;series_id?:string|null;seriesActive?:boolean};
+export type ClubSession={id:string;club_id:string;clubName:string;title:string;location:string;notes:string;starts_at:string;ends_at:string;capacity:number|null;status:'scheduled'|'cancelled';revision:number;created_at:string;updated_at:string;canManage:boolean;attendees:{id:string;name:string;guests?:number}[];rsvp:'going'|'not_going'|'maybe'|'waitlisted'|null;guests?:number;waitlistPosition?:number|null;waitlistCount?:number;maybeCount?:number;repeat_weekly?:number;series_id?:string|null;seriesActive?:boolean;demoWaitlist?:{id:string;name:string;guests:number}[]};
 const member="EXISTS(SELECT 1 FROM memberships m JOIN clubs c ON c.id=m.club_id JOIN profiles p ON p.id=m.player_id WHERE m.club_id=s.club_id AND m.player_id=? AND m.status='active' AND c.approval_status='approved' AND p.deleted_at IS NULL)";
 const manager=member.replace("AND m.status='active'","AND m.status='active' AND m.role IN ('owner','admin','board')");
 export async function readSessions(db:D1Database,player:string,club?:string,now=new Date().toISOString()):Promise<ClubSession[]>{

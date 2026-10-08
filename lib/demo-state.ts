@@ -8,6 +8,7 @@ import {clubs,players,initialMatches} from './rally';
 import {scoreError} from './match-rules';
 import {createDraw,recordFixture,resetFixture,withdrawPlayer,outcome,type Draw} from './tournament-engine';
 import {suggestSeeds,tournamentWeight,ratingEstimates} from './seeding';
+import {scheduleDraw} from './tournament-scheduling';
 
 // Sample actions stay in memory and never call the production API.
 function finish(draw:Draw){let d=draw;while(d.fixtures.some(f=>f.status==='ready')){const f=d.fixtures.find(f=>f.status==='ready')!;d=recordFixture(d,f.id,Array.from({length:Math.floor(d.bestOf/2)+1},()=>[11,7]));}return d;}
@@ -98,6 +99,8 @@ export function applyDemoAction(current:Data,p:Record<string,unknown>):Data{
   else if(action==='remove_entry'){if(t.status!=='registration')throw new Error('The draw is locked.');d.entries=d.entries.filter(e=>e.tournament_id!==id||e.player_id!==playerId);t.checkedIn=(t.checkedIn??[]).filter(id=>id!==playerId);}
   else if(action==='set_capacity'){if(!Number.isInteger(p.capacity)||Number(p.capacity)<Math.max(2,entries.length))throw new Error('The limit must fit the registered players.');t.capacity=Number(p.capacity);}
   else if(action==='start_tournament'){t.waitlist=[];t.waitlist_count=0;t.rating_weight=tournamentWeight(entries.map(e=>e.player_id),d.memberships,d.clubs.filter(c=>c.approvalStatus==='approved').map(c=>c.id));t.state=createDraw(p.seeds as string[],t.format,Number(p.bestOf),Boolean(p.thirdPlace));t.best_of=Number(p.bestOf);}
+  else if(action==='set_scorekeeper'){if(t.status==='completed')throw new Error('This event is completed.');if(typeof p.enabled!=='boolean')throw new Error('Choose scorekeeper access.');if(p.enabled&&!d.memberships.some(m=>m.club_id===t.club_id&&m.player_id===playerId&&m.status==='active'))throw new Error('Choose an active host-club member.');t.scorekeepers=p.enabled?[...new Set([...(t.scorekeepers??[]),playerId])]:(t.scorekeepers??[]).filter(s=>s!==playerId);}
+  else if(action==='schedule_tournament'){if(t.status!=='active'||!t.state)throw new Error('Start the draw before scheduling it.');const tables=Number(p.tableCount),minutes=Number(p.matchMinutes),start=new Date(Math.max(Date.parse(String(p.startsAt??''))||Date.parse(t.starts_at??''),Date.now())||Date.now()).toISOString(),scheduled=scheduleDraw(t.state,tables,minutes,start,t.fixturePlans??[]);t.table_count=tables;t.estimated_match_minutes=minutes;t.estimated_ends_at=scheduled.endsAt;t.fixturePlans=scheduled.plans;}
   else if(action==='score_fixture')t.state=recordFixture(t.state!,text('fixtureId'),p.games,p.forfeitWinner as string|undefined);
   else if(action==='reset_fixture')t.state=resetFixture(t.state!,text('fixtureId'));
   else if(action==='withdraw_player')t.state=withdrawPlayer(t.state!,playerId);
