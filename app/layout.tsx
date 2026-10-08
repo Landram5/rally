@@ -1,7 +1,8 @@
 import SupportFooter from './support-footer';
 import type { Metadata, Viewport } from "next";
+import "./theme.css";
 import "./globals.css";
-import "./dark.css";
+import "./refine.css";
 import AppearanceProvider from "./appearance-provider";
 import AnnouncementBanner from './announcement-banner';
 import PwaRegistration from "@/app/pwa-registration";
@@ -44,7 +45,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#172e29",
+  themeColor: "#1c352d", // keep in sync with --bg-inverse in theme.css
 };
 
 export default function RootLayout({

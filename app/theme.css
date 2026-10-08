@@ -1,0 +1,281 @@
+/*
+ * RALLY THEME — the single source of truth for how the site looks.
+ *
+ * To recolor the site, edit the PALETTE block (raw colors). Everything else below refers to it.
+ * To fine-tune light or dark mode independently, edit the SEMANTIC blocks.
+ * Nothing else in the codebase should contain raw color values; use the semantic tokens.
+ *
+ * Layers:
+ *   1. Palette   — raw color ramps (brand, call-to-action, neutral, status). Edit these to rebrand.
+ *   2. Semantic  — what each color is *for* (page, surface, text, border, status…), for light and dark.
+ *   3. Shape     — radius, shadow, spacing and motion tokens.
+ *   4. Library   — compatibility names used by the UI component library (shadcn).
+ */
+@import "@fontsource-variable/inter/index.css";
+
+:root {
+  /* ───────────────────────── 1. PALETTE ───────────────────────── */
+
+  /* Brand: deep forest green */
+  --brand-50: #f0f5f2;
+  --brand-100: #dfeae4;
+  --brand-200: #c0d5c8;
+  --brand-300: #97b9a6;
+  --brand-400: #6a9981;
+  --brand-500: #477a63;
+  --brand-600: #356150;
+  --brand-700: #2b4e41;
+  --brand-800: #244237;
+  --brand-900: #1c352d;
+  --brand-950: #0f1b15;
+
+  /* Call to action: lime */
+  --lime-50: #fbfdea;
+  --lime-100: #f4f9c4;
+  --lime-200: #e9f595;
+  --lime-300: #d9ed64;
+  --lime-400: #c9de48;
+  --lime-500: #a9bf30;
+  --lime-600: #85962a;
+
+  /* Neutral: green-tinted gray */
+  --neutral-0: #ffffff;
+  --neutral-25: #fafbf9;
+  --neutral-50: #f5f7f4;
+  --neutral-100: #eef1ed;
+  --neutral-150: #e7ebe6;
+  --neutral-200: #dfe5df;
+  --neutral-300: #ccd5ce;
+  --neutral-400: #a8b4ac;
+  --neutral-500: #85928a;
+  --neutral-600: #5c6962;
+  --neutral-700: #43504a;
+  --neutral-800: #2a3530;
+  --neutral-900: #17201c;
+  --neutral-950: #0c120f;
+
+  /* Status */
+  --green-600: #1f7a35;
+  --red-600: #b3382c;
+  --amber-600: #8a5a0b;
+  --blue-600: #1d5fa6;
+
+  /* Typography */
+  --font-sans: "Inter Variable", Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+  /* ───────────────────────── 2. SEMANTIC (light) ───────────────────────── */
+  color-scheme: light;
+
+  /* Surfaces */
+  --bg-page: var(--neutral-50);
+  --bg-surface: var(--neutral-0);
+  --bg-subtle: var(--neutral-25);
+  --bg-muted: var(--neutral-100);
+  --bg-sunken: var(--neutral-150);
+  --bg-tint: #edf3e8;
+  --bg-inverse: var(--brand-900);
+  --bg-inverse-soft: var(--brand-800);
+  --bg-inverse-raised: var(--brand-700);
+
+  /* Brand and call to action */
+  --brand: var(--brand-800);
+  --brand-hover: var(--brand-700);
+  --brand-strong: var(--brand-950);
+  --brand-soft: var(--brand-600);
+  --on-brand: #ffffff;
+  --on-brand-muted: #c5d4ca;
+  --on-brand-subtle: #92a99d;
+  --cta: var(--lime-300);
+  --cta-hover: var(--lime-400);
+  --cta-subtle: var(--lime-100);
+  --on-cta: #16241c;
+
+  /* Text */
+  --text-strong: #0f1a15;
+  --text: var(--neutral-900);
+  --text-muted: var(--neutral-600);
+  --text-subtle: #66746d;
+  --text-brand: var(--brand-600);
+  --text-link: var(--brand-600);
+
+  /* Borders */
+  --border-subtle: var(--neutral-100);
+  --border: var(--neutral-200);
+  --border-strong: var(--neutral-300);
+  --border-brand: var(--brand-400);
+  --border-inverse: #2c463b;
+
+  /* Status */
+  --success: var(--green-600);
+  --success-subtle: #eaf6ec;
+  --success-border: #b7dcbf;
+  --danger: var(--red-600);
+  --danger-solid: #b3382c;
+  --success-solid: #1f7a35;
+  --warning-solid: #9a6410;
+  --danger-subtle: #fcefed;
+  --danger-border: #efc3bd;
+  --warning: var(--amber-600);
+  --warning-subtle: #fdf3df;
+  --warning-border: #eed8a6;
+  --info: var(--blue-600);
+  --info-subtle: #eaf2fb;
+  --info-border: #bcd4ee;
+
+  --ring: var(--brand-400);
+  --line-win: #71944c;
+  --line-loss: #c78235;
+  --line-idle: #c2cdbd;
+  --series-1: #258b79;
+  --series-2: #d27829;
+  --overlay: rgb(12 18 15 / 0.5);
+  --shadow-rgb: 16 26 21;
+  --highlight: rgb(255 255 255 / 0.6);
+
+  /* ───────────────────────── 3. SHAPE ───────────────────────── */
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-pill: 999px;
+
+  --shadow-xs: 0 1px 2px rgb(var(--shadow-rgb) / 0.05);
+  --shadow-sm: 0 1px 2px rgb(var(--shadow-rgb) / 0.06), 0 2px 6px rgb(var(--shadow-rgb) / 0.04);
+  --shadow-md: 0 2px 4px rgb(var(--shadow-rgb) / 0.04), 0 8px 20px -6px rgb(var(--shadow-rgb) / 0.10);
+  --shadow-lg: 0 4px 8px rgb(var(--shadow-rgb) / 0.05), 0 24px 48px -12px rgb(var(--shadow-rgb) / 0.22);
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  --control-height: 40px;
+  --control-height-sm: 34px;
+  --control-height-lg: 46px;
+
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --duration: 140ms;
+
+  /* ───────────────────────── 4. LIBRARY COMPATIBILITY ───────────────────────── */
+  --background: var(--bg-page);
+  --foreground: var(--text);
+  --card: var(--bg-surface);
+  --card-foreground: var(--text);
+  --popover: var(--bg-surface);
+  --popover-foreground: var(--text);
+  --primary: var(--brand);
+  --primary-foreground: var(--on-brand);
+  --primary-hover: var(--brand-hover);
+  --secondary: var(--bg-muted);
+  --secondary-foreground: var(--text);
+  --muted: var(--bg-muted);
+  --muted-foreground: var(--text-muted);
+  --accent: var(--bg-tint);
+  --accent-foreground: var(--text-strong);
+  --destructive: var(--danger);
+  --input: var(--border-strong);
+  --radius: var(--radius-md);
+  --chart-1: var(--brand-600);
+  --chart-2: var(--lime-300);
+  --chart-3: var(--brand-400);
+  --chart-4: var(--brand-300);
+  --chart-5: var(--brand-200);
+  --sidebar: var(--bg-surface);
+  --sidebar-foreground: var(--text);
+  --sidebar-primary: var(--brand);
+  --sidebar-primary-foreground: var(--on-brand);
+  --sidebar-accent: var(--bg-tint);
+  --sidebar-accent-foreground: var(--text-strong);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+}
+
+/* ───────────────────────── SEMANTIC (dark) ─────────────────────────
+ * Layered near-black surfaces with hairline borders: depth comes from small
+ * differences in lightness, not from heavy shadows or saturated fills.
+ */
+.dark {
+  color-scheme: dark;
+
+  --bg-page: #0a0f0c;
+  --bg-surface: #111712;
+  --bg-subtle: #0d130f;
+  --bg-muted: #182019;
+  --bg-sunken: #070b09;
+  --bg-tint: #162119;
+  --bg-inverse: #0d1511;
+  --bg-inverse-soft: #141d18;
+  --bg-inverse-raised: #1c2822;
+
+  --brand: #25433a;
+  --brand-hover: #2d5145;
+  --brand-strong: #0a110d;
+  --brand-soft: #36584a;
+  --on-brand: #f1f6f2;
+  --on-brand-muted: #b4c6bb;
+  --on-brand-subtle: #85998e;
+  --cta: var(--lime-300);
+  --cta-hover: #e6f67f;
+  --cta-subtle: #232e12;
+  --on-cta: #16241c;
+
+  --text-strong: #f5f8f6;
+  --text: #e4eae6;
+  --text-muted: #97a69d;
+  --text-subtle: #7d8c84;
+  --text-brand: #c6de78;
+  --text-link: #c6de78;
+
+  --border-subtle: #151c17;
+  --border: #212b25;
+  --border-strong: #2f3c35;
+  --border-brand: #4d7a68;
+  --border-inverse: #25332b;
+
+  --success: #6fd18a;
+  --success-subtle: #0f2417;
+  --success-border: #1f4a2d;
+  --danger: #ff8e80;
+  --danger-solid: #c2412f;
+  --success-solid: #2a8a45;
+  --warning-solid: #a86f12;
+  --danger-subtle: #2a1411;
+  --danger-border: #5b2a24;
+  --warning: #f0bf5e;
+  --warning-subtle: #2a2010;
+  --warning-border: #5b4616;
+  --info: #7db5ee;
+  --info-subtle: #0f1e32;
+  --info-border: #25456f;
+
+  --ring: #7fb095;
+  --line-win: #86c46f;
+  --line-loss: #e2a45c;
+  --line-idle: #33433b;
+  --series-1: #4fc1ad;
+  --series-2: #f0a15e;
+  --overlay: rgb(0 0 0 / 0.62);
+  --shadow-rgb: 0 0 0;
+  --highlight: rgb(255 255 255 / 0.04);
+
+  --shadow-xs: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.45), 0 2px 6px rgb(0 0 0 / 0.25);
+  --shadow-md: 0 2px 4px rgb(0 0 0 / 0.35), 0 10px 24px -6px rgb(0 0 0 / 0.5);
+  --shadow-lg: 0 4px 8px rgb(0 0 0 / 0.4), 0 28px 56px -12px rgb(0 0 0 / 0.7);
+
+  --primary: #e9eeea;
+  --primary-foreground: #0d1511;
+  --primary-hover: #ffffff;
+  --chart-1: #8fc4a6;
+  --chart-2: var(--lime-300);
+  --chart-3: #5f9a80;
+  --chart-4: #3f7260;
+  --chart-5: #2c5446;
+}
