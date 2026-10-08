@@ -23,6 +23,7 @@ import AccountMenu from './account-menu';
 import Avatar from './player-avatar';
 import LivePointsTracker from './live-points-tracker';
 import {loadLiveDraft,storeLiveDraft,clearLiveDraft,type LiveMatchDraft} from '@/lib/live-draft';
+import {fetchRemoteDraft,pushRemoteDraft,flushRemoteDraft,dropRemoteDraft,isNewer,queueMatch,readOutbox,removeQueued} from './live-draft-sync';
 import type {LiveScore} from '@/lib/live-score';
 import PlayerSearchPicker from './player-search-picker';
 import NotificationInbox from './notification-inbox';
@@ -71,10 +72,43 @@ export function RallyApp({demo=false}:{demo?:boolean}={}){
  useEffect(()=>{if(demo){try{const saved=sessionStorage.getItem('rally-demo-preview');if(saved)setData(JSON.parse(saved));}catch{}setDemoLoaded(true)}},[demo]);
  const [draft,setDraft]=useState<LiveMatchDraft|null>(null),[draftError,setDraftError]=useState(''),[liveInitial,setLiveInitial]=useState<LiveScore|undefined>(),[liveSwapped,setLiveSwapped]=useState(false);
  const draftOwner=data.me?.id;
- useEffect(()=>{setDraft(null);setDraftError('');if(!draftOwner)return;try{setDraft(loadLiveDraft(demo?sessionStorage:localStorage,draftOwner,demo));}catch{setDraftError('This browser cannot store a live-score draft. Keep the scoring screen open until you save the result.');}},[draftOwner,demo]);
- function forgetDraft(id:string){if(!draftOwner)return;try{clearLiveDraft(demo?sessionStorage:localStorage,draftOwner,id,demo);setDraftError('');}catch{setDraftError('Could not clear the stored draft.');}setDraft(current=>current?.id===id?null:current);}
+ useEffect(()=>{
+  let current=true;setDraft(null);setDraftError('');if(!draftOwner)return;
+  let local:LiveMatchDraft|null=null;
+  try{local=loadLiveDraft(demo?sessionStorage:localStorage,draftOwner,demo);setDraft(local);}catch{setDraftError('This browser cannot store a live-score draft. Keep the scoring screen open until you save the result.');}
+  if(demo)return;
+  // The same account's draft on another device: the newest update wins, in either direction.
+  const syncDraft=async()=>{
+   const remote=await fetchRemoteDraft();if(!current)return;
+   let mine:LiveMatchDraft|null=null;try{mine=loadLiveDraft(localStorage,draftOwner)}catch{mine=local}
+   if(remote&&remote.owner===draftOwner&&(!mine||isNewer(remote,mine))){try{storeLiveDraft(localStorage,remote)}catch{/* kept in memory below */}setDraft(remote);}
+   else if(mine&&(!remote||isNewer(mine,remote)))pushRemoteDraft(mine);
+  };
+  void syncDraft();
+  const visible=()=>{if(document.visibilityState==='visible')void syncDraft()};document.addEventListener('visibilitychange',visible);
+  return()=>{current=false;document.removeEventListener('visibilitychange',visible);flushRemoteDraft()};
+ },[draftOwner,demo]);
+ // Finished matches that could not be sent (no connection) are submitted automatically once the device is online again.
+ useEffect(()=>{
+  if(demo||!draftOwner)return;let running=false;
+  const flush=async()=>{
+   if(running||!navigator.onLine)return;running=true;
+   try{
+    for(const item of readOutbox(draftOwner)){
+     let r:Response;try{r=await fetch('/api/rally',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(item.payload)});}catch{break}
+     if(r.ok){removeQueued(draftOwner,String(item.payload.id));toast.success('Offline match saved.');await refresh();}
+     else if(r.status>=400&&r.status<500&&r.status!==429){removeQueued(draftOwner,String(item.payload.id));const b=await r.json().catch(()=>({})) as {error?:string};toast.error('An offline match could not be saved: '+(b.error||'it was rejected.'));}
+     else break;
+    }
+   }finally{running=false}
+  };
+  void flush();window.addEventListener('online',flush);const visible=()=>{if(document.visibilityState==='visible')void flush()};document.addEventListener('visibilitychange',visible);
+  return()=>{window.removeEventListener('online',flush);document.removeEventListener('visibilitychange',visible)};
+ // eslint-disable-next-line react-hooks/exhaustive-deps
+ },[draftOwner,demo]);
+ function forgetDraft(id:string){if(!draftOwner)return;try{clearLiveDraft(demo?sessionStorage:localStorage,draftOwner,id,demo);setDraftError('');}catch{setDraftError('Could not clear the stored draft.');}if(!demo)dropRemoteDraft(id);setDraft(current=>current?.id===id?null:current);}
  function resumeDraft(){if(!draft||draft.owner!==draftOwner)return;if(draft.clubId==='unaffiliated'?![draft.a,draft.b].every(id=>data.players.some(p=>p.id===id&&!p.is_guest)):(!myClubs.some(c=>c.id===draft.clubId)||![draft.a,draft.b].every(id=>data.memberships.some(m=>m.club_id===draft.clubId&&m.player_id===id&&m.status==='active')))){toast.error('This draft’s club or players are no longer available. You can discard the draft.');return;}requestId.current=draft.id;setSelectedClub(draft.clubId);setA(draft.a);setB(draft.b);setFormat(String(draft.bestOf));setDate(draft.date);setGames(draft.state.games.map(g=>g.map(String) as [string,string]));setLiveInitial(draft.state);setLiveSwapped(draft.swapped);setLiveComplete(draft.state.complete);setLiveDirty(draft.state.history.length>0);liveGamesRef.current=null;setMatchMode('live');setError('');setModal('match');}
- function trackLive(state:LiveScore,swapped:boolean){if(liveGamesRef.current!==state.games){liveGamesRef.current=state.games;setGames(state.games.map(g=>g.map(String) as [string,string]));}setLiveComplete(state.complete);setLiveDirty(state.history.length>0);if(!draftOwner)return;if(!state.history.length){forgetDraft(requestId.current);return;}const next:LiveMatchDraft={version:1,owner:draftOwner,id:requestId.current,clubId:selectedClub,a,b,bestOf:Number(format),date,updatedAt:new Date().toISOString(),state,swapped};setDraft(next);try{storeLiveDraft(demo?sessionStorage:localStorage,next,demo);setDraftError('');}catch{setDraftError('Draft could not be stored on this device. Keep this screen open until the result saves to Rally.');}}
+ function trackLive(state:LiveScore,swapped:boolean){if(liveGamesRef.current!==state.games){liveGamesRef.current=state.games;setGames(state.games.map(g=>g.map(String) as [string,string]));}setLiveComplete(state.complete);setLiveDirty(state.history.length>0);if(!draftOwner)return;if(!state.history.length){forgetDraft(requestId.current);return;}const next:LiveMatchDraft={version:1,owner:draftOwner,id:requestId.current,clubId:selectedClub,a,b,bestOf:Number(format),date,updatedAt:new Date().toISOString(),state,swapped};setDraft(next);if(!demo)pushRemoteDraft(next);try{storeLiveDraft(demo?sessionStorage:localStorage,next,demo);setDraftError('');}catch{setDraftError('Draft could not be stored on this device. Keep this screen open until the result saves to Rally.');}}
  const liveGamesRef=useRef<[number,number][]|null>(null);
  const requestId=useRef('');
  const refreshVersion=useRef(0);
@@ -98,7 +132,7 @@ export function RallyApp({demo=false}:{demo?:boolean}={}){
  const comparison=statMatches.filter(m=>(m.a===ca&&m.b===cb)||(m.a===cb&&m.b===ca)),csA=scopeSummary?.opponents[ca]?.[cb]??stats(ca,scopeSummary?[]:comparison),csB=scopeSummary?.opponents[cb]?.[ca]??stats(cb,scopeSummary?[]:comparison);
  const eventPlayers=eventDetail?(!demo&&loadedEvent?.event.id===event?loadedEvent.entries:data.entries).filter(e=>e.tournament_id===eventDetail.id).map(e=>e.player_id):[];
  const candidates=eventDetail?data.players.filter(p=>!eventPlayers.includes(p.id)&&data.memberships.some(m=>m.club_id===eventDetail.club_id&&m.player_id===p.id&&m.status==='active')):[];
- async function act(payload:Record<string,unknown>,message:string){if(busy)return false;refreshVersion.current++;setBusy(true);setError('');try{if(demo){setData(applyDemoAction(data,payload));toast.success(message+' Sample data only.');return true;}const r=await fetch('/api/rally',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const b=await r.json() as {error?:string};if(!r.ok){if(r.status===409)await refresh();throw new Error(b.error||'Could not save your changes.');}toast.success(message);await refresh();return true}catch(e){const text=e instanceof Error?e.message:'Could not save. Try again.';setError(text);toast.error(text);return false}finally{setBusy(false)}}
+ async function act(payload:Record<string,unknown>,message:string){if(busy)return false;refreshVersion.current++;setBusy(true);setError('');try{if(demo){setData(applyDemoAction(data,payload));toast.success(message+' Sample data only.');return true;}const r=await fetch('/api/rally',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const b=await r.json() as {error?:string};if(!r.ok){if(r.status===409)await refresh();throw new Error(b.error||'Could not save your changes.');}toast.success(message);await refresh();return true}catch(e){if(!demo&&e instanceof TypeError&&payload.action==='record_match'&&draftOwner){try{queueMatch(draftOwner,payload);toast.success('You are offline. This result is saved on your device and will be sent automatically when you are back online.');return true}catch{/* fall through to the normal error */}}const text=e instanceof Error?e.message:'Could not save. Try again.';setError(text);toast.error(text);return false}finally{setBusy(false)}}
  function open(type:string,cid?:string){if(type==='match'&&draft){resumeDraft();return;}setLiveInitial(undefined);setLiveSwapped(false);liveGamesRef.current=null;setMatchMode('manual');setLiveComplete(false);setLiveDirty(false);setCropFile(null);setPhoto(undefined);setPhotoBusy(false);setError('');setFormName(type==='profile'?data.me?.name??data.account?.displayName??'':'');setLocation('');setGames([['',''],['','']]);setA('');setB('');setFormat('3');setDate(new Date().toLocaleDateString('en-CA'));setSelectedClub(cid??(type==='event'||type==='guest'?adminClubs[0]?.id:myClubs[0]?.id)??(type==='match'?'unaffiliated':''));requestId.current=crypto.randomUUID();setModal(type)}
  async function submit(e:React.FormEvent){e.preventDefault();let payload:Record<string,unknown>={};let message='Saved.';
   if(modal==='profile'){if(photoBusy)return;payload={action:'save_profile',name:formName,...(photo!==undefined?{photo}:{})};message='Player profile saved.'}

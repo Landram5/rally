@@ -52,3 +52,5 @@ export const openPlay=sqliteTable('open_play',{id:text('id').primaryKey(),clubId
 export const uiPreferences=sqliteTable('ui_preferences',{playerId:text('player_id').primaryKey().references(()=>profiles.id,{onDelete:'cascade'}),palette:text('palette').notNull().default('forest'),appearance:text('appearance').notNull().default('light'),onboardingHidden:integer('onboarding_hidden').notNull().default(0),updatedAt:text('updated_at').notNull()});
 
 export const profilePhotoOriginals=sqliteTable('profile_photo_originals',{playerId:text('player_id').primaryKey().references(()=>profiles.id,{onDelete:'cascade'}),imageData:text('image_data').notNull(),updatedAt:text('updated_at').notNull()});
+
+export const liveDrafts=sqliteTable('live_drafts',{playerId:text('player_id').primaryKey().references(()=>profiles.id,{onDelete:'cascade'}),draftId:text('draft_id').notNull(),draftJson:text('draft_json').notNull(),updatedAt:text('updated_at').notNull()});
