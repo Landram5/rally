@@ -961,3 +961,13 @@ input[type="checkbox"]:disabled, input[type="radio"]:disabled { opacity: 0.5; cu
 .announcement-empty { margin: 0; padding: 28px 20px; text-align: center; color: var(--text-muted); border: 1px dashed var(--border-strong); border-radius: var(--radius-lg); }
 .announcements-board { margin: 0; }
 .announcements-board .announcement-form { max-width: none; width: 100%; margin: 0; }
+
+/* Bio expander is a small chevron; summary stat tiles size to their content with equal padding. */
+.player-bio-wrap { display: flex; flex-direction: column; align-items: flex-start; }
+.player-bio-toggle { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; margin: 4px 0 0 -4px; border-radius: var(--radius-pill); text-decoration: none; color: var(--on-brand-muted); transition: background var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out); }
+.player-bio-toggle:hover { background: var(--bg-inverse-soft); color: var(--on-brand); }
+.player-bio-toggle svg { transition: transform var(--duration) var(--ease-out); }
+.player-bio-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
+.public-stat-grid article { min-height: 0 !important; padding: 20px 22px !important; justify-content: center; gap: 2px; }
+.public-stat-grid article > svg { margin-bottom: 6px; }
+.public-stat-grid strong { margin-top: 0; line-height: 1.15; }
