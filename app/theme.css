@@ -292,3 +292,25 @@
   --chart-4: #3f7260;
   --chart-5: #2c5446;
 }
+
+/* ───────────────────────── 5. ALTERNATE PALETTES ─────────────────────────
+ * Try a different brand by setting data-palette on <html> (for example in app/layout.tsx):
+ *   <html data-palette="ink">   forest (default) | ink | ocean | plum
+ * Each block only overrides the brand ramp and call-to-action; every screen follows.
+ * To import a theme from tweakcn.com, paste its --primary/--accent values into a block here.
+ */
+:root[data-palette="ink"] {
+  --brand-950: #0b0d10; --brand-900: #14181d; --brand-800: #1d242b; --brand-700: #2a343d; --brand-600: #3a4752;
+  --brand-500: #566672; --brand-400: #7b8b97; --brand-300: #a7b3bc; --brand-200: #cdd5db; --brand-100: #e4e9ed; --brand-50: #f2f5f7;
+  --cta: #f2f5f7; --cta-hover: #ffffff; --cta-subtle: #e4e9ed; --on-cta: #0b0d10; --bg-tint: #eceff2;
+}
+:root[data-palette="ocean"] {
+  --brand-950: #07182b; --brand-900: #0d2a47; --brand-800: #123a60; --brand-700: #1a4d7c; --brand-600: #236198;
+  --brand-500: #3a7ab4; --brand-400: #62a0d2; --brand-300: #94bfe3; --brand-200: #c3daf0; --brand-100: #e0edf8; --brand-50: #f1f7fc;
+  --cta: #7cd6e6; --cta-hover: #5fc8da; --cta-subtle: #d9f2f7; --on-cta: #06222b; --bg-tint: #e8f3f9;
+}
+:root[data-palette="plum"] {
+  --brand-950: #1c0f1f; --brand-900: #2e1a33; --brand-800: #44264b; --brand-700: #5a3463; --brand-600: #724479;
+  --brand-500: #8f5e96; --brand-400: #ae82b4; --brand-300: #c9aacd; --brand-200: #e0cce2; --brand-100: #f0e4f1; --brand-50: #f8f2f9;
+  --cta: #f1c27d; --cta-hover: #e8b25f; --cta-subtle: #fbeccf; --on-cta: #2b1a05; --bg-tint: #f4ecf5;
+}

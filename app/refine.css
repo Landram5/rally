@@ -1,14 +1,14 @@
 /*
- * RALLY REFINEMENTS — the polish layer. Loaded after globals.css.
+ * RALLY REFINEMENTS Ã¢â‚¬â€ the polish layer. Loaded after globals.css.
  *
  * Rules here use ONLY tokens from theme.css (colors, radii, shadows, spacing, motion, fonts).
  * Do not add raw color values here; add or adjust a token in theme.css instead.
  *
- * Sections: 1 Base type · 2 Header and navigation · 3 Buttons · 4 Surfaces · 5 Form controls
- *           6 Badges and chips · 7 Tables · 8 Dialogs and menus · 9 Public pages · 10 Utilities
+ * Sections: 1 Base type Ã‚Â· 2 Header and navigation Ã‚Â· 3 Buttons Ã‚Â· 4 Surfaces Ã‚Â· 5 Form controls
+ *           6 Badges and chips Ã‚Â· 7 Tables Ã‚Â· 8 Dialogs and menus Ã‚Â· 9 Public pages Ã‚Â· 10 Utilities
  */
 
-/* ───────────────────────── 1. BASE TYPE ───────────────────────── */
+/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ 1. BASE TYPE Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 html { scroll-behavior: smooth; }
 
 body {
@@ -53,7 +53,7 @@ button:focus-visible, a:focus-visible, [role="tab"]:focus-visible, summary:focus
   outline-offset: 2px;
 }
 
-/* ───────────────────────── 2. HEADER AND NAVIGATION ───────────────────────── */
+/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ 2. HEADER AND NAVIGATION Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 .topbar {
   height: 64px;
   gap: 24px;
@@ -136,13 +136,13 @@ button:focus-visible, a:focus-visible, [role="tab"]:focus-visible, summary:focus
   background: var(--bg-surface);
   color: var(--text-strong);
   border-color: var(--border);
-  box-shadow: var(--shadow-xs);
+  box-shadow: none;
 }
 
 .demo-note { font-size: 0.78rem; padding: 8px 24px; color: var(--text-muted); background: var(--bg-tint); border-bottom: 1px solid var(--border); }
 .demo-note a, .demo-note button { color: var(--text); font-weight: 500; }
 
-/* ───────────────────────── 3. BUTTONS ───────────────────────── */
+/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ 3. BUTTONS Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 [data-slot="button"] {
   height: var(--control-height);
   padding: 0 16px;
@@ -153,7 +153,7 @@ button:focus-visible, a:focus-visible, [role="tab"]:focus-visible, summary:focus
   gap: 8px;
   transition: background var(--duration) var(--ease), border-color var(--duration) var(--ease), box-shadow var(--duration) var(--ease), color var(--duration) var(--ease), transform 80ms var(--ease);
 }
-[data-slot="button"]:active:not(:disabled) { transform: translateY(0.5px); }
+[data-slot="button"]:active:not(:disabled) { transform: scale(0.98); }
 [data-slot="button"]:disabled { opacity: 0.45; box-shadow: none; }
 [data-slot="button"][data-size="sm"] { height: var(--control-height-sm); padding: 0 12px; font-size: 0.8125rem; border-radius: var(--radius-sm); }
 [data-slot="button"][data-size="lg"] { height: var(--control-height-lg); padding: 0 22px; font-size: 0.95rem; }
@@ -165,7 +165,7 @@ button:focus-visible, a:focus-visible, [role="tab"]:focus-visible, summary:focus
   background: var(--primary);
   color: var(--primary-foreground);
   border: 1px solid transparent;
-  box-shadow: inset 0 1px 0 var(--highlight), var(--shadow-sm);
+  box-shadow: none;
 }
 [data-slot="button"][data-variant="default"]:hover:not(:disabled) { background: var(--primary-hover); }
 
@@ -173,7 +173,7 @@ button:focus-visible, a:focus-visible, [role="tab"]:focus-visible, summary:focus
   background: var(--bg-surface);
   color: var(--text-strong);
   border: 1px solid var(--border-strong);
-  box-shadow: var(--shadow-xs);
+  box-shadow: none;
 }
 [data-slot="button"][data-variant="outline"]:hover:not(:disabled) { background: var(--bg-muted); border-color: var(--border-strong); }
 [data-slot="button"][data-variant="outline"][aria-pressed="true"] { background: var(--bg-muted); border-color: var(--text-muted); }
@@ -188,7 +188,7 @@ button:focus-visible, a:focus-visible, [role="tab"]:focus-visible, summary:focus
   background: var(--danger-solid);
   color: var(--on-brand);
   border: 1px solid transparent;
-  box-shadow: inset 0 1px 0 var(--highlight), var(--shadow-sm);
+  box-shadow: none;
 }
 .dark [data-slot="button"][data-variant="destructive"] { background: var(--danger-subtle); color: var(--danger); border-color: var(--danger-border); box-shadow: none; }
 [data-slot="button"][data-variant="destructive"]:hover:not(:disabled) { filter: brightness(1.08); }
@@ -206,11 +206,11 @@ button:focus-visible, a:focus-visible, [role="tab"]:focus-visible, summary:focus
   font-size: 0.9rem;
   font-weight: 650;
   letter-spacing: -0.01em;
-  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.07), inset 0 1px 0 rgb(255 255 255 / 0.45), var(--shadow-sm);
+  box-shadow: none;
   transition: background var(--duration) var(--ease), box-shadow var(--duration) var(--ease), transform 80ms var(--ease);
 }
 .primary-action:hover:not(:disabled) { background: var(--cta-hover); }
-.primary-action:active:not(:disabled) { transform: translateY(0.5px); }
+.primary-action:active:not(:disabled) { transform: scale(0.98); }
 
 /* Text-style actions that were plain underlined links */
 .dashboard-link {
@@ -226,7 +226,7 @@ button:focus-visible, a:focus-visible, [role="tab"]:focus-visible, summary:focus
   font-size: 0.8125rem;
   font-weight: 550;
   text-decoration: none;
-  box-shadow: var(--shadow-xs);
+  box-shadow: none;
   transition: background var(--duration) var(--ease);
 }
 .dashboard-link:hover { background: var(--bg-muted); }
@@ -238,11 +238,11 @@ button:focus-visible, a:focus-visible, [role="tab"]:focus-visible, summary:focus
   border-radius: var(--radius-sm);
   font-size: 0.8125rem;
   font-weight: 550;
-  box-shadow: var(--shadow-xs);
+  box-shadow: none;
   margin-bottom: 16px;
 }
 
-/* ───────────────────────── 4. SURFACES ───────────────────────── */
+/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ 4. SURFACES Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 .panel, .stat-card, .event-card, .club-card, .profile-card, .directory-card, .feedback-card, .session-card,
 .public-result, .public-stat-grid article, .public-draw, .directory-empty, .account-settings section, .legal-page section {
   background: var(--bg-surface);
@@ -261,7 +261,7 @@ a.directory-card:hover, .event-card:hover, .club-card:hover { border-color: var(
   border-radius: var(--radius-md);
 }
 
-/* ───────────────────────── 5. FORM CONTROLS ───────────────────────── */
+/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ 5. FORM CONTROLS Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="hidden"]):not([type="file"]),
 textarea,
 select,
@@ -292,7 +292,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--brand); width:
 .dark input[type="checkbox"], .dark input[type="radio"] { accent-color: var(--cta); }
 .field-label, .searchbox label { font-weight: 550; font-size: 0.85rem; }
 
-/* ───────────────────────── 6. BADGES AND CHIPS ───────────────────────── */
+/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ 6. BADGES AND CHIPS Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 .badge {
   display: inline-flex;
   align-items: center;
@@ -309,7 +309,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--brand); width:
 }
 .approval-count { border-radius: var(--radius-pill); }
 
-/* ───────────────────────── 7. TABLES ───────────────────────── */
+/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ 7. TABLES Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 table { border-collapse: separate; border-spacing: 0; }
 .panel th, table thead th {
   background: var(--bg-subtle);
@@ -325,7 +325,7 @@ table tbody tr:last-child td { border-bottom: 0; }
 table tbody tr { transition: background var(--duration) var(--ease); }
 table tbody tr:hover { background: var(--bg-subtle); }
 
-/* ───────────────────────── 8. DIALOGS AND MENUS ───────────────────────── */
+/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ 8. DIALOGS AND MENUS Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 [data-slot="dialog-content"], [data-slot="alert-dialog-content"], .form-dialog {
   border: 1px solid var(--border);
   border-radius: var(--radius-xl);
@@ -340,7 +340,7 @@ table tbody tr:hover { background: var(--bg-subtle); }
   box-shadow: var(--shadow-lg);
 }
 
-/* ───────────────────────── 9. PUBLIC PAGES ───────────────────────── */
+/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ 9. PUBLIC PAGES Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 .public-page, .public-directory { padding-top: 32px; }
 .directory-tabs a { border-radius: var(--radius-md); font-weight: 550; }
 .leaderboard-row { border-radius: var(--radius-lg); box-shadow: var(--shadow-xs); transition: border-color var(--duration) var(--ease), box-shadow var(--duration) var(--ease); }
@@ -349,12 +349,12 @@ table tbody tr:hover { background: var(--bg-subtle); }
 .support-footer a { color: var(--text-muted); text-decoration: none; }
 .support-footer a:hover { color: var(--text-strong); text-decoration: underline; }
 
-/* ───────────────────────── 10. UTILITIES ───────────────────────── */
+/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ 10. UTILITIES Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 @media (prefers-reduced-motion: reduce) {
   * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; scroll-behavior: auto !important; }
 }
 
-/* ───────────────────────── 11. WORKSPACES (tournaments, clubs) ───────────────────────── */
+/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ 11. WORKSPACES (tournaments, clubs) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 .tournament-page-heading { display: grid; gap: 8px; margin-bottom: 8px; }
 .tournament-title-row { display: flex; align-items: center; justify-content: flex-start; gap: 8px; flex-wrap: wrap; }
 .tournament-title-row a {
@@ -400,7 +400,7 @@ table tbody tr:hover { background: var(--bg-subtle); }
 
 .tournament-view-switch { display: inline-flex; gap: 2px; padding: 3px; background: var(--bg-muted); border: 1px solid var(--border); border-radius: var(--radius-md); }
 .tournament-view-switch [data-slot="button"] { height: 30px; border-radius: var(--radius-sm); box-shadow: none; border: 1px solid transparent; background: transparent; color: var(--text-muted); }
-.tournament-view-switch [data-slot="button"][data-variant="default"] { background: var(--bg-surface); color: var(--text-strong); border-color: var(--border); box-shadow: var(--shadow-xs); }
+.tournament-view-switch [data-slot="button"][data-variant="default"] { background: var(--bg-surface); color: var(--text-strong); border-color: var(--border); box-shadow: none; }
 
 /* Text on the lime accent stays dark in both themes (theme text colors flip in dark mode). */
 .brand-mark, .champion-banner, .diagram-champion, .public-winner, .mini-app-icon, .live-side-1, .venue-status, .venue-champion, .h2h-bar span { color: var(--on-cta); }
@@ -418,7 +418,7 @@ table tbody tr:hover { background: var(--bg-subtle); }
   --text-subtle: var(--on-brand-subtle);
 }
 
-/* ───────────────────────── 12. DESIGN AUDIT UPGRADES ───────────────────────── */
+/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ 12. DESIGN AUDIT UPGRADES Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 
 /* Cards: hairline border only. Shadow is reserved for things that float or respond to hover. */
 .panel, .stat-card, .event-card, .club-card, .profile-card, .directory-card, .feedback-card, .session-card,
@@ -509,3 +509,55 @@ body::before {
 .not-found h1 { font-size: clamp(2rem, 1.4rem + 2vw, 3rem); }
 .not-found p { color: var(--text-muted); }
 .not-found-code { font-size: 0.8rem; font-weight: 600; letter-spacing: 0.08em; color: var(--text-subtle); }
+
+/* ───────────────────────── 13. REDESIGN V2: flat, quiet, precise ─────────────────────────
+ * Principles: depth comes from hairline borders and tone, never from stacked shadows.
+ * Only floating layers (menus, dialogs) carry a shadow. Motion is short, ease-out and
+ * only changes color, opacity or a 2% scale on press.
+ */
+:root { --ease-out: cubic-bezier(0.23, 1, 0.32, 1); --duration-fast: 120ms; --duration-slow: 260ms; }
+
+/* Remove every remaining resting shadow from controls and cards. */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="hidden"]):not([type="file"]),
+textarea, select, [data-slot="input"], .picker,
+.leaderboard-row, .club-back-link, .dashboard-link { box-shadow: none; }
+a.directory-card:hover, .event-card:hover, .club-card:hover, .leaderboard-row:hover { box-shadow: none; border-color: var(--text-subtle); }
+[data-slot="tabs-list"][data-variant="default"] [data-slot="tabs-trigger"][data-state="active"],
+.section-tabs [role="tab"][data-state="active"] { box-shadow: none; border-color: var(--border-strong); }
+
+/* Buttons: flat fills, a slightly tighter shape, one consistent transition. */
+[data-slot="button"], .primary-action, .dashboard-link, .club-back-link {
+  border-radius: var(--radius-sm);
+  transition: background var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out), transform 100ms var(--ease-out);
+}
+[data-slot="button"][data-variant="outline"], .dashboard-link, .club-back-link { border-color: var(--border-strong); }
+[data-slot="button"][data-variant="outline"]:hover:not(:disabled), .dashboard-link:hover { border-color: var(--text-subtle); background: var(--bg-surface); }
+[data-slot="button"][data-variant="default"]:hover:not(:disabled), .primary-action:hover:not(:disabled) { filter: none; }
+@media (hover: none) { [data-slot="button"]:hover, .primary-action:hover { transition-duration: 0ms; } }
+
+/* Floating layers keep a single soft shadow; they also fade and scale in. */
+[data-slot="dialog-content"], [data-slot="alert-dialog-content"], .form-dialog { box-shadow: var(--shadow-lg); }
+@keyframes pop-in { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: none; } }
+[data-slot="dropdown-menu-content"], [data-slot="select-content"], [data-slot="popover-content"], .account-menu {
+  box-shadow: var(--shadow-md);
+  animation: pop-in var(--duration-fast) var(--ease-out) both;
+  transform-origin: top center;
+}
+
+/* Rhythm: roomier pages, a readable measure, quieter section headings. */
+.public-page, .public-directory { max-width: 1120px; margin-inline: auto; padding-top: 40px; }
+.panel-heading { padding: 22px 24px 16px; }
+.panel-heading h2 { font-size: 1.0625rem; }
+.panel-heading p, .page-heading p { color: var(--text-muted); max-width: 62ch; }
+.eyebrow { font-size: 0.72rem; letter-spacing: 0.06em; }
+
+/* Entrance: one calm rise, shorter and subtler than before. */
+@keyframes rise-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.panel, .directory-card, .leaderboard-list > li, .stat-card, .event-card, .club-card, .session-card { animation: rise-in var(--duration-slow) var(--ease-out) both; }
+
+/* Page transitions between routes where the browser supports them. */
+@view-transition { navigation: auto; }
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: 160ms; }
+
+/* Progress and number changes ease instead of jumping. */
+progress, .rating-bar span, .h2h-bar span { transition: width var(--duration-slow) var(--ease-out); }
