@@ -462,3 +462,5 @@ input[type=date]::-webkit-date-and-time-value,input[type=datetime-local]::-webki
 .rating-delta{font-weight:700;font-variant-numeric:tabular-nums}.rating-delta.up{color:#1f7a35}.rating-delta.down{color:#b3382c}.match-rating-change{display:flex;gap:10px;flex-wrap:wrap;color:var(--muted-foreground)}
 
 .match-meta .match-rating-change{display:flex;flex-wrap:wrap;gap:4px 12px;justify-content:flex-end}.match-rating-change>span{white-space:nowrap}
+
+.leaderboard-scope{display:flex;flex-wrap:wrap;align-items:end;gap:12px 24px;margin:12px 0}.leaderboard-scope label{display:grid;gap:6px;font-weight:600}.leaderboard-scope select{min-height:44px;max-width:100%}.leaderboard-scope .notification-choice{display:flex;align-items:center;gap:8px;font-weight:500}
