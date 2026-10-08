@@ -129,3 +129,7 @@ Branch `codex/safety` adds native write limits, Turnstile email-auth/feedback wi
 ## Notification delivery (prepared)
 
 See `RELEASE_NOTIFICATIONS_2026-10-07.md`. Email and encrypted Web Push use existing inbox events and opt-in preferences. Migration 0020 is local only; provider setup and physical-device delivery checks are pending.
+
+## Recurring sessions (prepared)
+
+See `RELEASE_SESSIONS_2026-10-07.md`. Weekly dates, per-date skips, Maybe/guest RSVPs and FIFO capacity promotion are prepared with local migration 0021. Production approval and physical-device checks remain pending.
