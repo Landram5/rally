@@ -1006,3 +1006,22 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; -webkit-tap-highl
 @supports (padding: max(0px)) {
   main { scroll-padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
 }
+/* ───────────────────────── 24. MATCH ROWS: layout never depends on the data ─────────────────────────
+ * Long names or many-game scores used to push the score column wider than the row and squeeze the names.
+ * Columns are now fixed by the container (names flexible, score capped), and long values wrap.
+ */
+.saved-match, .saved-match .match-row, [data-slot="tabs-content"], [data-slot="tabs-content"] > .panel { min-width: 0; max-width: 100%; }
+.match-row { grid-template-columns: minmax(0, 1fr) minmax(0, max-content); }
+.match-people { min-width: 0; }
+.match-people button { min-width: 0; }
+.match-people button span { overflow-wrap: anywhere; }
+.match-score { min-width: 0; max-width: 100%; }
+.match-score small { white-space: normal; overflow-wrap: anywhere; }
+@media (max-width: 700px) {
+  .match-row { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .match-people { flex-direction: column; align-items: flex-start; }
+  .match-score { display: flex; align-items: baseline; justify-content: space-between; gap: 6px 14px; flex-wrap: wrap; text-align: left; }
+  .match-score strong { font-size: 1.1rem; }
+  .match-score small { margin: 0; text-align: right; flex: 1 1 0; min-width: 8ch; }
+  .match-meta { grid-column: auto; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; align-items: baseline; text-align: left; margin: 0; }
+}
