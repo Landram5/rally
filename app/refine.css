@@ -1034,3 +1034,6 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; -webkit-tap-highl
   font-size: 0.65rem; font-weight: 700; line-height: 1; letter-spacing: 0; font-variant-numeric: tabular-nums;
   box-shadow: 0 0 0 2px var(--bg-surface);
 }
+@media (min-width: 901px) {
+  .nav-badge { top: -5px; right: -7px; min-width: 14px; height: 14px; padding: 0 3px; font-size: 0.58rem; box-shadow: 0 0 0 1.5px var(--bg-page); }
+}
