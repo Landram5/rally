@@ -125,3 +125,7 @@ The QR SVG is generated locally by qrcode 1.5.4, with a white quiet area and can
 ## Safety - October 7, 2026 (prepared; production configuration pending)
 
 Branch `codex/safety` adds native write limits, Turnstile email-auth/feedback widgets and server-authorized owner/admin club CSV exports. No D1 migration. Security dependencies patched; required checks pass. See `SAFETY_RELEASE.md` and newest `HANDOFF.md` entry for configuration, validation and remaining live checks. Notifications, recurring sessions and tournament operations follow in separate PRs; doubles is deferred.
+
+## Notification delivery (prepared)
+
+See `RELEASE_NOTIFICATIONS_2026-10-07.md`. Email and encrypted Web Push use existing inbox events and opt-in preferences. Migration 0020 is local only; provider setup and physical-device delivery checks are pending.
