@@ -217,9 +217,9 @@
   color-scheme: dark;
 
   --bg-page: #0a0f0c;
-  --bg-surface: #111712;
+  --bg-surface: #151d17;
   --bg-subtle: #0d130f;
-  --bg-muted: #182019;
+  --bg-muted: #1d2720;
   --bg-sunken: #070b09;
   --bg-tint: #162119;
   --bg-inverse: #0d1511;
@@ -240,13 +240,13 @@
 
   --text-strong: #f5f8f6;
   --text: #e4eae6;
-  --text-muted: #97a69d;
-  --text-subtle: #7d8c84;
+  --text-muted: #a5b4ab;
+  --text-subtle: #8c9b92;
   --text-brand: #c6de78;
   --text-link: #c6de78;
 
   --border-subtle: #151c17;
-  --border: #212b25;
+  --border: #26322b;
   --border-strong: #2f3c35;
   --border-brand: #4d7a68;
   --border-inverse: #25332b;

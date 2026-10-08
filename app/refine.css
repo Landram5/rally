@@ -671,3 +671,27 @@ a.directory-card:hover, .event-card:hover, .club-card:hover, .leaderboard-row:ho
 [data-slot="tabs-content"] { animation: rise-in 300ms var(--ease-out) both; }
 [data-slot="button"]:hover:not(:disabled), .primary-action:hover:not(:disabled) { transform: translateY(-1px); }
 [data-slot="button"]:active:not(:disabled), .primary-action:active:not(:disabled) { transform: scale(0.97); }
+/* ───────────────────────── 16. AUDIT FIXES ───────────────────────── */
+.topbar .account-area a.account-name { color: var(--text-muted); }
+.topbar .account-area a.account-name:hover { color: var(--text-strong); }
+
+/* Segmented tabs scroll sideways on phones instead of wrapping into a ragged grid. */
+@media (max-width: 700px) {
+  .section-tabs { display: flex; flex-wrap: nowrap; overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none; }
+  .section-tabs::-webkit-scrollbar { display: none; }
+  .section-tabs [role="tab"] { flex: 0 0 auto; white-space: nowrap; scroll-snap-align: start; }
+}
+
+/* Cards in a row share a top edge. */
+.dashboard-grid, .event-grid, .public-event-bottom { align-items: start; }
+.dashboard-grid > *, .event-grid > * { margin-top: 0; }
+
+/* Last-five form chips: visible gap and a readable tone for each result. */
+.form-marks { gap: 5px; }
+.form-marks .win { background: var(--success-subtle); color: var(--success); }
+.form-marks .loss { background: var(--danger-subtle); color: var(--danger); }
+
+/* Breathing room under informational banners. */
+.dashboard-callout, .registration-callout, .footnote-box, .match-focus-note { margin-bottom: 16px; }
+.legal-page li, .ratings-page li, .rules-box li { margin-block: 0.4rem; }
+.directory-banner span { color: var(--text-strong); }
