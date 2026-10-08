@@ -1,6 +1,6 @@
-﻿'use client';
+'use client';
 import {useEffect,useState} from 'react';
-import type {DoublesProfile} from '@/lib/doubles-stats';
+import type {DoublesProfile} from '@/lib/doubles-view';
 import {ESTABLISHED_MATCHES} from '@/lib/seeding';
 const dateLabel=(d:string)=>new Date(d+'T12:00:00Z').toLocaleDateString('en-US',{month:'short',day:'numeric',timeZone:'UTC'});
 // Simple trend of a player's doubles rating after each of their latest results.

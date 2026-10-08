@@ -1,7 +1,7 @@
-﻿'use client';
+'use client';
 import {useEffect,useState} from 'react';
 import CleanSelect from './clean-select';
-import type {DoublesStandings} from '@/lib/doubles-stats';
+import type {DoublesStandings} from '@/lib/doubles-view';
 import {ESTABLISHED_MATCHES} from '@/lib/seeding';
 // Doubles leaderboard for one club or all of the viewer's clubs, plus the best partnerships.
 export default function DoublesStandingsView({clubs,onProfile}:{clubs:{id:string;name:string}[];onProfile?:(id:string)=>void}){

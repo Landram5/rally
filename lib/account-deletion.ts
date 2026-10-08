@@ -81,6 +81,8 @@ export async function beginDeletion(db:D1Database,authId:string,mode:DeletionMod
   statements.push(q("DELETE FROM entries WHERE player_id=? AND tournament_id IN (SELECT id FROM tournaments WHERE status='registration')",id));
   // A doubles team still in open registration cannot go ahead without this player, so it is withdrawn.
   const openTeams=(await q("SELECT DISTINCT t.id,t.revision FROM tournaments t JOIN doubles_teams d ON d.tournament_id=t.id WHERE (d.p1=? OR d.p2=?) AND t.status='registration' AND t.deleted_at IS NULL",id,id).all<{id:string;revision:number}>()).results;
+   // Waiting teams go first so a freed place is never offered to a team that includes this player.
+   statements.push(q('DELETE FROM doubles_team_waitlist WHERE p1=? OR p2=?',id,id),q('UPDATE doubles_team_waitlist SET created_by=NULL WHERE created_by=?',id));
   statements.push(q("DELETE FROM doubles_teams WHERE (p1=? OR p2=?) AND tournament_id IN (SELECT id FROM tournaments WHERE status='registration')",id,id));
   for(const event of openTeams){statements.push(q('INSERT INTO deletion_revision_guards(tournament_id,expected_revision) VALUES(?,?)',event.id,event.revision));statements.push(q('UPDATE tournaments SET revision=revision+1 WHERE id=?',event.id));}
   statements.push(q('UPDATE doubles_teams SET created_by=NULL WHERE created_by=?',id));

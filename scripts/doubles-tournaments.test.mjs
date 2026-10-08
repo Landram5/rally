@@ -140,4 +140,59 @@ function fixture(){
  const listing=await getPublicDirectory(db,'tournaments','',1);const row=listing.tournaments.find(t=>t.id==='d');assert.equal(row?.entrants??4,4,'the directory counts teams');
  sql.close();
 }
-console.log('Doubles tournaments passed: creation, team registration rules and constraints, draws seeded by team, results as doubles matches (not singles), correction and reset, ratings, deletion and account removal.');
+{
+ // Team waitlist and check-in.
+ const {sql,db,run,service,go,one,all,doublesEvent}=fixture();
+ await doublesEvent('w',2);
+ await go('p1','w','enter_team',{partnerId:'p2'});await go('p3','w','enter_team',{partnerId:'p4'});
+ await assert.rejects(go('p5','w','enter_team',{partnerId:'p6'}),e=>e.status===409&&/waitlist/i.test(e.message),'a full event points to the waitlist');
+ await go('p5','w','join_team_waitlist',{partnerId:'p6'});await go('owner','w','join_team_waitlist',{playerId:'p7',partnerId:'p8'});
+ assert.deepEqual(all('SELECT p1 FROM doubles_team_waitlist ORDER BY created_at,rowid').map(r=>r.p1),['p5','p7']);
+ await assert.rejects(go('p5','w','join_team_waitlist',{partnerId:'p7'}),e=>e.status===409,'a waiting player cannot wait twice');
+ await assert.rejects(go('p1','w','join_team_waitlist',{partnerId:'owner'}),e=>e.status===409,'a registered player cannot also wait');
+ await assert.rejects(go('p6','w','enter_team',{partnerId:'owner'}),e=>e.status===409,'a waiting player cannot register a different team');
+ const own=await service.read('p5-auth',{}),listed=own.tournaments.find(t=>t.id==='w');
+ assert.equal(listed.waitlist_count,2);assert.deepEqual(listed.team_waitlist.map(w=>w.name),['P5 & P6'],'a player sees only their own waiting team');
+ assert.equal((await service.read('owner-auth',{})).tournaments.find(t=>t.id==='w').team_waitlist.length,2,'organizers see the whole line');
+ // Check-in belongs to the team: a member or an organizer may toggle it, and only while check-in is open.
+ const t1=one("SELECT id FROM doubles_teams WHERE p1='p1'").id,t3=one("SELECT id FROM doubles_teams WHERE p1='p3'").id;
+ await assert.rejects(go('p1','w','set_team_check_in',{teamId:t1,checkedIn:true}),e=>e.status===409,'check-in must be open');
+ run('UPDATE tournaments SET check_in_open=1');
+ await go('p2','w','set_team_check_in',{teamId:t1,checkedIn:true});assert.ok(one('SELECT checked_in_at FROM doubles_teams WHERE id=?',t1).checked_in_at);
+ await assert.rejects(go('p1','w','set_team_check_in',{teamId:t3,checkedIn:true}),e=>e.status===403,'another team cannot check you in');
+ await go('owner','w','set_team_check_in',{teamId:t3,checkedIn:true});
+ assert.deepEqual((await service.read('owner-auth',{})).tournaments.find(t=>t.id==='w').checkedIn.sort(),[t1,t3].sort(),'checked-in teams are listed by team id');
+ // A withdrawal gives the place to the first waiting team.
+ await go('p1','w','remove_team',{teamId:t1});
+ assert.deepEqual(all("SELECT p1 FROM doubles_teams WHERE tournament_id='w'").map(r=>r.p1).sort(),['p3','p5']);
+ assert.deepEqual(all('SELECT p1 FROM doubles_team_waitlist').map(r=>r.p1),['p7']);
+ // Only a member or an organizer can take a team off the waitlist, and raising the limit promotes the next team.
+ const wait=one("SELECT id FROM doubles_team_waitlist WHERE p1='p7'").id;
+ await assert.rejects(go('p1','w','leave_team_waitlist',{teamId:wait}),e=>e.status===403);
+ await go('owner','w','set_capacity',{capacity:3});
+ assert.equal(all('SELECT id FROM doubles_teams').length,3);assert.equal(all('SELECT id FROM doubles_team_waitlist').length,0,'raising the limit promotes the waiting team');
+ await go('owner','w','set_capacity',{capacity:4});await assert.rejects(go('p1','w','join_team_waitlist',{partnerId:'p2'}),e=>e.status===409,'no waitlist while there is room');
+ // Starting the draw clears the waitlist.
+ await doublesEvent('w2',2);await go('p1','w2','enter_team',{partnerId:'p2'});await go('p3','w2','enter_team',{partnerId:'p4'});await go('p5','w2','join_team_waitlist',{partnerId:'p6'});
+ await go('owner','w2','start_tournament',{bestOf:3});assert.equal(all("SELECT id FROM doubles_team_waitlist WHERE tournament_id='w2'").length,0);
+ await assert.rejects(go('p5','w2','join_team_waitlist',{partnerId:'p6'}),e=>e.status===409);
+ // Deleting an account removes its waiting team, so a freed place never goes to it.
+ await doublesEvent('w3',2);await go('p1','w3','enter_team',{partnerId:'p2'});await go('p7','w3','enter_team',{partnerId:'p8'});await go('p3','w3','join_team_waitlist',{partnerId:'p4'});await go('p5','w3','join_team_waitlist',{partnerId:'p6'});
+ await beginDeletion(db,'p3-auth','remove_history');
+ assert.deepEqual(all("SELECT p1 FROM doubles_team_waitlist WHERE tournament_id='w3'").map(r=>r.p1),['p5']);
+ await go('owner','w3','remove_team',{teamId:one("SELECT id FROM doubles_teams WHERE p1='p1' AND tournament_id='w3'").id});
+ assert.deepEqual(all("SELECT p1 FROM doubles_teams WHERE tournament_id='w3'").map(r=>r.p1).sort(),['p5','p7'],'the next team still in line is promoted');
+ assert.equal(one('PRAGMA foreign_key_check'),undefined);sql.close();
+}
+{
+ // Players from two approved clubs make the event cross-club (weight 3), exactly like singles.
+ const {sql,run,go,one,doublesEvent}=fixture();
+ run("INSERT INTO clubs(id,name,location,owner_id,created_at,approval_status) VALUES('club2','Club 2','Town','outsider','2026-10-01','approved')");
+ run("INSERT INTO memberships(id,club_id,player_id,role,status,created_at) VALUES('o2','club2','outsider','owner','active','2026-10-01'),('p4b','club2','p4','member','active','2026-10-01')");
+ await doublesEvent('x',4);run('UPDATE tournaments SET allow_visitors=1');
+ await go('p1','x','enter_team',{partnerId:'p2'});await go('p3','x','enter_team',{partnerId:'p4'});
+ await go('owner','x','start_tournament',{bestOf:3});assert.equal(one("SELECT rating_weight FROM tournaments WHERE id='x'").rating_weight,3);
+ await doublesEvent('y',4);await go('p1','y','enter_team',{partnerId:'p2'});await go('p5','y','enter_team',{partnerId:'p6'});
+ await go('owner','y','start_tournament',{bestOf:3});assert.equal(one("SELECT rating_weight FROM tournaments WHERE id='y'").rating_weight,2,'one club stays at the normal tournament weight');
+ sql.close();
+}console.log('Doubles tournaments passed: creation, team registration rules and constraints, draws seeded by team, results as doubles matches (not singles), correction and reset, ratings, deletion and account removal.');
