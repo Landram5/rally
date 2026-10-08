@@ -120,3 +120,20 @@ Guest claims require an authenticated player and approval by a different active 
 Match history/reviews are private to match players and active host-club leaders. Regular score corrections require a reason and matching result revision. Tournament corrections use reset/re-score draw controls, preserving downstream consistency and snapshots of every affected played result. Merely confirming a disputed match cannot resolve the dispute. Organizers either fix/reset it and resolve with an explanation, or reject it while retaining the original result. Inbox notices cover pending organizer reviews and claim/review decisions.
 
 The QR SVG is generated locally by qrcode 1.5.4, with a white quiet area and canonical Rally URL; no third-party image service sees the invitation. /demo/records uses isolated session sample data. node scripts/reliability.test.mjs now includes release-three.test.mjs and account-deletion.test.mjs, exercising SQLite migrations, permission/race rollback, FIFO promotion, merges, corrections, deletion and demo isolation.
+
+
+## Safety - October 7, 2026 (prepared; production configuration pending)
+
+Branch `codex/safety` adds native write limits, Turnstile email-auth/feedback widgets and server-authorized owner/admin club CSV exports. No D1 migration. Security dependencies patched; required checks pass. See `SAFETY_RELEASE.md` and newest `HANDOFF.md` entry for configuration, validation and remaining live checks. Notifications, recurring sessions and tournament operations follow in separate PRs; doubles is deferred.
+
+## Notification delivery (prepared)
+
+See `RELEASE_NOTIFICATIONS_2026-10-07.md`. Email and encrypted Web Push use existing inbox events and opt-in preferences. Migration 0020 is local only; provider setup and physical-device delivery checks are pending.
+
+## Recurring sessions (prepared)
+
+See `RELEASE_SESSIONS_2026-10-07.md`. Weekly dates, per-date skips, Maybe/guest RSVPs and FIFO capacity promotion are prepared with local migration 0021. Production approval and physical-device checks remain pending.
+
+## Prepared tournament operations (not deployed)
+
+Tournament-specific scorekeepers, table-count/duration scheduling with finish estimates, and FIFO reserved offers with claim deadlines are prepared on `codex/tournament-operations`. See RELEASE_TOURNAMENT_OPERATIONS_2026-10-07.md and HANDOFF.md. Migration 0022 is local only; production requires explicit approval and backup. No doubles.

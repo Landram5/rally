@@ -6,7 +6,7 @@ import {accountPlan,beginDeletion,finishDeletion,transferOwnership} from './acco
 import {AppError} from './rally-errors';
 
 type Session={user:{id:string;email?:string}|null;signOut:()=>Promise<unknown>};
-type Dependencies={db:D1Database;session:()=>Promise<Session>;admin:()=>{deleteUser:(id:string,soft?:boolean)=>Promise<{error:{code?:string;status?:number}|null}>};configured:()=>boolean};
+type Dependencies={db:D1Database;session:()=>Promise<Session>;limit?:(userId:string)=>Promise<Response|null>;admin:()=>{deleteUser:(id:string,soft?:boolean)=>Promise<{error:{code?:string;status?:number}|null}>};configured:()=>boolean};
 const reply=(data:unknown,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'private, no-store','Vary':'Cookie'}});
 async function readBody(request:Request):Promise<Record<string,unknown>> {
  if(!request.headers.get('content-type')?.startsWith('application/json'))throw new AppError(415,'JSON required.');
@@ -40,6 +40,7 @@ export function accountHandlers(deps:Dependencies) {
     const body=await readBody(request);
     const session=await deps.session(),user=session.user;
     if(!user)return reply({error:'Sign in to manage your account.'},401);
+    const limited=await deps.limit?.(user.id);if(limited)return limited;
     if(body.action==='save_notification_preferences'){await makeService(deps.db).act(user.id,body);return reply({ok:true});}
     if(body.action==='save_profile'){await makeService(deps.db).act(user.id,{action:'save_profile',name:body.name,bio:body.bio,...(body.photo!==undefined?{photo:body.photo}:{})});return reply({ok:true});}
     if(body.action==='transfer') {

@@ -7,6 +7,8 @@ import {ratingHistory,ratingEstimates} from '@/lib/seeding';
 import {playerPerformance} from '@/lib/player-performance';
 import {getPublicDirectory} from '@/lib/public-rally';
 import {AppError,makeService} from '@/lib/rally-service';
+import {rateLimit} from '@/lib/write-limits';
+import {verifyTurnstile} from '@/lib/turnstile';
 export const dynamic='force-dynamic';
 function service(){if(!env.DB)throw new Error('Database unavailable');return makeService(env.DB)}
 function isSiteAdmin(email:string){return (env.RALLY_ADMIN_EMAILS??'').split(',').some(value=>value.trim().toLowerCase()===email.toLowerCase())}
@@ -27,10 +29,12 @@ export async function POST(request:Request){try{
  const origin=request.headers.get('origin');if(!origin||origin!==new URL(request.url).origin)return response({error:'Request origin not allowed.'},403);
  if(!request.headers.get('content-type')?.startsWith('application/json'))return response({error:'JSON required.'},415);
  const user=await getAuthenticatedUser();if(!user)return response({error:'Sign in to save changes.'},401);
+ const limited=await rateLimit(env.USER_WRITE_LIMITER,user.id);if(limited)return limited;
  if(Number(request.headers.get('content-length')??0)>262144)return response({error:'Request too large.'},413);
  const raw=await request.text();if(raw.length>262144)return response({error:'Request too large.'},413);
  let body;try{body=JSON.parse(raw)}catch{return response({error:'Invalid request.'},400)}
  if(!body||typeof body!=='object'||Array.isArray(body))return response({error:'Invalid request.'},400);
+ if(body.action==='submit_feedback')await verifyTurnstile(request,body.captchaToken,env.TURNSTILE_SECRET_KEY);
  if(body.action==='create_club'&&!user.emailVerified)return response({error:'Verify your email address before creating a club.'},403);
  return response(await service().act(user.id,body,{isSiteAdmin:isSiteAdmin(user.email),reviewerId:user.id}));
 }catch(e){return error(e)}}
