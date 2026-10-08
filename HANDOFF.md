@@ -1,0 +1,176 @@
+# Codex handoff — 2026-10-07 — safety
+
+
+
+- Branch: `codex/safety`, based on `main` at `056583f`. Scope: write limits, Turnstile, private club CSV exports and security dependency patches. No doubles.
+
+- Ownership: Codex owns safety/auth/export files in this PR. Claude owns public leaderboard, demo fixes, rating display, sharing cards and `app/player-performance.tsx`; those files and `app/globals.css` were untouched. `app/api/rally/route.ts` changes only its POST path. `app/club-page.tsx` changes only the management export control/import.
+
+- Rate limits: Cloudflare native bindings, 500 ordinary writes/IP/minute, 10 auth writes/IP/minute and 60 authenticated writes/account/minute, shared across Rally/account/sessions/announcements. Limits are approximate per Cloudflare location, not global quotas. Export downloads share the account limit. Outages deny writes. No D1 migration.
+
+- Turnstile: widget on email signup/signin/reset and real feedback. Auth forwards the single-use token to Supabase. Enable its Turnstile CAPTCHA only after the new Auth forms are live, during an approved coordinated rollout; enabling it against old forms would block password auth. Feedback validates with Siteverify, expected hostname and `feedback` action. Never validate Auth tokens twice. Missing widget configuration fails closed. Google OAuth remains unchanged.
+
+- CSV: `/api/clubs/:id/export?kind=roster|results|ratings`; only active owner/admin of that club, rechecked server-side. Board members excluded. Private/no-store; no email/Auth IDs; CSV formula escaping; current shared rating engine. Results include pending/voided statuses but exclude deleted tournaments; ratings use confirmed results and active roster.
+
+- Validation: reliability, lint, build, TypeScript pass. New safety suite covers roles/revocation/club isolation, rating parity, CSV injection, CAPTCHA failures and Auth token forwarding, limiter denial/outages. High/critical dependency audit now clean; two low/moderate findings remain. Next 16.3.8; patched browserslist/source-map-js and Miniflare sharp override.
+
+- Localhost: built Worker served locally on 5173 with `wrangler dev --config dist/server/wrangler.json --local --host localhost`; public dummy site key supplied only via CLI. Widget rendered successfully on signup/signin/reset; mobile page width equals scroll width (375px). Malformed Auth body returned 400, then native limit 429. Anonymous CSV download returned 401. No accounts created or emails sent. Browser testing caught broken client navigation in Vinext beta. Updated to stable Vinext 1.0.0 / RSC plugin 0.5.34 and added the required Suspense boundary to the login page. Privacy navigation and return to sign-in were then checked successfully. Physical iPhone/Android and live provider rejection remain unchecked.
+
+- Merge blockers: configure managed Turnstile production site key + server secret and coordinate Supabase Auth CAPTCHA activation with the new forms. Review UI with Adam first; never enable provider CAPTCHA against the old forms. This changes production Auth settings, so requires Adam's go-ahead under AGENTS. Do not use `pnpm deploy` or local `wrangler deploy`; main merges deploy through Workers Builds.
+
+- Next: tell Adam the email-then-push notification plan before task 2. Inbox remains source of truth; respect event preferences and channel opt-in; durable deduplication/retries; Home Screen permission requires user gesture. Then sessions, then tournament operations. Every PR needs full reliability/lint/build before merge; migration export + explicit approval before any production D1 application.
+
+- Preexisting untracked `CLAUDE_HANDOFF.md` is not part of this PR.
+
+
+
+---
+
+
+
+# Handoff log
+
+
+
+Newest entry first. Each agent (Codex or Claude) adds an entry when it stops. Keep it short and factual.
+
+
+
+Template:
+
+
+
+```
+
+## YYYY-MM-DD â€” <agent> â€” <topic>
+
+- Branch/commit:
+
+- Changed:
+
+- Verified (commands run, results):
+
+- Not done / open questions:
+
+- Don't touch:
+
+```
+
+
+
+## 2026-10-07 â€” Claude â€” coding rules
+
+- Branch/commit: `claude/agent-setup`
+
+- Changed: added Coding Rules and Suggestions sections to `AGENTS.md` (minimum code, ask before suggestions with an Accept all option, urgent issues flagged immediately). Workflow Constraints in `AGENTS.md` and `CLAUDE.md` now require one full run (`pnpm test:reliability`, lint, build) before merging to `main`.
+
+- Suggestions waiting for the owner: none yet. If the owner is away, write suggestions here.
+
+
+
+## 2026-10-07 â€” Claude â€” Cloudflare connected to GitHub
+
+- Branch/commit: `claude/agent-setup`
+
+- Changed: Cloudflare Workers Builds is now connected to `Landram5/rally` (branch `main`) with build `pnpm run build` and deploy `npx wrangler deploy --config dist/server/wrangler.json`. Merging to `main` now deploys. `AGENTS.md` / `CLAUDE.md` updated to match (this replaces the earlier "Codex is the only deployer" note below).
+
+- Not yet verified: no build has run. The first merge to `main` will be the first build; check Cloudflare > Worker > Deployments, and note the version ID in the release note. If it fails (for example pnpm or env vars on the build machine), Codex's `pnpm deploy` from the PC remains the fallback.
+
+- Pending pull requests for the owner to merge: `claude/agent-setup` (agent docs) and `claude/match-header-logo` (tab and Home Screen icons; release note `RELEASE_LOGO_MATCH_2026-10-07.md`). Merging each will trigger a production deploy.
+
+- Don't touch: `.dev.vars`, production D1, Supabase settings without the owner's go-ahead.
+
+
+
+## 2026-10-07 â€” Claude â€” deploy rule and pending branches
+
+- Branch/commit: `claude/agent-setup`
+
+- Changed: `AGENTS.md` and `CLAUDE.md` now say Codex is the only deployer, and must `git pull` main before each deploy.
+
+- Waiting for the owner to merge: `claude/agent-setup` (agent docs) and `claude/match-header-logo` (tab and Home Screen icons now match the header logo; release note `RELEASE_LOGO_MATCH_2026-10-07.md`).
+
+- Codex, please: after the owner merges `claude/match-header-logo`, pull `main` and include it in your next deploy. Existing Home Screen installs keep the old icon until re-added.
+
+- Don't touch: `.dev.vars`, production D1, Supabase settings without the owner's go-ahead.
+
+
+
+## 2026-10-07 â€” Claude â€” agent setup and service check
+
+- Branch/commit: `claude/agent-setup`
+
+- Changed: added `AGENTS.md`, `CLAUDE.md`, `HANDOFF.md`. No application code changed.
+
+- Claude now has connectors for GitHub (push access to this repo), Supabase and Cloudflare. All production checks below were read-only.
+
+- Production state (checked 2026-10-07 ~19:50 UTC):
+
+  - Cloudflare Worker `rally-table-tennis`, last modified 2026-10-07 19:02 UTC. Deploys are run by the owner from their PC with Wrangler (`pnpm deploy`); merging to GitHub does not deploy.
+
+  - D1 `rally-table-tennis` (id in `wrangler.jsonc`): 36 tables, all 20 migrations (0000â€“0019) applied, latest `0019_unaffiliated_play` on 2026-10-07 17:40 UTC. Nothing pending.
+
+  - Supabase project "Rally" (ref `jzkimmldjarjhlxunfbu`, us-east-1, Postgres 17), healthy; used for Auth only.
+
+- Open items:
+
+  - Supabase security advisor: leaked-password protection is disabled. Owner can enable it in Authentication > Password security.
+
+  - Auth redirect allow-list and Site URL could not be read through the connector; confirm in the Supabase dashboard (Authentication > URL Configuration).
+
+  - Real-iPhone checks listed in `CONSOLIDATION.md` are still open.
+
+- Don't touch: `.dev.vars`, production D1, Supabase settings without the owner's go-ahead.
+
+
+---
+
+# Handoff log
+
+Newest entry first. Each agent (Codex or Claude) adds an entry when it stops. Keep it short and factual.
+
+Template:
+
+```
+## YYYY-MM-DD — <agent> — <topic>
+- Branch/commit:
+- Changed:
+- Verified (commands run, results):
+- Not done / open questions:
+- Don't touch:
+```
+
+## 2026-10-07 — Claude — coding rules
+- Branch/commit: `claude/agent-setup`
+- Changed: added Coding Rules and Suggestions sections to `AGENTS.md` (minimum code, ask before suggestions with an Accept all option, urgent issues flagged immediately). Workflow Constraints in `AGENTS.md` and `CLAUDE.md` now require one full run (`pnpm test:reliability`, lint, build) before merging to `main`.
+- Suggestions waiting for the owner: none yet. If the owner is away, write suggestions here.
+
+## 2026-10-07 — Claude — Cloudflare connected to GitHub
+- Branch/commit: `claude/agent-setup`
+- Changed: Cloudflare Workers Builds is now connected to `Landram5/rally` (branch `main`) with build `pnpm run build` and deploy `npx wrangler deploy --config dist/server/wrangler.json`. Merging to `main` now deploys. `AGENTS.md` / `CLAUDE.md` updated to match (this replaces the earlier "Codex is the only deployer" note below).
+- Not yet verified: no build has run. The first merge to `main` will be the first build; check Cloudflare > Worker > Deployments, and note the version ID in the release note. If it fails (for example pnpm or env vars on the build machine), Codex's `pnpm deploy` from the PC remains the fallback.
+- Pending pull requests for the owner to merge: `claude/agent-setup` (agent docs) and `claude/match-header-logo` (tab and Home Screen icons; release note `RELEASE_LOGO_MATCH_2026-10-07.md`). Merging each will trigger a production deploy.
+- Don't touch: `.dev.vars`, production D1, Supabase settings without the owner's go-ahead.
+
+## 2026-10-07 — Claude — deploy rule and pending branches
+- Branch/commit: `claude/agent-setup`
+- Changed: `AGENTS.md` and `CLAUDE.md` now say Codex is the only deployer, and must `git pull` main before each deploy.
+- Waiting for the owner to merge: `claude/agent-setup` (agent docs) and `claude/match-header-logo` (tab and Home Screen icons now match the header logo; release note `RELEASE_LOGO_MATCH_2026-10-07.md`).
+- Codex, please: after the owner merges `claude/match-header-logo`, pull `main` and include it in your next deploy. Existing Home Screen installs keep the old icon until re-added.
+- Don't touch: `.dev.vars`, production D1, Supabase settings without the owner's go-ahead.
+
+## 2026-10-07 — Claude — agent setup and service check
+- Branch/commit: `claude/agent-setup`
+- Changed: added `AGENTS.md`, `CLAUDE.md`, `HANDOFF.md`. No application code changed.
+- Claude now has connectors for GitHub (push access to this repo), Supabase and Cloudflare. All production checks below were read-only.
+- Production state (checked 2026-10-07 ~19:50 UTC):
+  - Cloudflare Worker `rally-table-tennis`, last modified 2026-10-07 19:02 UTC. Deploys are run by the owner from their PC with Wrangler (`pnpm deploy`); merging to GitHub does not deploy.
+  - D1 `rally-table-tennis` (id in `wrangler.jsonc`): 36 tables, all 20 migrations (0000–0019) applied, latest `0019_unaffiliated_play` on 2026-10-07 17:40 UTC. Nothing pending.
+  - Supabase project "Rally" (ref `jzkimmldjarjhlxunfbu`, us-east-1, Postgres 17), healthy; used for Auth only.
+- Open items:
+  - Supabase security advisor: leaked-password protection is disabled. Owner can enable it in Authentication > Password security.
+  - Auth redirect allow-list and Site URL could not be read through the connector; confirm in the Supabase dashboard (Authentication > URL Configuration).
+  - Real-iPhone checks listed in `CONSOLIDATION.md` are still open.
+- Don't touch: `.dev.vars`, production D1, Supabase settings without the owner's go-ahead.
+
+Review verification: temporarily granting board export access made the safety suite fail; restoring owner/admin-only access made it pass.

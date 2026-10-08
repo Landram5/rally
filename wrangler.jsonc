@@ -5,6 +5,7 @@
   "compatibility_date": "2026-05-22",
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": true,
+  "keep_vars": true,
   "routes": [
     {"pattern": "rallytt.net/*", "zone_name": "rallytt.net"},
     {"pattern": "www.rallytt.net/*", "zone_name": "rallytt.net"}
@@ -16,6 +17,11 @@
       "database_id": "37cea1e3-87b5-41dc-9c2a-bcea2514b2c4",
       "migrations_dir": "drizzle"
     }
+  ],
+  "ratelimits": [
+    {"name":"WRITE_LIMITER","namespace_id":"71001","simple":{"limit":500,"period":60}},
+    {"name":"AUTH_LIMITER","namespace_id":"71002","simple":{"limit":10,"period":60}},
+    {"name":"USER_WRITE_LIMITER","namespace_id":"71003","simple":{"limit":60,"period":60}}
   ],
   "observability": {"enabled": true},
   "triggers": {"crons": ["*/5 * * * *"]}

@@ -1,30 +1,33 @@
 'use client';
-import {useState} from 'react';
+import {Suspense,useState} from 'react';
 import {CircleDot} from 'lucide-react';
 import {useRouter,useSearchParams} from 'next/navigation';
 import Link from 'next/link';
 import {safeNextPath} from '@/lib/auth-rules';
 import PublicHeader from '@/app/public-header';
+import Turnstile from '@/app/turnstile';
 
 type Mode='signin'|'signup'|'reset';
 
-export default function LoginPage(){
+export default function LoginPage(){return <Suspense fallback={<main className="auth-shell"><p role="status">Loading sign in…</p></main>}><LoginForm/></Suspense>;}
+function LoginForm(){
  const router=useRouter();
  const searchParams=useSearchParams();
  const [mode,setMode]=useState<Mode>('signin'),[email,setEmail]=useState(''),[password,setPassword]=useState(''),[displayName,setDisplayName]=useState(''),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[error,setError]=useState('');
  const next=safeNextPath(searchParams.get('next')??'/clubhouse');
+ const [captchaToken,setCaptchaToken]=useState(''),[captchaAttempt,setCaptchaAttempt]=useState(0);
  const visibleError=error||searchParams.get('error')||'';
  async function submit(event:React.FormEvent){
   event.preventDefault();if(busy)return;setBusy(true);setError('');setMessage('');
   try{
    const path=mode==='reset'?'/api/auth/reset-password':'/api/auth/password';
-   const response=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(mode==='reset'?{email}:{mode,email,password,displayName,next})});
+   const response=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(mode==='reset'?{email,captchaToken}:{mode,email,password,displayName,next,captchaToken})});
    const body=await response.json() as {error?:string;needsConfirmation?:boolean};
    if(!response.ok)throw new Error(body.error||'Could not continue.');
    if(mode==='reset'){setMessage('If that email has an account, a reset link is on its way.');return}
    if(body.needsConfirmation){setMessage('Check your email to confirm your account, then sign in.');return}
    router.push(next);router.refresh();
-  }catch(value){setError(value instanceof Error?value.message:'Could not continue.')}finally{setBusy(false)}
+  }catch(value){setError(value instanceof Error?value.message:'Could not continue.')}finally{setBusy(false);setCaptchaToken('');setCaptchaAttempt(value=>value+1);}
  }
  return <><PublicHeader/><main className="auth-shell"><section className="auth-card">
   <div className="auth-heading"><span className="brand-mark"><CircleDot size={26}/></span><h1>{mode==='signup'?'Create your player account':mode==='reset'?'Reset your password':'Sign in'}</h1><p>{mode==='signup'?'Use Google or create an account with your email.':mode==='reset'?'We will email you a secure password reset link.':'Sign in to manage clubs, matches, and tournaments.'}</p></div>
@@ -34,7 +37,8 @@ export default function LoginPage(){
    <label>Email<input type="email" autoComplete="email" maxLength={254} required value={email} onChange={e=>setEmail(e.target.value)}/></label>
    {mode!=='reset'&&<label>Password<input type="password" autoComplete={mode==='signup'?'new-password':'current-password'} minLength={8} maxLength={128} required value={password} onChange={e=>setPassword(e.target.value)}/><small>At least 8 characters</small></label>}
    {visibleError&&<p className="auth-error" role="alert">{visibleError}</p>}{message&&<p className="auth-success" role="status">{message}</p>}
-   <button className="primary-action auth-submit" disabled={busy}>{busy?'Please wait…':mode==='signup'?'Create account':mode==='reset'?'Send reset link':'Sign in'}</button>
+   <Turnstile key={`${mode}-${captchaAttempt}`} action="auth" onToken={setCaptchaToken}/>
+   <button className="primary-action auth-submit" disabled={busy||!captchaToken}>{busy?'Please wait…':mode==='signup'?'Create account':mode==='reset'?'Send reset link':'Sign in'}</button>
   </form>
   <div className="auth-switch">{mode==='signin'?<><button onClick={()=>{setMode('reset');setError('');setMessage('')}}>Forgot password?</button><span>New to Rally? <button onClick={()=>{setMode('signup');setError('');setMessage('')}}>Create an account</button></span></>:<button onClick={()=>{setMode('signin');setError('');setMessage('')}}>Back to sign in</button>}</div>
   <p className="signup-legal">Review Rally’s <Link href="/privacy">Privacy policy</Link> and <Link href="/terms">Terms</Link> before creating an account.</p>
