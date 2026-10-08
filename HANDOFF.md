@@ -1,3 +1,12 @@
+# Codex rollout follow-up — 2026-10-07 — runtime variable retention
+
+- Adam reports saving keys in Worker Settings → Variables and Secrets. Read-only version binding metadata still showed neither Turnstile name on live or the latest three previews; awaiting whether the saved list contains both or Cloudflare showed a save/deploy error. Never read key values.
+- Fixed deployment configuration in safety commit 83c3f4e: `keep_vars: true` retains dashboard Variables, including a public Turnstile Site Key. Native schema confirms default would otherwise overwrite/delete dashboard variables. Reliability, lint, TypeScript and build pass; generated built-Worker config asserts retention is true.
+- Carried this configuration fix through the stacked notification/session/tournament branches so subsequent preview and main builds retain runtime variables. No code merged to main; no application deployment. Previous backup and production migrations remain complete.
+- Current blocker is configuration saving, not missing authorization. Do not ask Adam again to authorize the already-requested merge/deployment. Verify runtime binding names without exposing values, then coordinate new forms and Supabase CAPTCHA activation.
+
+---
+
 # Codex rollout handoff — 2026-10-07 — awaiting Turnstile setup
 
 - Adam explicitly requested merging and pushing live. Production D1 exported to ignored `.local-backups/rally-before-operations-2026-10-07.sql` (313,966 bytes). Migrations 0020, 0021 and 0022 applied remotely; migration list reports none pending. Live database-backed Clubs page still loads in the browser. Non-browser HTTP probes receive Cloudflare 403, so do not confuse those with a broken app.
