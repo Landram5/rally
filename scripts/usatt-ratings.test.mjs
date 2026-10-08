@@ -3,7 +3,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {readFileSync,writeFileSync,mkdirSync,readdirSync} from 'node:fs';
 import ts from 'typescript';
 mkdirSync('.test-runtime',{recursive:true});
-for(const name of ['club-seasons','notification-preferences','summary-cache','feedback-progress','record-ownership','dashboards','clubhouse-summary','rally','activity-pages','match-changes','head-to-head','player-highlights','match-filters','logistics','notifications','profile-photo','account-write-guard','account-deletion','announcements','club-sessions','weekly-sessions','rally-service','tournament-service','tournament-scheduling','tournament-engine','match-rules','rally-errors','seeding','public-rally'])writeFileSync(`.test-runtime/${name}.mjs`,ts.transpileModule(readFileSync(`lib/${name}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText.replace(/from ['"]\.\/([^'"]+)['"]/g,"from './$1.mjs'"));
+for(const name of ['club-seasons','notification-preferences','summary-cache','feedback-progress','record-ownership','dashboards','clubhouse-summary','rally','activity-pages','match-changes','head-to-head','player-highlights','match-stakes','match-filters','logistics','notifications','profile-photo','account-write-guard','account-deletion','announcements','club-sessions','weekly-sessions','rally-service','tournament-service','tournament-scheduling','tournament-engine','match-rules','rally-errors','seeding','public-rally'])writeFileSync(`.test-runtime/${name}.mjs`,ts.transpileModule(readFileSync(`lib/${name}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText.replace(/from ['"]\.\/([^'"]+)['"]/g,"from './$1.mjs'"));
 const {makeService}=await import('../.test-runtime/rally-service.mjs');
 const {readActivityPage}=await import('../.test-runtime/activity-pages.mjs');
 const {calculateRatings,ratingHistory,performanceEstimate,pointExchange,suggestSeeds}=await import('../.test-runtime/seeding.mjs');
@@ -111,4 +111,20 @@ function fixture(){
  assert.equal(h.biggestUpset.matchId,'m5');assert.equal(h.biggestUpset.gap,150);assert.ok(UPSET_GAP>0);
  assert.equal(playerHighlights([]).bestRating,null);assert.equal(playerHighlights([]).biggestUpset,null);
  assert.equal(playerHighlights([c('x','2026-01-01',true,1400,1450,1450)]).biggestUpset,null,'a small rating gap is not an upset');
+}{
+ const {matchStakes}=await import('../.test-runtime/match-stakes.mjs');
+ const {ratingChangesByMatch}=await import('../.test-runtime/seeding.mjs');
+ const mk=(id,a,b,games,day)=>({id,a,b,games,status:'confirmed',played_on:day,created_at:day+'T10:00:00Z',best_of:3,club_id:'c',tournament_id:null});
+ const history=[mk('s1','p','q',[[11,5],[11,8]],'2026-09-01'),mk('s2','p','r',[[11,6],[11,9]],'2026-09-02'),mk('s3','q','r',[[11,9],[8,11],[11,7]],'2026-09-03'),mk('s4','p','q',[[11,4],[11,6]],'2026-09-04'),mk('s5','r','q',[[11,7],[11,8]],'2026-09-05')];
+ const input={bestOf:3,clubId:'c',playedOn:'2026-10-01'},today='2026-10-07';
+ const stakes=matchStakes(history,'p','q',input,{},today);
+ for(const [winner,key] of [['p','aWins'],['q','bWins']]){
+  const real={id:'real',a:'p',b:'q',games:winner==='p'?[[11,7],[11,7]]:[[7,11],[7,11]],status:'confirmed',played_on:'2026-10-01',created_at:new Date().toISOString(),best_of:3,club_id:'c',tournament_id:null};
+  const actual=ratingChangesByMatch([...history,real],today).real;
+  assert.equal(stakes[key].a,actual.p,'predicted change equals the recorded change for '+key);assert.equal(stakes[key].b,actual.q);
+ }
+ assert.ok(stakes.aWins.a>0&&stakes.aWins.b<0&&stakes.bWins.b>0&&stakes.bWins.a<0,'winner gains and loser loses');
+ assert.equal(matchStakes(history,'p','p',input,{},today),null);assert.equal(matchStakes(history,'p','q',{...input,bestOf:4},{},today),null);assert.equal(matchStakes(history,'p','q',{...input,playedOn:'not-a-date'},{},today),null);
+ const single=matchStakes(history,'p','q',{...input,bestOf:1},{},today);assert.match(single.weight,/33%/);assert.ok(Math.abs(single.aWins.a)<=Math.abs(stakes.aWins.a)+1e-9,'single games carry less weight');
+ assert.equal(history.length,5,'inputs are not mutated');
 }console.log('USATT-style ratings passed exchange boundaries, published adjustment examples, initial anchors, provisional evidence, tournament multipliers, adjustments/decay, floors, chronological replay, seasons, estimate permissions, audit/idempotency, stale/revoked writes, cache invalidation, public privacy and guest merges.');

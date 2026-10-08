@@ -478,3 +478,5 @@ input[type=date]::-webkit-date-and-time-value,input[type=datetime-local]::-webki
 @media(max-width:560px){.leaderboard-row{grid-template-columns:1.6rem auto minmax(0,1fr) auto;grid-template-areas:none;gap:10px;padding:10px 12px}.leaderboard-rating{grid-auto-flow:row;justify-content:end;text-align:right;gap:0}.leaderboard-rating strong{font-size:1.1rem}.leaderboard-rating small{display:none}}
 
 .public-stat-grid strong .rating-delta{font-size:inherit;color:inherit}.public-stat-grid strong .rating-delta.up{color:#1f7a35}.public-stat-grid strong .rating-delta.down{color:#b3382c}
+
+.match-stakes{border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin:12px 0;background:var(--card)}.match-stakes h3{margin:0 0 8px;font-size:1rem}.stakes-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.stakes-card{display:grid;gap:4px;border:1px solid var(--border);border-radius:10px;padding:10px}.stakes-card span{font-variant-numeric:tabular-nums}@media(max-width:480px){.stakes-grid{grid-template-columns:1fr}}
