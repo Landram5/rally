@@ -804,7 +804,7 @@ input[type="checkbox"]:disabled, input[type="radio"]:disabled { opacity: 0.5; cu
 /* Notification options read as on/off switches, label left and switch right. */
 .notification-choice { justify-content: space-between; align-items: center; }
 .notification-choice input[type="checkbox"] {
-  order: 2; margin: 0; width: 42px; height: 24px; border-radius: var(--radius-pill); border: 0;
+  -webkit-appearance: none; appearance: none; flex: none; order: 2; margin: 0; width: 42px; height: 24px; min-height: 24px; border-radius: var(--radius-pill); border: 0; outline-offset: 2px;
   background-color: var(--border-strong); background-image: radial-gradient(circle at center, #fff 0 9px, transparent 10px);
   background-size: 24px 24px; background-repeat: no-repeat; background-position: left center;
   transition: background-color var(--duration) var(--ease-out), background-position var(--duration) var(--ease-out);
