@@ -411,7 +411,7 @@ table tbody tr:hover { background: var(--bg-subtle); }
 :is(.public-aside, .matchup-panel, .public-event-hero, .live-side-0) :is(span, small, p) { color: var(--on-brand-muted); }
 .public-avatar { color: var(--text-strong); }
 /* Always-dark areas: inside them, theme text tokens resolve to the "on dark" values in both themes. */
-.venue-display, .topbar, .public-event-hero, .public-aside, .matchup-panel {
+.venue-display, .public-event-hero, .public-aside, .matchup-panel {
   --text-strong: var(--on-brand);
   --text: var(--on-brand);
   --text-muted: var(--on-brand-muted);
@@ -565,3 +565,73 @@ progress, .rating-bar span, .h2h-bar span { transition: width var(--duration-slo
 /* Crisp, square-ish geometry: no pills. Radii come from the scale in theme.css. */
 .tournament-title-row a, .badge, .approval-count { border-radius: var(--radius-xs); }
 .dashboard-link, .club-back-link, .intro-secondary { border-radius: var(--radius-sm); }
+
+/* ───────────────────────── 14. LAYOUT V3: sidebar shell, open surfaces ─────────────────────────
+ * Desktop uses a left navigation rail and a light header instead of a dark band over a tab strip.
+ * Surfaces are soft tone-on-tone (white on the page tint) with no outlines; whitespace separates.
+ * Phones keep the bottom tab bar from section 2.
+ */
+.topbar { background: var(--bg-page); box-shadow: none; border-bottom: 1px solid var(--border); height: 60px; }
+.topbar .brand, .topbar .brand-label { color: var(--text-strong); }
+.topbar .brand-period { color: var(--lime-500); }
+.account-area > a { color: var(--text-muted); }
+.account-area > a:hover { color: var(--text-strong); }
+.account-menu-trigger { color: var(--text-strong); }
+.account-menu-trigger:hover { background: var(--bg-muted); }
+.preview-button { color: var(--text-strong); border-color: var(--border-strong); border-radius: var(--radius-sm); }
+.preview-button span { color: var(--text-muted); }
+
+/* Surfaces: tone on tone, no outline. */
+.panel, .stat-card, .event-card, .club-card, .profile-card, .directory-card, .feedback-card, .session-card,
+.public-result, .public-stat-grid article, .public-draw, .account-settings section, .legal-page section {
+  border-color: transparent;
+  border-radius: var(--radius-lg);
+}
+a.directory-card:hover, .event-card:hover, .club-card:hover, .leaderboard-row:hover { border-color: var(--border-strong); }
+.leaderboard-row { border-color: transparent; background: var(--bg-surface); }
+.panel-heading { padding: 24px 28px 14px; }
+.panel th, table thead th { background: transparent; }
+.badge, .approval-count, .tournament-title-row a { border-radius: var(--radius-pill); border-color: transparent; background: var(--bg-muted); }
+.dashboard-link, .club-back-link, .intro-secondary { border-radius: var(--radius-md); }
+.section-tabs, [data-slot="tabs-list"][data-variant="default"] { border-color: transparent; }
+
+@media (min-width: 901px) {
+  .app-shell {
+    display: grid !important;
+    grid-template-columns: 216px minmax(0, 1fr);
+    column-gap: 48px !important;
+    align-items: start;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 28px 32px 64px;
+  }
+  .app-shell > * { grid-column: 2; min-width: 0; }
+  .app-shell > .nav-wrap {
+    grid-column: 1;
+    grid-row: 1 / span 40;
+    position: sticky;
+    top: 24px;
+    z-index: var(--z-sticky);
+    padding: 0 !important;
+    overflow: visible;
+    background: transparent;
+    border: 0;
+  }
+  .main-nav { flex-direction: column !important; align-items: stretch !important; height: auto !important; min-width: 0 !important; gap: 2px !important; width: 100%; }
+  [data-slot="tabs-list"][data-variant="line"] [data-slot="tabs-trigger"] {
+    height: 40px;
+    width: 100%;
+    flex: none;
+    justify-content: flex-start;
+    gap: 12px;
+    padding: 0 12px;
+    border-radius: var(--radius-md);
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-muted);
+  }
+  [data-slot="tabs-list"][data-variant="line"] [data-slot="tabs-trigger"]:hover { background: var(--bg-muted); color: var(--text-strong); }
+  [data-slot="tabs-list"][data-variant="line"] [data-slot="tabs-trigger"][data-state="active"] { background: var(--bg-surface); color: var(--text-strong); font-weight: 600; }
+  [data-slot="tabs-list"][data-variant="line"] [data-slot="tabs-trigger"][data-state="active"] svg { color: var(--text-brand); }
+  [data-slot="tabs-list"][data-variant="line"] [data-slot="tabs-trigger"]::after { display: none; }
+}
