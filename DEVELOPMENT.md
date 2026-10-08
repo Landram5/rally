@@ -137,3 +137,34 @@ See `RELEASE_SESSIONS_2026-10-07.md`. Weekly dates, per-date skips, Maybe/guest 
 ## Prepared tournament operations (not deployed)
 
 Tournament-specific scorekeepers, table-count/duration scheduling with finish estimates, and FIFO reserved offers with claim deadlines are prepared on `codex/tournament-operations`. See RELEASE_TOURNAMENT_OPERATIONS_2026-10-07.md and HANDOFF.md. Migration 0022 is local only; production requires explicit approval and backup. No doubles.
+
+
+## Theming and design system
+
+All colors, fonts, radii, shadows and motion live in **`app/theme.css`**. To recolor or restyle the site, edit that file only.
+
+- **Palette** (top of the file): raw color ramps — `--brand-*` (forest green), `--lime-*` (call-to-action), `--neutral-*` (green-tinted gray), plus status colors and the font stacks. Change these to rebrand.
+- **Semantic tokens**: what each color is *for* (`--bg-page`, `--bg-surface`, `--text`, `--text-muted`, `--border`, `--cta`, `--danger`…). Light values are in `:root`; dark values are in `.dark`. Edit these to tune light or dark mode separately.
+- **Shape tokens**: `--radius-*`, `--shadow-*`, `--control-height*`, `--duration`, `--ease`.
+- **Library tokens**: shadcn names (`--primary`, `--card`, `--muted`…) are mapped onto the semantic tokens at the bottom of the file.
+
+Rules for contributors:
+1. Never write a raw color (`#fff`, `rgb()`, `white`) in `globals.css`, `refine.css` or components. Use a token; add one to `theme.css` if none fits.
+2. `app/globals.css` is the original component stylesheet (now token-based). `app/refine.css` is the polish layer loaded after it (buttons, tabs, cards, inputs, tables, dialogs). Prefer adding refinements to `refine.css`.
+3. Inside always-dark areas (header, TV display, dark panels) `refine.css` re-points the text tokens to their "on dark" values, so text inside them needs no special handling.
+4. Text on the lime call-to-action uses `--on-cta`; text on brand/dark fills uses `--on-brand`, `--on-brand-muted`, `--on-brand-subtle`.
+5. `themeColor` in `app/layout.tsx` (the browser UI color) cannot use a variable; keep it equal to `--bg-inverse`.
+
+Check contrast in both themes after changing tokens: normal text needs 4.5:1, large text 3:1.
+
+## Preview environment (safe visual testing)
+
+`rally-preview` is a separate Worker with its **own** D1 database (`rally-preview`), no custom-domain routes, no cron and no secrets. It can never touch production data or rallytt.net.
+
+```sh
+pnpm build
+node scripts/make-preview-config.mjs <preview-d1-database-id>
+pnpm exec wrangler deploy --config dist/server/wrangler.preview.json
+```
+
+The preview database is created with `wrangler d1 create rally-preview`. Apply the SQL in `drizzle/` to it with `wrangler d1 execute rally-preview --remote --file drizzle/<file>.sql` (the migration runner mis-splits the trigger bodies in migration 0020). Sign-in is disabled in the preview because it has no auth secrets; use `/demo` and the public pages.
