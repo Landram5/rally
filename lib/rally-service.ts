@@ -208,7 +208,7 @@ export function makeService(database:D1Database){
   }
   if(action==='create_tournament'){
    const clubId=id(body.clubId),eventId=id(body.id),name=str(body.name,'Tournament name',80),eventDate=date(body.date),format=str(body.format,'Format',30),capacity=body.capacity;await admin(clubId,user.id);
-   if(!['Round robin','Single elimination','Double elimination'].includes(format)||!Number.isSafeInteger(capacity)||(capacity as number)<2)fail(400,'Choose a valid format and a whole-number player limit of at least 2.');
+   if(!['Round robin','Single elimination','Double elimination','Round robin groups','Swiss'].includes(format)||!Number.isSafeInteger(capacity)||(capacity as number)<2)fail(400,'Choose a valid format and a whole-number player limit of at least 2.');
    await q('INSERT INTO tournaments (id,name,club_id,date,format,capacity,created_at,created_by) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING',eventId,name,clubId,eventDate,format,capacity,now,user.id).run();return {ok:true};
   }
   if(['request_guest_claim','review_guest_claim','request_match_review','resolve_match_review','correct_match'].includes(action))return ownershipAction(db,user,body);

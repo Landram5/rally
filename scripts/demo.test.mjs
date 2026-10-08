@@ -105,4 +105,18 @@ assert.equal(readNotices.find(n=>n.id==='match-needs-verification').actionNeeded
 assert.ok(!notificationsFor({...source,matches:[]},[],true,'2026-10-06').some(n=>n.id==='match-needs-verification'));
 assert.ok(notices.filter(n=>n.id.startsWith('entry-')||n.id.startsWith('completed-')).every(n=>!n.actionNeeded));
 assert.ok(notices.filter(n=>n.id.startsWith('checkin-')||n.id.startsWith('fixture-')).every(n=>n.actionNeeded));
-console.log('Inbox tasks retain action status after reading, disappear after resolution, and distinguish informational updates.');
+{
+ // Swiss and group formats work end to end in the sample demo: create, register, start with options, record, advance.
+ const players=['alex','jordan','sam','riley','casey','taylor','morgan'];
+ let swissData=applyDemoAction(seed,{action:'create_tournament',id:'swiss-event',clubId:'harbor',name:'Demo Swiss',date:'2026-10-12',format:'Swiss',capacity:8});
+ for(const playerId of players)swissData=applyDemoAction(swissData,{action:'enter_tournament',id:'swiss-event',playerId});
+ swissData=applyDemoAction(swissData,{action:'start_tournament',id:'swiss-event',seeds:players,bestOf:3,swissRounds:2});
+ let swiss=swissData.tournaments.find(t=>t.id==='swiss-event');assert.equal(swiss.state.swissRounds,2);assert.equal(swiss.state.fixtures.filter(f=>f.round===1).length,4,'seven players give three matches and a bye');
+ for(const f of swiss.state.fixtures.filter(f=>f.status==='ready'))swissData=applyDemoAction(swissData,{action:'score_fixture',id:'swiss-event',fixtureId:f.id,games:[[11,5],[11,7]]});
+ swiss=swissData.tournaments.find(t=>t.id==='swiss-event');assert.equal(Math.max(...swiss.state.fixtures.map(f=>f.round)),2,'the second round appears after the first is recorded');
+ let groupData=applyDemoAction(seed,{action:'create_tournament',id:'group-event',clubId:'harbor',name:'Demo Groups',date:'2026-10-13',format:'Round robin groups',capacity:8});
+ for(const playerId of players)groupData=applyDemoAction(groupData,{action:'enter_tournament',id:'group-event',playerId});
+ groupData=applyDemoAction(groupData,{action:'start_tournament',id:'group-event',seeds:players,bestOf:3,groupCount:2});
+ assert.deepEqual(groupData.tournaments.find(t=>t.id==='group-event').state.groups.map(g=>g.length),[3,4],'groups are dealt by seed');
+ assert.throws(()=>applyDemoAction(groupData,{action:'start_tournament',id:'group-event',seeds:players,bestOf:3,groupCount:1}),/at least two groups|started/i);
+}console.log('Inbox tasks retain action status after reading, disappear after resolution, and distinguish informational updates.');

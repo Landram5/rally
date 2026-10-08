@@ -198,6 +198,37 @@ for(;;){t=(await service.read('owner-auth')).tournaments.find(t=>t.id==='event-o
 assert.equal((await service.read('owner-auth')).tournaments.find(t=>t.id==='event-one').status,'completed');
 const publicPlayer=await getPublicPlayer(db,owner);assert.equal(publicPlayer.name,'Owner');assert.ok(publicPlayer.matches.every(m=>m.opponentId&&m.clubName));
 const publicEvent=await getPublicTournament(db,'event-one');assert.equal(publicEvent.name,'Club Open');assert.equal(publicEvent.entrants.length,4);assert.ok(publicEvent.state);
+{
+ // Swiss and rating-balanced group events through the real service and SQLite.
+ const read=async who=>(await service.read(who)).tournaments;
+ await act('owner-auth',{action:'create_tournament',id:'swiss-one',clubId:'club-one',name:'Swiss Night',date:'2026-10-12',format:'Swiss',capacity:6});
+ const swissPlayers=[owner,member,opponent,'guest-one'];for(const playerId of swissPlayers)await act('owner-auth',{action:'enter_tournament',id:'swiss-one',playerId});
+ await assert.rejects(go('start_tournament',{seeds:swissPlayers,bestOf:3,swissRounds:1},'owner-auth','swiss-one'),e=>e.status===400,'one round is not a Swiss event');
+ await assert.rejects(go('start_tournament',{seeds:swissPlayers,bestOf:3,swissRounds:4},'owner-auth','swiss-one'),e=>e.status===400,'more rounds than opponents is rejected');
+ await go('start_tournament',{seeds:swissPlayers,bestOf:3,swissRounds:2},'owner-auth','swiss-one');
+ let swiss=(await read('owner-auth')).find(x=>x.id==='swiss-one');assert.equal(swiss.state.swissRounds,2);assert.equal(swiss.state.fixtures.length,2,'only round one exists after the start');assert.equal(swiss.status,'active');
+ const playRound=async()=>{for(;;){swiss=(await read('owner-auth')).find(x=>x.id==='swiss-one');const f=swiss.state.fixtures.find(f=>f.status==='ready');if(!f)break;await go('score_fixture',{fixtureId:f.id,games:[[11,7],[11,8]]},'owner-auth','swiss-one');}};
+ const firstRound=swiss.state.fixtures.find(f=>f.round===1&&f.status==='ready');await go('score_fixture',{fixtureId:firstRound.id,games:[[11,7],[11,8]]},'owner-auth','swiss-one');
+ swiss=(await read('owner-auth')).find(x=>x.id==='swiss-one');assert.equal(Math.max(...swiss.state.fixtures.map(f=>f.round)),1,'round two waits for the whole round');
+ await playRound();swiss=(await read('owner-auth')).find(x=>x.id==='swiss-one');
+ assert.equal(Math.max(...swiss.state.fixtures.map(f=>f.round)),2);assert.equal(swiss.status,'completed','the event completes after its planned rounds');
+ const playedMatches=(await service.read('owner-auth')).matches.filter(m=>m.tournament_id==='swiss-one'&&m.status==='confirmed').length;assert.equal(playedMatches,swiss.state.fixtures.filter(f=>f.status==='played').length,'each played fixture creates one confirmed match');
+ const roundOne=swiss.state.fixtures.find(f=>f.round===1&&f.status==='played');
+ await assert.rejects(go('reset_fixture',{note:'Late correction',fixtureId:roundOne.id},'owner-auth','swiss-one'),e=>e.status===400&&/later Swiss rounds/.test(e.message),'earlier rounds cannot be reset once later rounds have results');
+ const roundTwo=swiss.state.fixtures.find(f=>f.round===2&&f.status==='played');await go('reset_fixture',{note:'Wrong score',fixtureId:roundTwo.id},'owner-auth','swiss-one');
+ assert.equal((await service.read('owner-auth')).matches.filter(m=>m.tournament_id==='swiss-one'&&m.status==='confirmed').length,playedMatches-1,'resetting voids only that result');
+ assert.equal(JSON.stringify((await getPublicTournament(db,'swiss-one')).state.swissRounds),'2','public data carries the Swiss round count');
+ await act('owner-auth',{action:'create_tournament',id:'groups-one',clubId:'club-one',name:'Groups Night',date:'2026-10-13',format:'Round robin groups',capacity:8});
+ await act('owner-auth',{action:'add_guest',id:'guest-three',clubId:'club-one',name:'Third Guest'});await act('owner-auth',{action:'add_guest',id:'guest-four',clubId:'club-one',name:'Fourth Guest'});
+ const groupPlayers=[owner,member,opponent,'guest-one','guest-two','guest-three'];for(const playerId of groupPlayers)await act('owner-auth',{action:'enter_tournament',id:'groups-one',playerId});
+ await go('start_tournament',{seeds:groupPlayers,bestOf:3,groupCount:2},'owner-auth','groups-one');
+ let groups=(await read('owner-auth')).find(x=>x.id==='groups-one');assert.deepEqual(groups.state.groups.map(g=>g.length),[3,3]);assert.equal(groups.state.fixtures.length,6);assert.ok(groups.state.fixtures.every(f=>groups.state.groups[f.group].includes(f.a)&&groups.state.groups[f.group].includes(f.b)));
+ for(;;){groups=(await read('owner-auth')).find(x=>x.id==='groups-one');const f=groups.state.fixtures.find(f=>f.status==='ready');if(!f)break;await go('score_fixture',{fixtureId:f.id,games:[[11,7],[11,8]]},'owner-auth','groups-one');}
+ assert.equal(groups.status,'completed');
+ await act('owner-auth',{action:'create_tournament',id:'groups-small',clubId:'club-one',name:'Too small',date:'2026-10-14',format:'Round robin groups',capacity:8});for(const playerId of swissPlayers)await act('owner-auth',{action:'enter_tournament',id:'groups-small',playerId});
+ await assert.rejects(go('start_tournament',{seeds:swissPlayers,bestOf:3},'owner-auth','groups-small'),e=>e.status===400&&/at least six/.test(e.message),'groups need at least six players');
+ await assert.rejects(act('owner-auth',{action:'create_tournament',id:'bad-format',clubId:'club-one',name:'Nope',date:'2026-10-14',format:'Ladder',capacity:8}),e=>e.status===400,'unknown formats are still rejected');
+}
 await go('reset_fixture',{note:'Correcting a score',fixtureId:t.state.fixtures[0].id});
 assert.equal((await service.read('owner-auth')).tournaments.find(t=>t.id==='event-one').status,'active');
 // Two stale writers must not commit conflicting results or duplicate statistics.
