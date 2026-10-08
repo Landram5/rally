@@ -67,6 +67,7 @@ export async function beginDeletion(db:D1Database,authId:string,mode:DeletionMod
   statements.push(q("UPDATE profiles SET name='Deleted player',auth_id=NULL,deleted_at=? WHERE id=?",now,id));
   statements.push(q('DELETE FROM memberships WHERE player_id=?',id));
   statements.push(q('DELETE FROM notification_preferences WHERE player_id=?',id));
+  statements.push(q('DELETE FROM ui_preferences WHERE player_id=?',id));
   statements.push(q("UPDATE season_players SET status='withdrawn' WHERE player_id=?",id));
   statements.push(q('DELETE FROM tournament_scorekeepers WHERE player_id=?',id));
   statements.push(q('DELETE FROM tournament_waitlist WHERE player_id=?',id));

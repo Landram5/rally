@@ -16,5 +16,5 @@ const handlers=()=>accountHandlers({
   return {user:error?null:data.user,signOut:()=>client.auth.signOut({scope:'global'})};
  },
 });
-export async function GET(){return handlers().GET()}
+export async function GET(request:Request){return handlers().GET(request)}
 export async function POST(request:Request){return handlers().POST(request)}

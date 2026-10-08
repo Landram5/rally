@@ -9,6 +9,7 @@ import PwaRegistration from "@/app/pwa-registration";
 import PersistentMobileNavigation from './persistent-mobile-navigation';
 import SkipLink from './skip-link';
 import ThemeColorSync from './theme-color-sync';
+import PreferenceSync from './preference-sync';
 import {PALETTE_INIT_SCRIPT} from '@/lib/palettes';
 
 export const metadata: Metadata = {
@@ -60,7 +61,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head><script dangerouslySetInnerHTML={{__html: PALETTE_INIT_SCRIPT}} /></head>
-      <body className="antialiased"><AppearanceProvider><ThemeColorSync/><SkipLink/>{children}<SupportFooter/><PersistentMobileNavigation/><AnnouncementBanner/><PwaRegistration /></AppearanceProvider></body>
+      <body className="antialiased"><AppearanceProvider><ThemeColorSync/><PreferenceSync/><SkipLink/>{children}<SupportFooter/><PersistentMobileNavigation/><AnnouncementBanner/><PwaRegistration /></AppearanceProvider></body>
     </html>
   );
 }

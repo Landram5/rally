@@ -1,4 +1,5 @@
 import {readPreferences} from './notification-preferences';
+import {readUiPreferences,saveUiPreferences} from './ui-preferences';
 import {profilePhotoUrl} from './profile-photo';
 import {makeService} from './rally-service';
 import {sameOrigin} from './auth-rules';
@@ -26,9 +27,11 @@ function failure(error:unknown){
 }
 export function accountHandlers(deps:Dependencies) {
  return {
-  async GET(){
+  async GET(request?:Request){
    try {
     const {user}=await deps.session();if(!user)return reply({error:'Sign in to manage your account.'},401);
+    // Lightweight read used on page load to keep colour, mode and dismissed hints in step across devices.
+    if(request&&new URL(request.url).searchParams.get('view')==='preferences'){const me=await deps.db.prepare('SELECT id FROM profiles WHERE auth_id=? AND deleted_at IS NULL').bind(user.id).first<{id:string}>();return reply({playerId:me?.id??null,ui:me?await readUiPreferences(deps.db,me.id):null});}
     const plan=await accountPlan(deps.db,user.id);
     const profile=plan.pending?null:await deps.db.prepare('SELECT p.id,p.name,p.bio,p.rally_id,ph.updated_at AS photo_version FROM profiles p LEFT JOIN profile_photos ph ON ph.player_id=p.id WHERE p.auth_id=? AND p.deleted_at IS NULL').bind(user.id).first<{id:string;name:string;bio:string;rally_id:string;photo_version:string|null}>();
     return reply({...plan,preferences:profile?await readPreferences(deps.db,profile.id):null,profile:profile?{id:profile.id,name:profile.name,bio:profile.bio,rally_id:profile.rally_id,photo_url:profilePhotoUrl(profile.id,profile.photo_version)}:null,email:user.email??'',deletionAvailable:deps.configured()});
@@ -41,6 +44,7 @@ export function accountHandlers(deps:Dependencies) {
     const session=await deps.session(),user=session.user;
     if(!user)return reply({error:'Sign in to manage your account.'},401);
     const limited=await deps.limit?.(user.id);if(limited)return limited;
+    if(body.action==='save_ui_preferences'){const me=await deps.db.prepare('SELECT id FROM profiles WHERE auth_id=? AND deleted_at IS NULL').bind(user.id).first<{id:string}>();if(!me)throw new AppError(400,'Create your player profile first.');return reply({ok:true,ui:await saveUiPreferences(deps.db,me.id,body)});}
     if(body.action==='save_notification_preferences'){await makeService(deps.db).act(user.id,body);return reply({ok:true});}
     if(body.action==='save_profile'){await makeService(deps.db).act(user.id,{action:'save_profile',name:body.name,bio:body.bio,...(body.photo!==undefined?{photo:body.photo}:{})});return reply({ok:true});}
     if(body.action==='transfer') {
