@@ -971,3 +971,14 @@ input[type="checkbox"]:disabled, input[type="radio"]:disabled { opacity: 0.5; cu
 .public-stat-grid article { min-height: 0 !important; padding: 20px 22px !important; justify-content: center; gap: 2px; }
 .public-stat-grid article > svg { margin-bottom: 6px; }
 .public-stat-grid strong { margin-top: 0; line-height: 1.15; }
+/* Overview: one consistent 24px rhythm between stacked blocks (the stacking margin was doubling the flex gap). */
+.rally-dashboard { gap: 24px; }
+.rally-dashboard > * { margin-top: 0 !important; }
+.rally-dashboard .section-heading { margin: 8px 0 -8px; }
+.dashboard-actions .panel-heading { padding: 24px 28px 6px; }
+.dashboard-actions .dashboard-empty { margin: 0; padding: 0 28px 24px; }
+.dashboard-personal { padding: 22px 28px; }
+/* Get started card: the footer carries a permanent "Don't show again" choice. */
+.onboarding-foot { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.onboarding-dismiss { display: inline-flex; align-items: center; gap: 10px; font-size: 0.85rem; font-weight: 500; color: var(--text-muted); cursor: pointer; margin: 0; }
+.onboarding-dismiss input { width: 18px; height: 18px; }
