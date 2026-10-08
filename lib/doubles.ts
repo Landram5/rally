@@ -62,4 +62,9 @@ export async function readDoublesFeed(db:D1Database,viewer:string,clubId:string,
  const scope=clubId==='all'?`(${mine} OR ${played})`:clubId==='unaffiliated'?played:`(d.club_id=?2 AND ${mine})`;
  const rows=(await db.prepare(`SELECT d.*,c.name club_name,pa1.name n_a1,pa2.name n_a2,pb1.name n_b1,pb2.name n_b2,EXISTS(SELECT 1 FROM memberships m WHERE m.club_id=d.club_id AND m.player_id=?1 AND m.status='active' AND m.role IN ('owner','admin','board')) is_admin FROM doubles_matches d JOIN clubs c ON c.id=d.club_id JOIN profiles pa1 ON pa1.id=d.a1 JOIN profiles pa2 ON pa2.id=d.a2 JOIN profiles pb1 ON pb1.id=d.b1 JOIN profiles pb2 ON pb2.id=d.b2 WHERE ${scope} ORDER BY d.played_on DESC,d.created_at DESC LIMIT ?3 OFFSET ?4`).bind(viewer,clubId,Math.min(Math.max(limit,1),50),Math.max(offset,0)).all<SavedDoubles&{club_name:string;n_a1:string;n_a2:string;n_b1:string;n_b2:string;is_admin:number}>()).results;
  return rows.map(({club_name,n_a1,n_a2,n_b1,n_b2,is_admin,...m})=>({...m,games:JSON.parse(m.games) as [number,number][],names:{[m.a1]:n_a1,[m.a2]:n_a2,[m.b1]:n_b1,[m.b2]:n_b2},canConfirm:canConfirmDoubles(m,viewer,!!is_admin),canVoid:m.status!=='voided'&&(!!is_admin||(m.submitted_by===viewer&&m.status==='pending')),clubName:club_name}));
+}// Seeds for a doubles draw: strongest team first, by the average of the two players' doubles ratings (400 when unrated).
+export async function suggestTeamSeeds(db:D1Database,teams:{id:string;p1:string;p2:string}[]):Promise<string[]>{
+ const rows=(await db.prepare("SELECT id,club_id,a1,a2,b1,b2,games,best_of,played_on,status,tournament_id,created_at FROM doubles_matches WHERE status='confirmed'").all<DoublesMatch>()).results;
+ const {ratings}=replayDoubles(rows),strength=(t:{p1:string;p2:string})=>((ratings.get(t.p1)?.rating??400)+(ratings.get(t.p2)?.rating??400))/2;
+ return teams.map((t,i)=>({t,i,s:strength(t)})).sort((a,b)=>b.s-a.s||a.i-b.i).map(x=>x.t.id);
 }

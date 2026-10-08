@@ -79,6 +79,11 @@ export async function beginDeletion(db:D1Database,authId:string,mode:DeletionMod
   statements.push(q('DELETE FROM match_history WHERE actor_id=?',id));
   statements.push(q('UPDATE profiles SET merged_into=NULL WHERE merged_into=?',id));
   statements.push(q("DELETE FROM entries WHERE player_id=? AND tournament_id IN (SELECT id FROM tournaments WHERE status='registration')",id));
+  // A doubles team still in open registration cannot go ahead without this player, so it is withdrawn.
+  const openTeams=(await q("SELECT DISTINCT t.id,t.revision FROM tournaments t JOIN doubles_teams d ON d.tournament_id=t.id WHERE (d.p1=? OR d.p2=?) AND t.status='registration' AND t.deleted_at IS NULL",id,id).all<{id:string;revision:number}>()).results;
+  statements.push(q("DELETE FROM doubles_teams WHERE (p1=? OR p2=?) AND tournament_id IN (SELECT id FROM tournaments WHERE status='registration')",id,id));
+  for(const event of openTeams){statements.push(q('INSERT INTO deletion_revision_guards(tournament_id,expected_revision) VALUES(?,?)',event.id,event.revision));statements.push(q('UPDATE tournaments SET revision=revision+1 WHERE id=?',event.id));}
+  statements.push(q('UPDATE doubles_teams SET created_by=NULL WHERE created_by=?',id));
   const openEntries=(await q("SELECT t.id,t.revision FROM tournaments t JOIN entries e ON e.tournament_id=t.id WHERE e.player_id=? AND t.status='registration' AND t.deleted_at IS NULL",id).all<{id:string;revision:number}>()).results;
   for(const event of openEntries){statements.push(q('INSERT INTO deletion_revision_guards(tournament_id,expected_revision) VALUES(?,?)',event.id,event.revision));statements.push(q('UPDATE tournaments SET revision=revision+1 WHERE id=?',event.id));}
   // Operation payloads accept arbitrary JSON from the client, so drop authored audit
@@ -123,6 +128,9 @@ export async function beginDeletion(db:D1Database,authId:string,mode:DeletionMod
    const doublesRows=(await q('SELECT id FROM doubles_matches WHERE a1=? OR a2=? OR b1=? OR b2=? OR submitted_by=? OR confirmed_by=?',id,id,id,id,id,id).all<{id:string}>()).results;
    statements.push(q('DELETE FROM doubles_audit WHERE actor_id=?',id));
    for(const m of doublesRows){const pid=placeholder(`doubles:${m.id}`);statements.push(q('UPDATE doubles_matches SET a1=CASE WHEN a1=? THEN ? ELSE a1 END,a2=CASE WHEN a2=? THEN ? ELSE a2 END,b1=CASE WHEN b1=? THEN ? ELSE b1 END,b2=CASE WHEN b2=? THEN ? ELSE b2 END,submitted_by=CASE WHEN submitted_by=? THEN ? ELSE submitted_by END,confirmed_by=CASE WHEN confirmed_by=? THEN ? ELSE confirmed_by END WHERE id=?',id,pid,id,pid,id,pid,id,pid,id,pid,id,pid,m.id));}
+   // Teams that already played keep their place in the draw, with this player shown as "Deleted player".
+   const teamRows=(await q('SELECT id FROM doubles_teams WHERE p1=? OR p2=?',id,id).all<{id:string}>()).results;
+   for(const team of teamRows){const pid=placeholder(`team:${team.id}`);statements.push(q('UPDATE doubles_teams SET p1=CASE WHEN p1=? THEN ? ELSE p1 END,p2=CASE WHEN p2=? THEN ? ELSE p2 END WHERE id=?',id,pid,id,pid,team.id));}
    statements.push(q('DELETE FROM entries WHERE player_id=?',id));
    statements.push(q('DELETE FROM season_players WHERE player_id=?',id));
    statements.push(q('DELETE FROM profiles WHERE id=?',id));
