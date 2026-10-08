@@ -7,6 +7,7 @@ import AppearanceProvider from "./appearance-provider";
 import AnnouncementBanner from './announcement-banner';
 import PwaRegistration from "@/app/pwa-registration";
 import PersistentMobileNavigation from './persistent-mobile-navigation';
+import SkipLink from './skip-link';
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://rallytt.net"),
@@ -55,7 +56,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="antialiased"><AppearanceProvider>{children}<SupportFooter/><PersistentMobileNavigation/><AnnouncementBanner/><PwaRegistration /></AppearanceProvider></body>
+      <body className="antialiased"><AppearanceProvider><SkipLink/>{children}<SupportFooter/><PersistentMobileNavigation/><AnnouncementBanner/><PwaRegistration /></AppearanceProvider></body>
     </html>
   );
 }

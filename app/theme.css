@@ -11,7 +11,7 @@
  *   3. Shape     — radius, shadow, spacing and motion tokens.
  *   4. Library   — compatibility names used by the UI component library (shadcn).
  */
-@import "@fontsource-variable/inter/index.css";
+@import "@fontsource-variable/geist/index.css";
 
 :root {
   /* ───────────────────────── 1. PALETTE ───────────────────────── */
@@ -61,7 +61,7 @@
   --blue-600: #1d5fa6;
 
   /* Typography */
-  --font-sans: "Inter Variable", Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-sans: "Geist Variable", Geist, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
 
   /* ───────────────────────── 2. SEMANTIC (light) ───────────────────────── */
@@ -155,6 +155,18 @@
   --space-8: 32px;
   --space-10: 40px;
   --space-12: 48px;
+
+  /* Stacking scale: use these instead of arbitrary z-index numbers. */
+  --z-grain: 1;
+  --z-raised: 2;
+  --z-sticky: 20;
+  --z-nav: 40;
+  --z-menu: 55;
+  --z-dropdown: 60;
+  --z-overlay: 70;
+  --z-toast: 90;
+  --z-top: 95;
+  --grain-opacity: 0.04;
 
   --control-height: 40px;
   --control-height-sm: 34px;
@@ -264,6 +276,7 @@
   --overlay: rgb(0 0 0 / 0.62);
   --shadow-rgb: 0 0 0;
   --highlight: rgb(255 255 255 / 0.04);
+  --grain-opacity: 0.06;
 
   --shadow-xs: 0 1px 2px rgb(0 0 0 / 0.4);
   --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.45), 0 2px 6px rgb(0 0 0 / 0.25);
