@@ -1,5 +1,6 @@
 import {readSessions} from './club-sessions';
 import {readOwnership,ownershipAction} from './record-ownership';
+import {doublesAction} from './doubles';
 import {dashboardsFor} from './dashboards';
 import {cachedSummaries,summaryVersion} from './summary-cache';
 import {readFeedback,updateFeedback} from './feedback-progress';
@@ -211,7 +212,8 @@ export function makeService(database:D1Database){
    if(!['Round robin','Single elimination','Double elimination','Round robin groups','Swiss'].includes(format)||!Number.isSafeInteger(capacity)||(capacity as number)<2)fail(400,'Choose a valid format and a whole-number player limit of at least 2.');
    await q('INSERT INTO tournaments (id,name,club_id,date,format,capacity,created_at,created_by) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING',eventId,name,clubId,eventDate,format,capacity,now,user.id).run();return {ok:true};
   }
-  if(['request_guest_claim','preview_guest_merge','review_guest_claim','request_match_review','resolve_match_review','correct_match'].includes(action))return ownershipAction(db,user,body);
+  if(['record_doubles_match','confirm_doubles_match','void_doubles_match'].includes(action))return doublesAction(db,user,body);
+ if(['request_guest_claim','preview_guest_merge','review_guest_claim','request_match_review','resolve_match_review','correct_match'].includes(action))return ownershipAction(db,user,body);
   if(['set_scorekeeper','schedule_tournament','claim_waitlist_place','set_registration_policy','join_waitlist','leave_waitlist','set_event_logistics','set_check_in','set_fixture_plan','delete_tournament','enter_tournament','add_tournament_guest','set_capacity','remove_entry','start_tournament','score_fixture','reset_fixture','withdraw_player'].includes(action))return tournamentAction(db,user,body);
   fail(400,'Unknown action.');
  }

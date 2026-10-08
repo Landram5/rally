@@ -119,6 +119,10 @@ export async function beginDeletion(db:D1Database,authId:string,mode:DeletionMod
     statements.push(q('UPDATE matches SET a=CASE WHEN a=? THEN ? ELSE a END,b=CASE WHEN b=? THEN ? ELSE b END,submitted_by=CASE WHEN submitted_by=? THEN ? ELSE submitted_by END,confirmed_by=CASE WHEN confirmed_by=? THEN ? ELSE confirmed_by END WHERE id=?',id,pid,id,pid,id,pid,id,pid,match.id));
     statements.push(q('UPDATE match_history SET before_json=replace(before_json,?,?),after_json=replace(after_json,?,?) WHERE match_id=?',quotedId,JSON.stringify(pid),quotedId,JSON.stringify(pid),match.id));
    }
+   // Doubles results keep their scores for the other three players; this player becomes a "Deleted player" placeholder.
+   const doublesRows=(await q('SELECT id FROM doubles_matches WHERE a1=? OR a2=? OR b1=? OR b2=? OR submitted_by=? OR confirmed_by=?',id,id,id,id,id,id).all<{id:string}>()).results;
+   statements.push(q('DELETE FROM doubles_audit WHERE actor_id=?',id));
+   for(const m of doublesRows){const pid=placeholder(`doubles:${m.id}`);statements.push(q('UPDATE doubles_matches SET a1=CASE WHEN a1=? THEN ? ELSE a1 END,a2=CASE WHEN a2=? THEN ? ELSE a2 END,b1=CASE WHEN b1=? THEN ? ELSE b1 END,b2=CASE WHEN b2=? THEN ? ELSE b2 END,submitted_by=CASE WHEN submitted_by=? THEN ? ELSE submitted_by END,confirmed_by=CASE WHEN confirmed_by=? THEN ? ELSE confirmed_by END WHERE id=?',id,pid,id,pid,id,pid,id,pid,id,pid,id,pid,m.id));}
    statements.push(q('DELETE FROM entries WHERE player_id=?',id));
    statements.push(q('DELETE FROM season_players WHERE player_id=?',id));
    statements.push(q('DELETE FROM profiles WHERE id=?',id));

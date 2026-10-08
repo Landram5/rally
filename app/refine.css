@@ -1045,3 +1045,32 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; -webkit-tap-highl
 .merge-repair strong { display: block; margin-bottom: 4px; }
 .merge-repair p { margin: 6px 0; color: var(--text-muted); }
 .merge-repair ul { margin: 6px 0; padding-left: 1.1rem; display: grid; gap: 6px; }
+
+/* ───────────────────────── 25. DOUBLES ───────────────────────── */
+.doubles-panel { margin-top: 24px; }
+.doubles-panel .panel-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.doubles-panel .panel-heading p { max-width: 52ch; }
+.doubles-filter { padding: 0 28px 12px; max-width: 320px; }
+.doubles-list { list-style: none; margin: 0; padding: 0 12px 12px; display: flex; flex-direction: column; }
+.doubles-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 20px; align-items: center; padding: 16px; border-top: 1px solid var(--border-subtle); }
+.doubles-sides { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; font-size: 0.9rem; font-weight: 550; min-width: 0; overflow-wrap: anywhere; }
+.doubles-sides .versus { color: var(--text-subtle); font-weight: 400; font-size: 0.8rem; }
+.doubles-winner { color: var(--text-strong); font-weight: 700; }
+.doubles-sides span:not(.doubles-winner):not(.versus) { color: var(--text-muted); }
+.doubles-score { text-align: right; }
+.doubles-score strong { display: block; font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+.doubles-score small { display: block; color: var(--text-muted); font-size: 0.75rem; white-space: normal; }
+.doubles-meta { grid-column: 1 / -1; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; font-size: 0.78rem; color: var(--text-muted); }
+.doubles-meta .status-pending { color: var(--warning); }
+.doubles-meta .status-voided { color: var(--text-subtle); text-decoration: line-through; }
+.doubles-actions { grid-column: 1 / -1; display: flex; gap: 8px; }
+.doubles-empty { margin: 4px 28px 24px; padding: 28px 20px; text-align: center; color: var(--text-muted); border: 1px dashed var(--border-strong); border-radius: var(--radius-lg); }
+.doubles-form { gap: 16px; }
+.doubles-teams { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.doubles-teams fieldset { border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 12px 14px 14px; display: grid; gap: 10px; min-width: 0; margin: 0; }
+.doubles-teams legend { padding: 0 6px; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); }
+.doubles-meta-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.doubles-games { display: grid; gap: 8px; }
+.doubles-game { display: grid; grid-template-columns: 64px 1fr 14px 1fr auto; gap: 8px; align-items: center; }
+.doubles-game input { text-align: center; }
+@media (max-width: 600px) { .doubles-teams, .doubles-meta-fields { grid-template-columns: 1fr; } .doubles-row { grid-template-columns: 1fr; } .doubles-score { text-align: left; } .doubles-filter { padding-inline: 16px; } }

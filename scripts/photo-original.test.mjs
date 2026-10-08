@@ -3,7 +3,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {readFileSync,writeFileSync,mkdirSync,readdirSync} from 'node:fs';
 import ts from 'typescript';
 mkdirSync('.test-runtime',{recursive:true});
-for(const name of ['club-seasons','notification-preferences','summary-cache','feedback-progress','record-ownership','dashboards','clubhouse-summary','rally','activity-pages','match-changes','match-filters','logistics','notifications','profile-photo','account-write-guard','account-deletion','account-http','auth-rules','rally-errors','rally-service','ui-preferences','palettes']){
+for(const name of ['club-seasons','notification-preferences','summary-cache','feedback-progress','record-ownership','dashboards','clubhouse-summary','rally','activity-pages','match-changes','match-filters','logistics','notifications','profile-photo','account-write-guard','account-deletion','account-http','auth-rules','rally-errors','rally-service','doubles','doubles-rating','ui-preferences','palettes']){
  let code;try{code=ts.transpileModule(readFileSync(`lib/${name}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText.replace(/from ['"]\.\/([^'"]+)['"]/g,"from './$1.mjs'");}catch{continue}
  writeFileSync(`.test-runtime/${name}.mjs`,code);
 }
