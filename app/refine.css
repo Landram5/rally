@@ -982,3 +982,13 @@ input[type="checkbox"]:disabled, input[type="radio"]:disabled { opacity: 0.5; cu
 .onboarding-foot { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
 .onboarding-dismiss { display: inline-flex; align-items: center; gap: 10px; font-size: 0.85rem; font-weight: 500; color: var(--text-muted); cursor: pointer; margin: 0; }
 .onboarding-dismiss input { width: 18px; height: 18px; }
+/* ───────────────────────── 22. TOUCH TARGETS AND SMALL TEXT ───────────────────────── */
+@media (max-width: 700px) {
+  .nav-wrap [role="tab"], .nav-wrap a, .nav-wrap button { font-size: 0.7rem; letter-spacing: 0; }
+  .support-footer { display: flex; flex-wrap: wrap; gap: 0 4px; }
+}
+.support-footer a { display: inline-block; padding: 12px 8px; }
+.demo-note a, .demo-note button { display: inline-block; padding: 8px 6px; }
+.match-people button { min-height: 36px; }
+.player-bio-toggle { position: relative; }
+.player-bio-toggle::before { content: ""; position: absolute; inset: -8px; }
