@@ -34,3 +34,5 @@ html.dark{color-scheme:dark;--background:#111d19;--foreground:#edf3ed;--card:#1b
 .dark .club-detail a,.dark .club-directory-link .directory-view{color:#d9ed64}.dark .club-member-row .person{color:var(--foreground)}
 
 .dark .rating-delta.up{color:#8fd88a}.dark .rating-delta.down{color:#ff9d8f}
+
+.dark .public-stat-grid strong .rating-delta.up{color:#8fd88a}.dark .public-stat-grid strong .rating-delta.down{color:#ff9d8f}

@@ -7,6 +7,7 @@ import {env} from 'cloudflare:workers';
 import {CalendarDays,MapPin,Trophy,Users} from 'lucide-react';
 import TournamentInvite from '@/app/tournament-invite';
 import {RatingDelta} from '@/app/rating-delta';
+import {shareMetadata} from '@/lib/share-meta';
 import PublicHeader from '@/app/public-header';
 import {TimeLabel} from '@/app/time-label';
 import {registrationClosed} from '@/lib/logistics';
@@ -22,7 +23,7 @@ async function tournament(id:string){return env.DB?getPublicTournament(env.DB,id
 
 export async function generateMetadata({params}:Props):Promise<Metadata>{
  const t=await tournament((await params).id);
- return t?{title:`${t.name} · Rally tournament`,description:`Follow the field, draw, and results for ${t.name} at ${t.club.name}.`,alternates:{canonical:`/tournaments/${encodeURIComponent(t.id)}`}}:{title:'Tournament not found · Rally'};
+ return t?shareMetadata({title:`${t.name} · Rally tournament`,description:`Follow the field, draw, and results for ${t.name} at ${t.club.name}.`,path:`/tournaments/${encodeURIComponent(t.id)}`,image:`/og/tournament/${encodeURIComponent(t.id)}`}):{title:'Tournament not found · Rally'};
 }
 
 export default async function PublicTournamentPage({params}:Props){

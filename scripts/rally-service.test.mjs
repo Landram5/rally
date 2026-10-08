@@ -3,12 +3,13 @@ import {DatabaseSync} from 'node:sqlite';
 import {readFileSync,writeFileSync,mkdirSync,rmSync,readdirSync} from 'node:fs';
 import ts from 'typescript';
 mkdirSync('.test-runtime',{recursive:true});
-for(const name of ['club-seasons','notification-preferences','summary-cache','feedback-progress','record-ownership','dashboards','clubhouse-summary','rally','activity-pages','match-changes','match-filters','logistics','notifications','profile-photo','account-write-guard','account-deletion','announcements','club-sessions','weekly-sessions','rally-service','tournament-service','tournament-scheduling','tournament-engine','match-rules','rally-errors','seeding','public-rally']){
+for(const name of ['club-seasons','notification-preferences','summary-cache','feedback-progress','record-ownership','dashboards','clubhouse-summary','rally','activity-pages','match-changes','match-filters','logistics','notifications','profile-photo','account-write-guard','account-deletion','announcements','club-sessions','weekly-sessions','rally-service','tournament-service','tournament-scheduling','tournament-engine','match-rules','rally-errors','seeding','public-rally','public-leaderboard']){
  const compiled=ts.transpileModule(readFileSync(`lib/${name}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText.replace(/from ['"]\.\/([^'"]+)['"]/g, "from './$1.mjs'");
  writeFileSync(`.test-runtime/${name}.mjs`,compiled);
 }
 const {makeService,scoreError}=await import('../.test-runtime/rally-service.mjs');
-const {getPublicPlayer,getPublicTournament,getPublicDirectory,getPublicHeadToHead}=await import('../.test-runtime/public-rally.mjs');
+const {getPublicPlayer,getPublicTournament,getPublicDirectory,getPublicHeadToHead,getPublicMatch}=await import('../.test-runtime/public-rally.mjs');
+const {getPublicLeaderboard}=await import('../.test-runtime/public-leaderboard.mjs');
 const path='.test-runtime/test-data.sqlite';rmSync(path,{force:true});let sql;
 function open(){sql=new DatabaseSync(path);sql.exec('PRAGMA foreign_keys=ON');}
 open();for(const f of readdirSync('drizzle').filter(f=>f.endsWith('.sql')).sort())sql.exec(readFileSync('drizzle/'+f,'utf8'));
@@ -140,6 +141,20 @@ await act('opponent-auth',{action:'confirm_match',id:'match-one'});
  const pair=await getPublicHeadToHead(db,member,opponent),flipped=await getPublicHeadToHead(db,opponent,member);
  assert.equal(pair.meetings.length,1);assert.deepEqual(pair.meetings[0].games,[[11,8],[11,9]]);assert.deepEqual(flipped.meetings[0].games,[[8,11],[9,11]],'games are listed from the first player');
  assert.equal(await getPublicHeadToHead(db,member,member),null);assert.equal(await getPublicHeadToHead(db,member,'missing-player'),null);assert.equal(await getPublicHeadToHead(db,member,"x' OR '1'='1"),null,'invalid ids are rejected');
+ {
+  const board=await getPublicLeaderboard(db,{});
+  const ids=board.players.map(p=>p.id);assert.ok(ids.includes(member)&&ids.includes(opponent),'public leaderboard lists rated players');
+  const mine=board.players.find(p=>p.id===member);assert.equal(typeof mine.rating,'number');assert.ok(mine.rank>=1,'rated players have a rank');assert.equal(mine.established,false,'one verified match is provisional');
+  assert.deepEqual((await getPublicLeaderboard(db,{established:true})).players,[],'established filter hides provisional players');
+  const byName=(await getPublicLeaderboard(db,{sort:'name'})).players.map(p=>p.name),sorted=[...byName].sort((x,y)=>x.localeCompare(y));assert.deepEqual(byName,sorted,'name sort is alphabetical');
+  assert.equal((await getPublicLeaderboard(db,{club:'no-such-club'})).club,'all','unknown clubs fall back to all');
+  assert.equal((await getPublicLeaderboard(db,{search:'%'})).players.length,0,'search treats % literally');
+  assert.equal((await getPublicLeaderboard(db,{sort:"rating'; DROP TABLE profiles;--"})).sort,'rating','invalid sort falls back to rating');
+  assert.equal((await getPublicLeaderboard(db,{page:999})).players.length,0,'out-of-range pages are empty');
+  const shown=await getPublicMatch(db,'match-one');
+  assert.equal(shown.a.id,member);assert.equal(shown.b.id,opponent);assert.deepEqual(shown.games,[[11,8],[11,9]]);assert.equal(shown.clubId,'club-one');assert.equal(typeof shown.changes.a,'number','public match includes rating changes');
+  assert.equal(await getPublicMatch(db,'no-such-match'),null);assert.equal(await getPublicMatch(db,"x' OR '1'='1"),null,'invalid match ids are rejected');
+ }
 }
 assert.equal((await service.read('member-auth')).matches[0].status,'confirmed');
 await assert.rejects(act('member-auth',{action:'void_match',id:'match-one'}),e=>e.status===403);
