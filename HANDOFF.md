@@ -1,3 +1,13 @@
+# Codex production rollout — 2026-10-07
+
+- PRs #2–#5 merged to main; feature merge head 3c862900269c9211efbad8216d745f1de13820e2. Workers Builds deployed version a9b74058-f1da-4ab2-9a76-91418a92f158. Secure VAPID configuration then deployed version ec4cb981-e281-4a68-87a0-62a12b7b3900 at 100%. No local code deploy.
+- Production backup: ignored .local-backups/rally-before-operations-2026-10-07.sql (313,966 bytes); migrations 0020–0022 applied, none pending.
+- All feature branches passed full reliability/lint/build before merge; TypeScript passed. Live owner CSV controls, weekly session form and notification preferences render. Push setup is available and binding names verify all three VAPID settings plus both Turnstile settings; no secret values read or printed.
+- Pending: owner confirmation that Supabase CAPTCHA is enabled with the matching Turnstile secret; verified Resend sender and RESEND_API_KEY/NOTIFICATION_FROM; actual email and physical-device push delivery tests. Do not claim these integrations fully tested. Push remains opt-in and inbox remains source of truth. Notification scan ceiling remains documented.
+- Claude-owned public UI untouched; no doubles. Preexisting untracked CLAUDE_HANDOFF.md untouched. Earlier handoff entries below are historical, superseded by this rollout.
+
+---
+
 # Codex rollout follow-up — 2026-10-07 — runtime variable retention
 
 - Adam reports saving keys in Worker Settings → Variables and Secrets. Read-only version binding metadata still showed neither Turnstile name on live or the latest three previews; awaiting whether the saved list contains both or Cloudflare showed a save/deploy error. Never read key values.
