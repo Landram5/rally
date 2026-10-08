@@ -1,10 +1,11 @@
 import {profilePhotoUrl} from './profile-photo';
 import type {Draw} from './tournament-engine';
+import {loadRatingChanges} from './match-changes';
 
 export type PublicPlayerMatch={
  id:string;clubId:string;clubName:string;opponentId:string;opponentName:string;
  games:[number,number][];bestOf:number;playedOn:string;tournamentId:string|null;
- playerSide:0|1;
+ playerSide:0|1;ratingChange?:number;
 };
 
 export type PublicPlayer={
@@ -17,7 +18,7 @@ export type PublicTournament={estimatedEndsAt?:string|null;allowVisitors?:boolea
  id:string;name:string;date:string;format:string;capacity:number;
  registrationClosesAt?:string|null;startsAt?:string|null;fixturePlans?:{fixture_id:string;court:string;starts_at:string|null;ends_at?:string|null;called_at?:string|null}[];status:'registration'|'active'|'completed';bestOf:number;revision:number;
  club:{id:string;name:string;location:string};
- entrants:{id:string;name:string;isGuest:boolean}[];
+ entrants:{id:string;name:string;isGuest:boolean}[];ratingChanges?:Record<string,number>;
  state:Draw|null;
 };
 
@@ -46,7 +47,8 @@ export async function getPublicPlayer(db:D1Database,playerId:string):Promise<Pub
  if(!profile)return null;
  const clubs=(await db.prepare("SELECT c.id,c.name,c.location FROM clubs c JOIN memberships m ON m.club_id=c.id WHERE m.player_id=? AND m.status='active' AND c.approval_status='approved' ORDER BY c.name").bind(playerId).all<{id:string;name:string;location:string}>()).results;
  const rows=(await db.prepare("SELECT m.id,m.club_id,c.name AS club_name,m.a,m.b,pa.name AS a_name,pb.name AS b_name,m.games,m.best_of,m.played_on,m.tournament_id FROM matches m JOIN clubs c ON c.id=m.club_id JOIN profiles pa ON pa.id=m.a JOIN profiles pb ON pb.id=m.b WHERE m.status='confirmed' AND c.approval_status='approved' AND (m.a=? OR m.b=?) ORDER BY m.played_on DESC,m.created_at DESC").bind(playerId,playerId).all<{id:string;club_id:string;club_name:string;a:string;b:string;a_name:string;b_name:string;games:string;best_of:number;played_on:string;tournament_id:string|null}>()).results;
- return {id:profile.id,name:profile.name,isGuest:!!profile.is_guest,photoUrl:profilePhotoUrl(profile.id,profile.photo_version),bio:profile.bio,clubs,matches:rows.map(m=>({id:m.id,clubId:m.club_id,clubName:m.club_name,opponentId:m.a===playerId?m.b:m.a,opponentName:m.a===playerId?m.b_name:m.a_name,games:JSON.parse(m.games),bestOf:m.best_of,playedOn:m.played_on,tournamentId:m.tournament_id,playerSide:m.a===playerId?0:1}))};
+ const changes=await loadRatingChanges(db,rows.map(m=>m.id));
+ return {id:profile.id,name:profile.name,isGuest:!!profile.is_guest,photoUrl:profilePhotoUrl(profile.id,profile.photo_version),bio:profile.bio,clubs,matches:rows.map(m=>({ratingChange:changes[m.id]?.[playerId],id:m.id,clubId:m.club_id,clubName:m.club_name,opponentId:m.a===playerId?m.b:m.a,opponentName:m.a===playerId?m.b_name:m.a_name,games:JSON.parse(m.games),bestOf:m.best_of,playedOn:m.played_on,tournamentId:m.tournament_id,playerSide:m.a===playerId?0:1}))};
 }
 
 export async function getPublicTournament(db:D1Database,tournamentId:string):Promise<PublicTournament|null>{
@@ -56,5 +58,7 @@ export async function getPublicTournament(db:D1Database,tournamentId:string):Pro
  const entrants=(await db.prepare('SELECT p.id,p.name,p.auth_id IS NULL AS is_guest FROM entries e JOIN profiles p ON p.id=e.player_id WHERE e.tournament_id=? ORDER BY e.created_at,e.id').bind(tournamentId).all<{id:string;name:string;is_guest:number}>()).results;
  const fixturePlans=(await db.prepare('SELECT fixture_id,court,starts_at,ends_at,called_at FROM tournament_fixture_plans WHERE tournament_id=?').bind(tournamentId).all<{fixture_id:string;court:string;starts_at:string|null;ends_at?:string|null;called_at?:string|null}>()).results;
  const waitlistCount=(await db.prepare('SELECT count(*) n FROM tournament_waitlist WHERE tournament_id=?').bind(tournamentId).first<{n:number}>())?.n??0;
- return {estimatedEndsAt:event.estimated_ends_at,allowVisitors:!!event.allow_visitors,waitlistCount,fixturePlans,registrationClosesAt:event.registration_closes_at,startsAt:event.starts_at,id:event.id,name:event.name,date:event.date,format:event.format,capacity:event.capacity,status:event.status,bestOf:event.best_of,revision:event.revision,club:{id:event.club_id,name:event.club_name,location:event.club_location},entrants:entrants.map(p=>({...p,isGuest:!!p.is_guest})),state:event.state_json?JSON.parse(event.state_json):null};
+ const eventMatchIds=(await db.prepare("SELECT id FROM matches WHERE tournament_id=? AND status='confirmed'").bind(tournamentId).all<{id:string}>()).results.map(m=>m.id),eventChanges=await loadRatingChanges(db,eventMatchIds),ratingChanges:Record<string,number>={};
+ for(const byPlayer of Object.values(eventChanges))for(const [id,delta] of Object.entries(byPlayer))ratingChanges[id]=Math.round(((ratingChanges[id]??0)+delta)*10)/10;
+ return {ratingChanges,estimatedEndsAt:event.estimated_ends_at,allowVisitors:!!event.allow_visitors,waitlistCount,fixturePlans,registrationClosesAt:event.registration_closes_at,startsAt:event.starts_at,id:event.id,name:event.name,date:event.date,format:event.format,capacity:event.capacity,status:event.status,bestOf:event.best_of,revision:event.revision,club:{id:event.club_id,name:event.club_name,location:event.club_location},entrants:entrants.map(p=>({...p,isGuest:!!p.is_guest})),state:event.state_json?JSON.parse(event.state_json):null};
 }

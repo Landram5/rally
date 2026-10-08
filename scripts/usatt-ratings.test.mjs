@@ -3,7 +3,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {readFileSync,writeFileSync,mkdirSync,readdirSync} from 'node:fs';
 import ts from 'typescript';
 mkdirSync('.test-runtime',{recursive:true});
-for(const name of ['club-seasons','notification-preferences','summary-cache','feedback-progress','record-ownership','dashboards','clubhouse-summary','rally','activity-pages','match-filters','logistics','notifications','profile-photo','account-write-guard','account-deletion','announcements','club-sessions','weekly-sessions','rally-service','tournament-service','tournament-scheduling','tournament-engine','match-rules','rally-errors','seeding','public-rally'])writeFileSync(`.test-runtime/${name}.mjs`,ts.transpileModule(readFileSync(`lib/${name}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText.replace(/from ['"]\.\/([^'"]+)['"]/g,"from './$1.mjs'"));
+for(const name of ['club-seasons','notification-preferences','summary-cache','feedback-progress','record-ownership','dashboards','clubhouse-summary','rally','activity-pages','match-changes','match-filters','logistics','notifications','profile-photo','account-write-guard','account-deletion','announcements','club-sessions','weekly-sessions','rally-service','tournament-service','tournament-scheduling','tournament-engine','match-rules','rally-errors','seeding','public-rally'])writeFileSync(`.test-runtime/${name}.mjs`,ts.transpileModule(readFileSync(`lib/${name}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText.replace(/from ['"]\.\/([^'"]+)['"]/g,"from './$1.mjs'"));
 const {makeService}=await import('../.test-runtime/rally-service.mjs');
 const {readActivityPage}=await import('../.test-runtime/activity-pages.mjs');
 const {calculateRatings,ratingHistory,performanceEstimate,pointExchange,suggestSeeds}=await import('../.test-runtime/seeding.mjs');
@@ -82,4 +82,15 @@ function fixture(){
 {
  const {act,payload,run,service,one}=fixture();await act('owner',payload('guest',1600));await act('member',{action:'request_guest_claim',id:'claim',clubId:'club',guestId:'guest',note:'This was my visiting record.'});await act('owner',{action:'review_guest_claim',id:'claim',status:'approved',confirmation:'MERGE'});assert.equal(one("SELECT initial_rating FROM profiles WHERE id='member'").initial_rating,1600,'Guest merge preserves an initial estimate when the account has none');assert.equal(one('PRAGMA foreign_key_check'),undefined);
 }
-console.log('USATT-style ratings passed exchange boundaries, published adjustment examples, initial anchors, provisional evidence, tournament multipliers, adjustments/decay, floors, chronological replay, seasons, estimate permissions, audit/idempotency, stale/revoked writes, cache invalidation, public privacy and guest merges.');
+{
+ const {ratingChangesByMatch}=await import('../.test-runtime/seeding.mjs');
+ const sample=[
+  {id:'rc1',a:'p',b:'q',games:[[11,5],[11,8]],status:'confirmed',played_on:'2026-09-01',created_at:'2026-09-01T10:00:00Z',best_of:3,club_id:'c'},
+  {id:'rc2',a:'q',b:'r',games:[[11,9],[8,11],[11,7]],status:'confirmed',played_on:'2026-09-02',created_at:'2026-09-02T10:00:00Z',best_of:3,club_id:'c'},
+  {id:'rc3',a:'p',b:'r',games:[[7,11],[11,9],[9,11]],status:'confirmed',played_on:'2026-09-03',created_at:'2026-09-03T10:00:00Z',best_of:3,club_id:'c'},
+  {id:'rc4',a:'p',b:'q',games:[[11,0],[11,0]],status:'pending',played_on:'2026-09-04',created_at:'2026-09-04T10:00:00Z',best_of:3,club_id:'c'}];
+ const shown=ratingChangesByMatch(sample,'2026-10-07');
+ for(const player of ['p','q','r'])for(const c of ratingHistory(sample,player,'2026-10-07').changes)assert.equal(shown[c.matchId][player],Math.round(c.delta*10)/10,'displayed change equals the rating history change');
+ assert.equal(shown.rc4,undefined,'pending results show no rating change');
+ assert.deepEqual(Object.keys(shown.rc1).sort(),['p','q'],'both players receive a displayed change');
+}console.log('USATT-style ratings passed exchange boundaries, published adjustment examples, initial anchors, provisional evidence, tournament multipliers, adjustments/decay, floors, chronological replay, seasons, estimate permissions, audit/idempotency, stale/revoked writes, cache invalidation, public privacy and guest merges.');
