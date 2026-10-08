@@ -1098,3 +1098,7 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; -webkit-tap-highl
 .doubles-trend svg text { font-size: 10px; fill: currentColor; opacity: .6; }
 .doubles-trend figcaption { font-size: .85rem; margin-top: 6px; color: var(--text-muted, inherit); }
 .doubles-standings .leaderboard-scope { margin-bottom: 12px; }
+
+.doubles-games.is-hidden { display: none; }
+.doubles-live { display: grid; gap: 8px; }
+.doubles-link { font-size: .85rem; color: var(--text-link, var(--brand-600)); }

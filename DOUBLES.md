@@ -36,19 +36,19 @@ Replayed from every confirmed match, in date order, like singles.
 - UI: a **Doubles** section under the Matches tab to record a match (two players per side), see the feed, confirm, withdraw or void. Hidden in the sample demo.
 - Safety: account deletion keeps the other three players' results with a "Deleted player" placeholder; guest merging voids matches that contain both profiles and re-points the rest. Both covered by `scripts/doubles.test.mjs`.
 
-## Not built yet
+## Phase 3: everything else (built)
 
-1. **Doubles tournaments (phase 2).** Pairs register together (a team of two members), the existing formats run on team ids, results create `doubles_matches` with `tournament_id`. Needs: team entry model and waitlist behaviour, draw display with pair names, venue display, scoring screens, and what happens when one partner withdraws.
-2. **Doubles rating display.** Profile (doubles rating, record, partners), a doubles leaderboard and a doubles rating history chart.
-3. **Live scoring for doubles** and share cards; public pages for doubles matches and pairs; head-to-head for pairs.
-4. **Demo support.** The sample demo does not show doubles yet.
-5. **Seeding doubles events** from doubles ratings (`suggestSeeds` is singles only).
+- **Waitlist and check-in for teams** (migration 0029). A full event takes a waiting team (both players chosen up front). The first waiting team takes a place automatically when a team leaves or the limit goes up, in joining order, until the draw starts. There is no claim window because the team already agreed. A player can be on one team or one waiting team per event. Check-in is per team; a member or an organizer can toggle it while check-in is open.
+- **Cross-club weight.** Doubles tournaments count 3x when the players come from two or more approved clubs, using the same rule as singles. The rating reads now include the tournament weight.
+- **Doubles rating display.** Doubles tab > Standings (club or all clubs, established-only filter, best partnerships) and My rating (rating, record, partners, history chart). The same card shows on a club-mate's player page for signed-in viewers. Everything uses ``lib/doubles-view.ts``, which the server and the sample demo share.
+- **Live scoring.** The record-a-match form can score point by point (the same tracker as singles). It can only be saved once the match is complete.
+- **Public pages.** ``/doubles/<match>`` (a confirmed result) and ``/pairs/<a>/<b>`` (a pair's record together, recent results and record against other pairs), each with a share card (``/og/doubles/...``, ``/og/pair/...``). Approved clubs only, confirmed results only, and a deleted player removes the page.
+- **Sample demo.** Metro has doubles results, a pending result to confirm, standings and an open doubles event (register a team, join the waitlist, check in, start and play it).
 
-## Phase 2: doubles tournaments (built)
+## Limits
 
-- 	ournaments.team_size (1 singles, 2 doubles) and doubles_teams (two players per team; database triggers keep a player on one team per event and teams out of singles events).
-- Players register a team by choosing a partner (enter_team); either partner or an organizer withdraws it (emove_team); organizers can enter any team. Capacity counts teams. Draws, brackets and formats are unchanged and run on team ids.
-- Seeds come from the average doubles rating of each team. Results are written to doubles_matches (never matches), corrected by reset then re-score, voided on reset or when the tournament is deleted, and counted at the tournament weight in the doubles rating.
-- Account deletion keeps teams that already played (the deleted player becomes a placeholder) and withdraws teams still in registration. Guest merging treats teams like entries.
-- The app reads teams as entries under their own id, so counts, names, brackets and the public pages work; players on a team get the same match-ready notices as singles players.
-- Not in this phase: waitlists and check-in for doubles events, mixed-event rules, cross-club tournament weighting for doubles, doubles rating on profiles and leaderboards, doubles in the sample demo, and a doubles-specific venue-display layout.
+- Live scoring covers casual doubles matches, not saving a draft across devices or the offline outbox (those exist for singles only).
+- Doubles ratings are not on the public player page for signed-out visitors, and there is no public doubles leaderboard or directory listing yet.
+- Pair-versus-pair is shown as a record on each pair's page; there is no dedicated head-to-head page.
+- The venue display uses the team names in the existing layout.
+- Mixed or open-gender rules, and doubles in the demo public pages (``/demo/...``), are not modelled.
