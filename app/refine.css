@@ -917,3 +917,18 @@ input[type="checkbox"]:disabled, input[type="radio"]:disabled { opacity: 0.5; cu
 .notification-inbox .inbox-note { margin: 0; padding: 16px 28px 24px; border-top: 1px solid var(--border-subtle); }
 .notification-inbox .inbox-more { margin: 0 28px 16px; }
 .notification-inbox section[aria-label] { padding: 0 28px; }
+/* Player profile header: name and share icon on one line, compact clamped bio. */
+.public-hero { align-items: flex-start; gap: 20px; }
+.public-hero-body { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.hero-title-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.hero-title-row h1 { margin: 0; }
+.hero-title-row .share-link { display: inline-flex; align-items: center; gap: 8px; margin: 0; }
+.hero-title-row .share-link [data-size="icon"] { width: 36px; height: 36px; min-height: 36px; border-radius: var(--radius-pill); border-color: var(--border-inverse); background: transparent; color: var(--on-brand); }
+.hero-title-row .share-link [data-size="icon"]:hover { background: var(--bg-inverse-soft); border-color: var(--on-brand-subtle); }
+.hero-title-row .share-link span { font-size: 0.8rem; color: var(--on-brand-muted); }
+.hero-sub { margin: 0; font-size: 0.85rem; color: var(--on-brand-muted); }
+.player-bio-wrap { margin-top: 8px; max-width: 62ch; }
+.player-bio { margin: 0; font-size: 0.9rem; line-height: 1.5; white-space: pre-line; color: var(--on-brand-muted); overflow-wrap: anywhere; }
+.player-bio.is-clamped { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.player-bio a { color: var(--on-brand); text-decoration: underline; text-underline-offset: 3px; }
+.player-bio-toggle { margin-top: 4px; padding: 0; min-height: 0; background: none; border: 0; color: var(--on-brand); font-size: 0.8rem; font-weight: 600; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
