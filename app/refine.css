@@ -695,3 +695,5 @@ a.directory-card:hover, .event-card:hover, .club-card:hover, .leaderboard-row:ho
 .dashboard-callout, .registration-callout, .footnote-box, .match-focus-note { margin-bottom: 16px; }
 .legal-page li, .ratings-page li, .rules-box li { margin-block: 0.4rem; }
 .directory-banner span { color: var(--text-strong); }
+/* Side-by-side layouts: columns start on the same line (stack margins apply only to vertical flow). */
+.public-layout > *, .dashboard-grid > *, .event-grid > *, .public-event-bottom > * { margin-top: 0 !important; }
