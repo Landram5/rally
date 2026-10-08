@@ -1074,3 +1074,10 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; -webkit-tap-highl
 .doubles-game { display: grid; grid-template-columns: 64px 1fr 14px 1fr auto; gap: 8px; align-items: center; }
 .doubles-game input { text-align: center; }
 @media (max-width: 600px) { .doubles-teams, .doubles-meta-fields { grid-template-columns: 1fr; } .doubles-row { grid-template-columns: 1fr; } .doubles-score { text-align: left; } .doubles-filter { padding-inline: 16px; } }
+/* Doubles tournaments: team entries on public pages. */
+.team-entrant { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; padding: 10px 12px; border-radius: var(--radius-md); background: var(--bg-muted); }
+.team-entrant > span:first-child { color: var(--text-subtle); font-size: 0.8rem; font-variant-numeric: tabular-nums; }
+.team-entrant a { color: inherit; font-weight: 600; text-decoration: none; }
+.team-entrant a:hover { text-decoration: underline; }
+.doubles-entry { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: center; }
+@media (max-width: 600px) { .doubles-entry { grid-template-columns: 1fr; } }

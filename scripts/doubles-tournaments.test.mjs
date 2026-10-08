@@ -128,4 +128,16 @@ function fixture(){
  const compact=await service.read('p1-auth',{compact:true});assert.ok(compact.entries.some(e=>e.player_id===team.id),'a player sees their own team as their entry');assert.ok(!compact.entries.some(e=>e.player_id!==team.id&&e.tournament_id==='d'),'but not other teams');
  assert.equal(compact.tournaments.find(t=>t.id==='d').entry_count,2);sql.close();
 }
+{
+ // Public pages and the rest of the app keep working with a running doubles draw.
+ const {sql,db,go,doublesEvent,service,one}=fixture();await doublesEvent('d',4);for(const [a,b] of [['p1','p2'],['p3','p4'],['p5','p6'],['p7','p8']])await go('owner','d','enter_team',{playerId:a,partnerId:b});
+ const {getPublicTournament,getPublicDirectory}=await import('../.test-runtime/public-rally.mjs');
+ let pub=await getPublicTournament(db,'d');assert.equal(pub.teamSize,2);assert.equal(pub.entrants.length,4);assert.ok(pub.entrants.every(e=>e.isTeam&&e.members.length===2&&e.name.includes(' & ')),'public entrants are teams with their players');
+ await go('owner','d','start_tournament',{bestOf:3});pub=await getPublicTournament(db,'d');const names=new Map(pub.entrants.map(e=>[e.id,e.name]));
+ assert.ok(pub.state.fixtures.filter(f=>f.a).every(f=>names.has(f.a)&&names.has(f.b)),'every fixture side resolves to a team name');
+ {const team=pub.state.fixtures.find(f=>f.status==='ready'),members=sql.prepare('SELECT p1,p2 FROM doubles_teams WHERE id=?').get(team.a),notified=(await service.read(members.p1+'-auth',{})).notifications.filter(n=>n.id.startsWith('fixture-d-'));assert.ok(notified.length>=1,'a player on a ready team is told their match is ready');const other=(await service.read('outsider-auth',{})).notifications.filter(n=>n.id.startsWith('fixture-d-'));assert.equal(other.length,0,'players not in the match are not');}
+ for(const who of ['owner-auth','p1-auth','outsider-auth']){const data=await service.read(who,{});assert.ok(data.tournaments.find(t=>t.id==='d'));await service.read(who,{compact:true});}
+ const listing=await getPublicDirectory(db,'tournaments','',1);const row=listing.tournaments.find(t=>t.id==='d');assert.equal(row?.entrants??4,4,'the directory counts teams');
+ sql.close();
+}
 console.log('Doubles tournaments passed: creation, team registration rules and constraints, draws seeded by team, results as doubles matches (not singles), correction and reset, ratings, deletion and account removal.');

@@ -43,3 +43,12 @@ Replayed from every confirmed match, in date order, like singles.
 3. **Live scoring for doubles** and share cards; public pages for doubles matches and pairs; head-to-head for pairs.
 4. **Demo support.** The sample demo does not show doubles yet.
 5. **Seeding doubles events** from doubles ratings (`suggestSeeds` is singles only).
+
+## Phase 2: doubles tournaments (built)
+
+- 	ournaments.team_size (1 singles, 2 doubles) and doubles_teams (two players per team; database triggers keep a player on one team per event and teams out of singles events).
+- Players register a team by choosing a partner (enter_team); either partner or an organizer withdraws it (emove_team); organizers can enter any team. Capacity counts teams. Draws, brackets and formats are unchanged and run on team ids.
+- Seeds come from the average doubles rating of each team. Results are written to doubles_matches (never matches), corrected by reset then re-score, voided on reset or when the tournament is deleted, and counted at the tournament weight in the doubles rating.
+- Account deletion keeps teams that already played (the deleted player becomes a placeholder) and withdraws teams still in registration. Guest merging treats teams like entries.
+- The app reads teams as entries under their own id, so counts, names, brackets and the public pages work; players on a team get the same match-ready notices as singles players.
+- Not in this phase: waitlists and check-in for doubles events, mixed-event rules, cross-club tournament weighting for doubles, doubles rating on profiles and leaderboards, doubles in the sample demo, and a doubles-specific venue-display layout.
