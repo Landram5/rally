@@ -8,6 +8,7 @@ import AnnouncementBanner from './announcement-banner';
 import PwaRegistration from "@/app/pwa-registration";
 import PersistentMobileNavigation from './persistent-mobile-navigation';
 import SkipLink from './skip-link';
+import ThemeColorSync from './theme-color-sync';
 import {PALETTE_INIT_SCRIPT} from '@/lib/palettes';
 
 export const metadata: Metadata = {
@@ -47,7 +48,8 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#1c352d", // keep in sync with --bg-inverse in theme.css
+  themeColor: [{media:"(prefers-color-scheme: light)",color:"#f5f7f4"},{media:"(prefers-color-scheme: dark)",color:"#0a0f0c"}], // match --bg-page in theme.css; ThemeColorSync keeps it current after the user picks a mode or color
+  interactiveWidget: "resizes-content",
 };
 
 export default function RootLayout({
@@ -58,7 +60,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head><script dangerouslySetInnerHTML={{__html: PALETTE_INIT_SCRIPT}} /></head>
-      <body className="antialiased"><AppearanceProvider><SkipLink/>{children}<SupportFooter/><PersistentMobileNavigation/><AnnouncementBanner/><PwaRegistration /></AppearanceProvider></body>
+      <body className="antialiased"><AppearanceProvider><ThemeColorSync/><SkipLink/>{children}<SupportFooter/><PersistentMobileNavigation/><AnnouncementBanner/><PwaRegistration /></AppearanceProvider></body>
     </html>
   );
 }
