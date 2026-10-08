@@ -1,3 +1,37 @@
+# Codex rollout follow-up — 2026-10-07 — runtime variable retention
+
+- Adam reports saving keys in Worker Settings → Variables and Secrets. Read-only version binding metadata still showed neither Turnstile name on live or the latest three previews; awaiting whether the saved list contains both or Cloudflare showed a save/deploy error. Never read key values.
+- Fixed deployment configuration in safety commit 83c3f4e: `keep_vars: true` retains dashboard Variables, including a public Turnstile Site Key. Native schema confirms default would otherwise overwrite/delete dashboard variables. Reliability, lint, TypeScript and build pass; generated built-Worker config asserts retention is true.
+- Carried this configuration fix through the stacked notification/session/tournament branches so subsequent preview and main builds retain runtime variables. No code merged to main; no application deployment. Previous backup and production migrations remain complete.
+- Current blocker is configuration saving, not missing authorization. Do not ask Adam again to authorize the already-requested merge/deployment. Verify runtime binding names without exposing values, then coordinate new forms and Supabase CAPTCHA activation.
+
+---
+
+# Codex rollout handoff — 2026-10-07 — awaiting Turnstile setup
+
+- Adam explicitly requested merging and pushing live. Production D1 exported to ignored `.local-backups/rally-before-operations-2026-10-07.sql` (313,966 bytes). Migrations 0020, 0021 and 0022 applied remotely; migration list reports none pending. Live database-backed Clubs page still loads in the browser. Non-browser HTTP probes receive Cloudflare 403, so do not confuse those with a broken app.
+- Full reliability, lint, TypeScript and build rerun successfully before rollout. No source changes since tested tournament commit 616b404.
+- No PR merged and no application deployment performed. PR #2 marked ready; #3–#5 remain draft. Main remains 056583f; current production Worker version was b5336205-e770-46ca-a578-6f3e87215c4e before attempted configuration.
+- Blocking configuration: Worker secret names list contains only RALLY_ADMIN_EMAILS and three Supabase secrets. No TURNSTILE_SITE_KEY / TURNSTILE_SECRET_KEY: deploying new forms now would block email authentication and feedback. User asked to configure securely; do not put secrets in chat. Cloudflare dashboard tab is at login. Supabase CAPTCHA activation must immediately follow new-form rollout, never precede it.
+- Email provider and NOTIFICATION_FROM/RESEND_API_KEY are absent. VAPID keys also absent. Attempted generating push keys directly into Wrangler secret bulk (no file/key output), but Cloudflare rejected the entire upload with 10214 because its latest preview version is not the deployed version. No keys were saved. Do not deploy latest preview merely to get around this. Versioned secret setup must be coordinated with the approved main build.
+- Next: user completes Cloudflare login/Turnstile setup; verify required secret names, coordinate Supabase activation; merge #2 to main, retarget/merge #3, #4, #5 to main sequentially with expected heads; observe Workers Builds and verify live endpoints. Never pnpm deploy or local Wrangler deploy. Email/push must not be reported active until provider keys and actual delivery are checked.
+- Existing CLAUDE_HANDOFF.md untouched. No doubles or Claude UI ownership changes.
+
+---
+
+# Codex handoff — 2026-10-07 — tournament operations
+
+- Branch: `codex/tournament-operations`, stacked on sessions PR #4. Owns tournament management/registration/service/scheduling, migration 0022 and checks. No leaderboard, demo source, rating display, sharing cards or global CSS edits.
+- Added: tournament-specific scorekeeper assignment to active account-holding host members. Played results only; no forfeits, resets, scheduling or organizing. Server checks membership/assignment again inside the write transaction. Membership removal and account deletion revoke assignments.
+- Scheduling: 1–64 tables, 5–120 minutes per match, ready/waiting fixtures, bracket dependencies, known-player conflicts, estimated finish including a possible reset final. Greedy estimates, not predictions. Rebuild after delays. Actual called matches reserve table/players and remain assigned on rebuild; scoring releases the call. Estimates do not generate email/push call-ups.
+- Tournament waitlist: FIFO offers reserve capacity; player (or organizer confirming attendance) claims by deadline. Default 24h, configurable 5–1,440 minutes, capped at registration deadline. Expired/ineligible offers are removed by existing five-minute cron and next eligible player offered. Open offers block starting until resolved or registration closes. Inbox shows offer/deadline; external delivery remains the three requested event types.
+- Migration: 0022 applied to local D1 only. Export plus explicit owner approval required before production application. Do not deploy or merge prematurely.
+- Validation: full reliability, lint, TypeScript and final build passed. New native-SQLite tests check role restrictions, revocation between preflight/write, table/player conflicts, dependencies, reset-final estimate, called locks, FIFO reservations, deadline race rollback and next offer after expiry. Removing the scorekeeper forfeit restriction failed its mutation check; restored suite passes. Local built-Worker UI fixture at 375px has no horizontal overflow and schedule inputs fit. Authentication still enforced; fixture removed. Physical-device and signed-in browser flows remain unchecked. Temporary fixture absent from final build; claim-window field uses existing logistics input layout. Final check results recorded in PR.
+- Release notes: RELEASE_TOURNAMENT_OPERATIONS_2026-10-07.md. No doubles. Production CAPTCHA approval, sender choice/secure provider and VAPID configuration remain pending. Notification scan throughput limit remains documented in its release notes.
+- Preexisting untracked CLAUDE_HANDOFF.md untouched. All PRs remain draft; production unchanged.
+
+---
+
 # Codex handoff — 2026-10-07 — recurring sessions
 
 - Branch: `codex/sessions`, stacked on notifications PR #3. Owns session UI/service, weekly generation, migration 0021 and session checks. No leaderboard, demo source, rating display, sharing card or global CSS edits.

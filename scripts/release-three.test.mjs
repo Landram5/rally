@@ -3,7 +3,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {readFileSync,writeFileSync,mkdirSync,readdirSync} from 'node:fs';
 import ts from 'typescript';
 mkdirSync('.test-runtime',{recursive:true});
-for(const name of ['club-seasons','notification-preferences','summary-cache','feedback-progress','record-ownership','dashboards','clubhouse-summary','rally','activity-pages','match-filters','logistics','notifications','profile-photo','account-write-guard','account-deletion','announcements','club-sessions','weekly-sessions','rally-service','tournament-service','tournament-engine','match-rules','rally-errors','seeding','public-rally'])writeFileSync(`.test-runtime/${name}.mjs`,ts.transpileModule(readFileSync(`lib/${name}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText.replace(/from ['"]\.\/([^'"]+)['"]/g,"from './$1.mjs'"));
+for(const name of ['club-seasons','notification-preferences','summary-cache','feedback-progress','record-ownership','dashboards','clubhouse-summary','rally','activity-pages','match-filters','logistics','notifications','profile-photo','account-write-guard','account-deletion','announcements','club-sessions','weekly-sessions','rally-service','tournament-service','tournament-scheduling','tournament-engine','match-rules','rally-errors','seeding','public-rally'])writeFileSync(`.test-runtime/${name}.mjs`,ts.transpileModule(readFileSync(`lib/${name}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText.replace(/from ['"]\.\/([^'"]+)['"]/g,"from './$1.mjs'"));
 const {makeService}=await import('../.test-runtime/rally-service.mjs');
 const {matchRecord}=await import('../.test-runtime/record-ownership.mjs');
 const {getPublicPlayer}=await import('../.test-runtime/public-rally.mjs');
@@ -37,16 +37,16 @@ function fixture(){
  await assert.rejects(go('third','open','enter_tournament',{playerId:'third'}),e=>e.status===409);
  await assert.rejects(go('visitor','open','remove_entry',{playerId:'owner'}),e=>e.status===403);
  await go('visitor','open','remove_entry',{playerId:'visitor'});
- assert.ok(one("SELECT 1 FROM entries WHERE player_id='second'"),'oldest queued player promoted');
- await go('owner','open','set_capacity',{capacity:3});assert.ok(one("SELECT 1 FROM entries WHERE player_id='third'"));
+ assert.ok(one("SELECT claim_expires_at FROM tournament_waitlist WHERE player_id='second'").claim_expires_at,'oldest queued player offered a place');
+ await go('second','open','claim_waitlist_place',{playerId:'second'});
+ await go('owner','open','set_capacity',{capacity:3});await go('third','open','claim_waitlist_place',{playerId:'third'});assert.ok(one("SELECT 1 FROM entries WHERE player_id='third'"));
  await go('owner','open','set_event_logistics',{checkInOpen:true});await go('second','open','set_check_in',{playerId:'second',checkedIn:true});
  assert.ok(one("SELECT checked_in_at FROM entries WHERE player_id='second'").checked_in_at,'nonmember entrant may check in');
  await go('visitor','open','join_waitlist',{playerId:'visitor'});
  f.run("UPDATE tournaments SET registration_closes_at='2000-01-01T00:00:00Z' WHERE id='open'");
  await go('third','open','remove_entry',{playerId:'third'});assert.equal(one("SELECT count(*) n FROM entries WHERE player_id='visitor'").n,0,'deadline prevents promotion');
  f.run("UPDATE tournaments SET registration_closes_at=NULL WHERE id='open'");
- await assert.rejects(go('owner','open','add_tournament_guest',{name:'Queue jumper'}),e=>e.status===409);
- await go('owner','open','set_capacity',{capacity:3});assert.ok(one("SELECT 1 FROM entries WHERE player_id='visitor'"));
+ await go('visitor','open','enter_tournament',{playerId:'visitor'});assert.ok(one("SELECT 1 FROM entries WHERE player_id='visitor'"));
  await act('owner',{action:'mark_notifications_read'});
  sql.close();
 }
@@ -108,7 +108,7 @@ console.log('Passed: private dispute access, retry identity, organizer-only corr
 console.log('Passed: concurrent collision and revoked-role rollback; tournament reset reasons, original/replacement history and disputes resolved through draw controls.');
 
 {
- const {db,sql,event,go,one}=fixture();await event('deletion-queue');await go('owner','deletion-queue','set_registration_policy',{allowVisitors:true});for(const playerId of ['owner','visitor'])await go(playerId,'deletion-queue','enter_tournament',{playerId});await go('second','deletion-queue','join_waitlist',{playerId:'second'});await beginDeletion(db,'visitor-auth','keep_results');assert.ok(one("SELECT 1 FROM entries WHERE tournament_id='deletion-queue' AND player_id='second'"));assert.equal(one('PRAGMA foreign_key_check'),undefined);sql.close();
+ const {db,sql,event,go,one}=fixture();await event('deletion-queue');await go('owner','deletion-queue','set_registration_policy',{allowVisitors:true});for(const playerId of ['owner','visitor'])await go(playerId,'deletion-queue','enter_tournament',{playerId});await go('second','deletion-queue','join_waitlist',{playerId:'second'});await beginDeletion(db,'visitor-auth','keep_results');assert.ok(one("SELECT claim_expires_at FROM tournament_waitlist WHERE tournament_id='deletion-queue' AND player_id='second'").claim_expires_at);await go('second','deletion-queue','claim_waitlist_place',{playerId:'second'});assert.ok(one("SELECT 1 FROM entries WHERE tournament_id='deletion-queue' AND player_id='second'"));assert.equal(one('PRAGMA foreign_key_check'),undefined);sql.close();
 }
 console.log('Passed: deleting an account frees its registration place for the oldest eligible waiting player.');
 
