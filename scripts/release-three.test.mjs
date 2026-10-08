@@ -69,7 +69,37 @@ console.log('Passed: visiting-player opt-in, scoped visibility, no implicit memb
  run("INSERT INTO matches(id,club_id,a,b,games,best_of,played_on,status,submitted_by,created_at) VALUES('collision','club','guest','member','[[11,5],[11,7]]',3,'2026-10-01','confirmed','owner','2026-10-01')");
  await assert.rejects(act('owner',{action:'review_guest_claim',id:'claim',status:'approved',confirmation:'MERGE'}),e=>e.status===409);assert.equal(one("SELECT status FROM guest_claims").status,'pending');assert.equal(one("SELECT deleted_at FROM profiles WHERE id='guest'").deleted_at,null);sql.close();
 }
-console.log('Passed: organizer-approved guest merging, draw/results/memberships and old-link preservation, collision rejection and deletion of merged accounts without foreign-key failures.');
+{
+ // Repair merge, part 1: club matches between the two profiles are voided instead of blocking the merge.
+ const {db,sql,act,one,run}=fixture();await act('member',{action:'request_guest_claim',id:'claim',guestId:'guest',clubId:'club',note:'Guest record'});
+ run("INSERT INTO matches(id,club_id,a,b,games,best_of,played_on,status,submitted_by,created_at) VALUES('collision','club','guest','member','[[11,5],[11,7]]',3,'2026-10-01','confirmed','owner','2026-10-01'),('third','club','guest','other','[[11,9],[11,7]]',3,'2026-10-02','confirmed','owner','2026-10-02')");
+ const approve=(extra={})=>act('owner',{action:'review_guest_claim',id:'claim',status:'approved',confirmation:'MERGE',...extra});
+ await assert.rejects(approve(),e=>e.status===409,'without the repair confirmation the overlap still blocks the merge');
+ await assert.rejects(act('other',{action:'preview_guest_merge',id:'claim'}),e=>e.status===403,'only organizers can preview');
+ const preview=await act('owner',{action:'preview_guest_merge',id:'claim'});assert.deepEqual(preview.preview.voidedMatches.map(m=>m.id),['collision']);assert.deepEqual(preview.preview.sharedEvents,[]);
+ assert.equal(one("SELECT status FROM matches WHERE id='collision'").status,'confirmed','previewing changes nothing');
+ await approve({repair:true});
+ assert.equal(one("SELECT status FROM matches WHERE id='collision'").status,'voided','the match between the two profiles is voided');assert.equal(one("SELECT count(*) n FROM audit WHERE match_id='collision' AND action='voided'").n,1,'the void is audited');
+ assert.equal(one("SELECT a FROM matches WHERE id='third'").a,'member','other guest matches follow the account');assert.equal(one("SELECT a||b ab FROM matches WHERE id='collision'").ab,'guestmember','the voided match keeps its original players');
+ assert.equal(one("SELECT merged_into FROM profiles WHERE id='guest'").merged_into,'member');assert.equal(one('PRAGMA foreign_key_check'),undefined);sql.close();
+}
+{
+ // Repair merge, part 2: in a tournament both profiles entered, the old identity stays as a placeholder and the draw is untouched.
+ const {db,sql,act,one,go,event,run}=fixture();run("INSERT INTO memberships(id,club_id,player_id,role,status,created_at) VALUES('other','club','other','member','active','2026-10-01')");
+ await event('shared',4);for(const p of ['guest','member','other'])await go('owner','shared','enter_tournament',{playerId:p});
+ await go('owner','shared','start_tournament',{seeds:['guest','member','other'],bestOf:3});
+ const before=one("SELECT state_json FROM tournaments WHERE id='shared'").state_json;
+ await act('member',{action:'request_guest_claim',id:'claim',guestId:'guest',clubId:'club',note:'Guest record'});
+ const approve=(extra={})=>act('owner',{action:'review_guest_claim',id:'claim',status:'approved',confirmation:'MERGE',...extra});
+ await assert.rejects(approve(),e=>e.status===409);
+ const preview=await act('owner',{action:'preview_guest_merge',id:'claim'});assert.deepEqual(preview.preview.sharedEvents.map(e=>e.id),['shared']);
+ await approve({repair:true});
+ assert.equal(one("SELECT state_json FROM tournaments WHERE id='shared'").state_json,before,'the shared draw is not rewritten');
+ assert.equal(one("SELECT count(*) n FROM entries WHERE tournament_id='shared' AND player_id='guest'").n,1,'the old identity keeps its entry as a placeholder');assert.equal(one("SELECT count(*) n FROM entries WHERE tournament_id='shared' AND player_id='member'").n,1,'the account keeps its own entry');
+ assert.equal(one("SELECT merged_into FROM profiles WHERE id='guest'").merged_into,'member');assert.equal(one("SELECT name FROM profiles WHERE id='guest'").name,'Deleted player');assert.equal(one('PRAGMA foreign_key_check'),undefined);
+ assert.equal((await getPublicPlayer(db,'guest')).id,'member','old guest links still follow the account');sql.close();
+}
+console.log('Passed: organizer-approved guest merging, repair of duplicate identities (voided club matches, placeholder in shared tournaments), draw/results/memberships and old-link preservation, collision rejection and deletion of merged accounts without foreign-key failures.');
 {
  const {db,sql,act,one}=fixture();await act('member',{action:'record_match',id:'regular',clubId:'club',a:'member',b:'owner',games:[[11,5],[11,6]],bestOf:3,date:'2026-10-01'});
  const request={action:'request_match_review',id:'review',matchId:'regular',note:'Scores were reversed.'};await act('member',request);await act('member',request);

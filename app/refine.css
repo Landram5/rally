@@ -1039,3 +1039,9 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; -webkit-tap-highl
 }
 /* Photo cropper: rotate and reset controls sit on one row. */
 .crop-tools { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 8px; }
+
+/* Guest merge repair summary inside the confirmation dialog. */
+.merge-repair { margin-top: 12px; padding: 14px 16px; border-radius: var(--radius-md); background: var(--warning-subtle); border: 1px solid var(--warning-border); font-size: 0.875rem; }
+.merge-repair strong { display: block; margin-bottom: 4px; }
+.merge-repair p { margin: 6px 0; color: var(--text-muted); }
+.merge-repair ul { margin: 6px 0; padding-left: 1.1rem; display: grid; gap: 6px; }
