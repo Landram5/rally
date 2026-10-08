@@ -932,3 +932,32 @@ input[type="checkbox"]:disabled, input[type="radio"]:disabled { opacity: 0.5; cu
 .player-bio.is-clamped { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .player-bio a { color: var(--on-brand); text-decoration: underline; text-underline-offset: 3px; }
 .player-bio-toggle { margin-top: 4px; padding: 0; min-height: 0; background: none; border: 0; color: var(--on-brand); font-size: 0.8rem; font-weight: 600; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+/* ───────────────────────── 21. ANNOUNCEMENTS ───────────────────────── */
+.announcements-board { max-width: 760px; display: flex; flex-direction: column; gap: 20px; }
+.announcements-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.announcements-head h2 { margin: 0; font-size: 1.15rem; }
+.announcements-head p { margin: 2px 0 0; font-size: 0.85rem; color: var(--text-muted); }
+.announcements-head [data-size="icon"] { flex: none; }
+
+.announcement-form { background: var(--bg-surface); border-radius: var(--radius-xl); padding: 24px 28px; display: flex; flex-direction: column; gap: 4px; }
+.announcement-form-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 6px; }
+.announcement-form-head h3 { margin: 0; font-size: 1rem; }
+.announcement-audience-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: var(--radius-pill); background: var(--bg-muted); color: var(--text-muted); font-size: 0.78rem; font-weight: 550; }
+.announcement-form label { margin: 14px 0 6px; font-size: 0.85rem; font-weight: 600; }
+.announcement-form input, .announcement-form textarea { width: 100%; }
+.announcement-form textarea { min-height: 128px; padding: 12px 14px; line-height: 1.5; }
+.announcement-form-foot { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
+.announcement-form-foot .club-buttons { display: flex; gap: 8px; margin: 0; }
+.announcement-hint { margin: 0; font-size: 0.8rem; color: var(--text-muted); }
+.announcement-count { margin-left: 6px; font-variant-numeric: tabular-nums; color: var(--text-subtle); }
+
+.announcement-feed { display: flex; flex-direction: column; gap: 12px; }
+.announcement-feed-title { margin: 8px 0 0; font-size: 0.8rem; font-weight: 600; letter-spacing: 0.02em; color: var(--text-muted); }
+.announcement-entry { background: var(--bg-surface); border-radius: var(--radius-lg); padding: 20px 24px; margin: 0; border: 0; }
+.announcement-entry-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.announcement-entry-head small { color: var(--text-subtle); font-size: 0.78rem; }
+.announcement-entry h3 { margin: 0 0 6px; font-size: 1rem; }
+.announcement-entry p { margin: 0; white-space: pre-line; line-height: 1.55; color: var(--text); font-size: 0.9rem; overflow-wrap: anywhere; }
+.announcement-empty { margin: 0; padding: 28px 20px; text-align: center; color: var(--text-muted); border: 1px dashed var(--border-strong); border-radius: var(--radius-lg); }
+.announcements-board { margin: 0; }
+.announcements-board .announcement-form { max-width: none; width: 100%; margin: 0; }
