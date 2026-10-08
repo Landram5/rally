@@ -1,3 +1,15 @@
+# Codex rollout handoff — 2026-10-07 — awaiting Turnstile setup
+
+- Adam explicitly requested merging and pushing live. Production D1 exported to ignored `.local-backups/rally-before-operations-2026-10-07.sql` (313,966 bytes). Migrations 0020, 0021 and 0022 applied remotely; migration list reports none pending. Live database-backed Clubs page still loads in the browser. Non-browser HTTP probes receive Cloudflare 403, so do not confuse those with a broken app.
+- Full reliability, lint, TypeScript and build rerun successfully before rollout. No source changes since tested tournament commit 616b404.
+- No PR merged and no application deployment performed. PR #2 marked ready; #3–#5 remain draft. Main remains 056583f; current production Worker version was b5336205-e770-46ca-a578-6f3e87215c4e before attempted configuration.
+- Blocking configuration: Worker secret names list contains only RALLY_ADMIN_EMAILS and three Supabase secrets. No TURNSTILE_SITE_KEY / TURNSTILE_SECRET_KEY: deploying new forms now would block email authentication and feedback. User asked to configure securely; do not put secrets in chat. Cloudflare dashboard tab is at login. Supabase CAPTCHA activation must immediately follow new-form rollout, never precede it.
+- Email provider and NOTIFICATION_FROM/RESEND_API_KEY are absent. VAPID keys also absent. Attempted generating push keys directly into Wrangler secret bulk (no file/key output), but Cloudflare rejected the entire upload with 10214 because its latest preview version is not the deployed version. No keys were saved. Do not deploy latest preview merely to get around this. Versioned secret setup must be coordinated with the approved main build.
+- Next: user completes Cloudflare login/Turnstile setup; verify required secret names, coordinate Supabase activation; merge #2 to main, retarget/merge #3, #4, #5 to main sequentially with expected heads; observe Workers Builds and verify live endpoints. Never pnpm deploy or local Wrangler deploy. Email/push must not be reported active until provider keys and actual delivery are checked.
+- Existing CLAUDE_HANDOFF.md untouched. No doubles or Claude UI ownership changes.
+
+---
+
 # Codex handoff — 2026-10-07 — tournament operations
 
 - Branch: `codex/tournament-operations`, stacked on sessions PR #4. Owns tournament management/registration/service/scheduling, migration 0022 and checks. No leaderboard, demo source, rating display, sharing cards or global CSS edits.
