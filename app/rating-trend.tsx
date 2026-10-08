@@ -1,9 +1,10 @@
 'use client';
 import {useState} from 'react';
 import type {RatingChange} from '@/lib/seeding';
+import {UPSET_GAP,isUpset} from '@/lib/player-highlights';
 import {Button} from '@/components/ui/button';
 const signed=(value:number)=>`${value>0?'+':''}${value.toFixed(1)}`;
-const UPSET_GAP=100,isUpset=(c:RatingChange)=>c.won&&c.opponentRating-c.before>=UPSET_GAP;
+
 export default function RatingTrend({changes,rating,asOf,name}:{changes:RatingChange[];rating:number;asOf:string;name:(id:string)=>string}){
  const recent=changes.slice(0,20).reverse();
  const samples=[...(recent.length?[{id:'baseline',date:recent[0].date,value:recent[0].before,change:null,label:'Before first plotted match'},...recent.map(c=>({id:c.matchId,date:c.date,value:c.after,change:c,label:`${c.date} · ${c.won?'Win':'Loss'} vs ${name(c.opponentId)}`}))]:[]),{id:'today',date:asOf,value:rating,change:null,label:'Today’s rating'}];
