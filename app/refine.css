@@ -1025,3 +1025,12 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; -webkit-tap-highl
   .match-score small { margin: 0; text-align: right; flex: 1 1 0; min-width: 8ch; }
   .match-meta { grid-column: auto; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; align-items: baseline; text-align: left; margin: 0; }
 }
+/* Tab icon with an unread count bubble (keeps the label short so six tabs fit on a phone). */
+.nav-icon { position: relative; display: inline-flex; }
+.nav-badge {
+  position: absolute; top: -6px; right: -9px; min-width: 16px; height: 16px; padding: 0 4px; box-sizing: border-box;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: var(--radius-pill); background: var(--danger-solid); color: var(--on-brand);
+  font-size: 0.65rem; font-weight: 700; line-height: 1; letter-spacing: 0; font-variant-numeric: tabular-nums;
+  box-shadow: 0 0 0 2px var(--bg-surface);
+}
