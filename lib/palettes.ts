@@ -5,6 +5,10 @@ export const PALETTES=[
   {id:'ink',label:'Ink',colors:['#14181d','#f2f5f7']},
   {id:'ocean',label:'Ocean',colors:['#0d2a47','#7cd6e6']},
   {id:'plum',label:'Plum',colors:['#2e1a33','#f1c27d']},
+  {id:'ember',label:'Ember',colors:['#42261a','#ffb37a']},
+  {id:'teal',label:'Teal',colors:['#184341','#ffcf70']},
+  {id:'crimson',label:'Crimson',colors:['#431820','#f6e3c3']},
+  {id:'indigo',label:'Indigo',colors:['#1b1c41','#d4c2ff']},
 ] as const;
 export type PaletteId=(typeof PALETTES)[number]['id'];
 export const PALETTE_STORAGE_KEY='rally-palette';
