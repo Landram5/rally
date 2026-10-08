@@ -896,3 +896,24 @@ input[type="checkbox"]:disabled, input[type="radio"]:disabled { opacity: 0.5; cu
 .feedback-page form button[type="submit"], .feedback-page form .primary-action, .feedback-page form > button:last-of-type { align-self: flex-start; }
 .feedback-page section { border-top: 0; padding: 28px 0 0; }
 .feedback-page .feedback-card { background: var(--bg-surface); border: 0; border-radius: var(--radius-lg); padding: 20px 24px; margin: 12px 0; }
+/* Search box: a single bordered field with the icon inside it (the generic input rule was boxing the inner input too). */
+.searchbox { border: 1px solid var(--border-strong); border-radius: var(--radius-md); padding-left: 14px; min-height: var(--control-height); transition: border-color var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out); }
+.searchbox:hover { border-color: var(--text-subtle); }
+.searchbox:focus-within { border-color: var(--ring); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 28%, transparent); }
+.searchbox input:not([type="checkbox"]):not([type="radio"]):not([type="range"]) { flex: 1; min-width: 0; min-height: 40px; height: 40px; border: 0; border-radius: 0; background: transparent; box-shadow: none; padding: 0 12px 0 0; }
+.searchbox input:focus-visible { box-shadow: none; border: 0; outline: none; }
+.searchbox svg { flex: none; color: var(--text-muted); }
+/* Search box and its neighbours share one height; the inner input never draws its own box. */
+.searchbox { height: var(--control-height); box-sizing: border-box; }
+.searchbox input, .searchbox [data-slot="input"] { border: 0 !important; border-radius: 0 !important; box-shadow: none !important; background: transparent !important; outline: none; height: 100% !important; min-height: 0 !important; padding: 0 12px 0 0 !important; }
+.toolbar .picker, .toolbar [data-slot="select-trigger"], .toolbar .clean-select { height: var(--control-height); min-height: var(--control-height); box-sizing: border-box; }
+/* Inbox: icon actions, and content inset to match the panel heading. */
+.notification-inbox .panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 12px; }
+.notification-inbox .panel-heading p { margin: 0; color: var(--text-muted); font-size: 0.85rem; }
+.notification-inbox .panel-heading .club-buttons { display: flex; gap: 8px; }
+.notification-inbox .panel-heading [data-size="icon"] { width: var(--control-height); padding: 0; }
+.notification-inbox .inbox-filters { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 28px 16px; }
+.notification-inbox .empty { margin: 4px 28px 24px; padding: 28px 20px; }
+.notification-inbox .inbox-note { margin: 0; padding: 16px 28px 24px; border-top: 1px solid var(--border-subtle); }
+.notification-inbox .inbox-more { margin: 0 28px 16px; }
+.notification-inbox section[aria-label] { padding: 0 28px; }
