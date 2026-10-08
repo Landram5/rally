@@ -1,4 +1,5 @@
 import PublicHeader from "../public-header";
+import {SUPPORT_EMAIL} from "@/lib/support";
 import Link from "next/link";
 
 export const metadata = {
@@ -20,7 +21,7 @@ export default function PrivacyPage() {
       <section><h2>Cookies and security</h2><p>Rally uses essential cookies to keep you signed in and protect account sessions. We use reasonable technical safeguards, but no online service can guarantee absolute security.</p></section>
       <section><h2>Retention and your choices</h2><p>You can delete your account from Account settings. Club owners must first transfer ownership to another eligible active member. Deletion removes your sign-in account, username, bio, photo, Rally ID, submitted feedback, memberships, and public player profile. You may keep linked past results under “Deleted player,” or remove your original player record and personal history links. Club branding, shared match scores and tournament draws remain for other players; the latter option uses separate deleted-player placeholders for each match or tournament. Event context may still identify a past participant. If our sign-in provider is temporarily unavailable, Rally blocks account access and retries deletion automatically, retaining the account identifier needed to complete it. A temporary identifier-only safety record is retained for at least 24 hours and removed after deletion finishes, to prevent requests already in flight from restoring account data. Existing provider backups and operational logs expire under provider retention policies. Contact us for access, correction, or questions about retained records.</p></section>
       <section><h2>Children</h2><p>Rally is not directed to children under 13. If you believe a child has provided personal information without appropriate consent, contact us so we can address it.</p></section>
-      <section><h2>Contact</h2><p>Questions or privacy requests can be sent to <a href="mailto:adamlandrum25@gmail.com">adamlandrum25@gmail.com</a>.</p></section>
+      <section><h2>Contact</h2><p>Questions or privacy requests can be sent to <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.</p></section>
     </main>
     <footer className="public-footer"><Link className="footer-brand" href="/">rally.</Link><Link href="/privacy">Privacy</Link><Link href="/terms">Terms</Link></footer>
   </>;
