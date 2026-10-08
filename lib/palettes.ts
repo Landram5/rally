@@ -1,9 +1,10 @@
+// Colorways. colors are only the preview swatches in the picker (brand, action); the real values live in theme.css.
 // Colorways. Each id other than "forest" matches a [data-palette] block in app/theme.css.
 export const PALETTES=[
-  {id:'forest',label:'Forest'},
-  {id:'ink',label:'Ink'},
-  {id:'ocean',label:'Ocean'},
-  {id:'plum',label:'Plum'},
+  {id:'forest',label:'Forest',colors:['#1c352d','#d9ed64']},
+  {id:'ink',label:'Ink',colors:['#14181d','#f2f5f7']},
+  {id:'ocean',label:'Ocean',colors:['#0d2a47','#7cd6e6']},
+  {id:'plum',label:'Plum',colors:['#2e1a33','#f1c27d']},
 ] as const;
 export type PaletteId=(typeof PALETTES)[number]['id'];
 export const PALETTE_STORAGE_KEY='rally-palette';

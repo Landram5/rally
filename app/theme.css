@@ -140,6 +140,7 @@
   --radius-lg: 12px;
   --radius-xl: 16px;
   --radius-pill: 999px;
+  --radius-avatar: 32%; /* avatars and the photo-crop frame share this shape */
 
   --shadow-xs: 0 1px 2px rgb(var(--shadow-rgb) / 0.05);
   --shadow-sm: 0 1px 2px rgb(var(--shadow-rgb) / 0.06), 0 2px 6px rgb(var(--shadow-rgb) / 0.04);

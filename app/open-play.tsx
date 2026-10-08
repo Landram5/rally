@@ -1,4 +1,5 @@
 'use client';
+import CleanSelect from './clean-select';
 /* eslint-disable react-hooks/set-state-in-effect */
 import {useCallback,useEffect,useRef,useState} from 'react';
 import {Button} from '@/components/ui/button';
@@ -30,7 +31,7 @@ export default function OpenPlay({clubId,me,demo=false,meName='You'}:{clubId:str
  return <section className="open-play" aria-label="Open play"><div className="session-heading"><h2>Open play</h2></div><p>Let club members know you&rsquo;re at the club and up for a game. Only active members see this, and it clears by itself.</p>
   {error&&<p role="alert" className="auth-error">{error}</p>}
   {mine?<div className="open-play-me" role="status"><p><strong>You&rsquo;re listed as looking for a game</strong> until {clock(mine.expiresAt)}{mine.note?` \u00b7 \u201c${mine.note}\u201d`:''}</p><Button variant="outline" disabled={busy} onClick={()=>void act({action:'check_out'})}>I&rsquo;m done</Button></div>
-  :<form className="open-play-form" onSubmit={e=>{e.preventDefault();void act({action:'check_in',note,minutes});}}><label>Note (optional)<input value={note} maxLength={120} placeholder="Anyone, best of 3, working on backhand" onChange={e=>setNote(e.target.value)}/></label><label>For<select value={minutes} onChange={e=>setMinutes(Number(e.target.value))}>{DURATIONS.map(([m,label])=><option key={m} value={m}>{label}</option>)}</select></label><Button type="submit" disabled={busy||!me}>I&rsquo;m here and want a game</Button></form>}
+  :<form className="open-play-form" onSubmit={e=>{e.preventDefault();void act({action:'check_in',note,minutes});}}><label>Note (optional)<input value={note} maxLength={120} placeholder="Anyone, best of 3, working on backhand" onChange={e=>setNote(e.target.value)}/></label><label>For<CleanSelect value={minutes} onChange={e=>setMinutes(Number(e.target.value))}>{DURATIONS.map(([m,label])=><option key={m} value={m}>{label}</option>)}</CleanSelect></label><Button type="submit" disabled={busy||!me}>I&rsquo;m here and want a game</Button></form>}
   {loading?<p role="status">Checking who is here&hellip;</p>:others.length?<ul className="open-play-list" aria-label="Members looking for a game">{others.map(p=><li key={p.id}><Avatar name={p.name} photoUrl={p.photoUrl}/><div><strong>{p.name}</strong>{p.rating!==null&&<small>Rally rating {p.rating}</small>}{p.note&&<span>{p.note}</span>}<small>Here since {clock(p.startedAt)} {'\u00b7'} until {clock(p.expiresAt)}</small></div></li>)}</ul>:<p className="empty">Nobody else is looking for a game right now.</p>}
  </section>;
 }

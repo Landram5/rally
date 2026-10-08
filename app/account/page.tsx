@@ -1,7 +1,9 @@
 'use client';
+import CleanSelect from '@/app/clean-select';
 import NotificationSettings from '@/app/notification-settings';
 import type {NotificationPreferences} from '@/lib/notification-preferences';
 import AppearanceSettings from '@/app/appearance-settings';
+import AccountNav from '@/app/account-nav';
 import {useCallback,useEffect,useState} from 'react';
 import Link from 'next/link';
 import PublicHeader from '../public-header';
@@ -39,17 +41,17 @@ export default function AccountPage(){
   {error&&<div className="auth-error" role="alert"><p>{error}</p>{!settings&&<button onClick={()=>void load()}>Try again</button>}</div>}
   {signedOut&&<p><Link href="/login">Sign in</Link> to manage or delete your account.</p>}
   {settings&&!loading&&!signedOut&&(settings.pending?<section><h2>Deletion is in progress</h2><p>Your Rally access has been removed. We are retrying the final sign-in account deletion automatically.</p><Link href="/account/deleted?pending=1">View deletion information</Link></section>:<>
-   <AccountProfileForm key={settings.profile?.id??'new'} profile={settings.profile} disabled={busy} onSave={async(name,bio,photo)=>{await send({action:'save_profile',name,bio,...(photo!==undefined?{photo}:{})});await load();}}/>
-   <section><h2>Sign-in details</h2><p>{settings.email}</p><Link href="/account/update-password">Change password</Link></section>
+   <AccountNav hideClubs={!settings.clubs.length}/><AccountProfileForm key={settings.profile?.id??'new'} profile={settings.profile} disabled={busy} onSave={async(name,bio,photo)=>{await send({action:'save_profile',name,bio,...(photo!==undefined?{photo}:{})});await load();}}/>
+   <section id="sign-in"><h2>Sign-in details</h2><p>{settings.email}</p><Link href="/account/update-password">Change password</Link></section>
 
-   <NotificationSettings live key={settings.profile?.id} initial={settings.preferences} disabled={busy||!settings.profile} onSave={async preferences=>{await send({action:'save_notification_preferences',...preferences});}}/>   {!!settings.clubs.length&&<details className="account-ownership"><summary>Club ownership ({settings.clubs.length})</summary><div><p>Your clubs and other members’ records will remain. Choose a new owner for each club before deleting your account. You will remain an administrator until you delete your account.</p>
+   <NotificationSettings live key={settings.profile?.id} initial={settings.preferences} disabled={busy||!settings.profile} onSave={async preferences=>{await send({action:'save_notification_preferences',...preferences});}}/>   {!!settings.clubs.length&&<details id="clubs" className="account-ownership"><summary>Club ownership ({settings.clubs.length})</summary><div><p>Your clubs and other members’ records will remain. Choose a new owner for each club before deleting your account. You will remain an administrator until you delete your account.</p>
     {settings.clubs.map(club=><div className="account-club" key={club.id}><h3>{club.name}</h3>{club.successors.length?<>
-     <label htmlFor={`owner-${club.id}`}>New owner</label><select id={`owner-${club.id}`} disabled={busy} value={selection[club.id]??''} onChange={e=>setSelection({...selection,[club.id]:e.target.value})}><option value="">Choose an active member</option>{club.successors.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select>
+     <label htmlFor={`owner-${club.id}`}>New owner</label><CleanSelect id={`owner-${club.id}`} disabled={busy} value={selection[club.id]??''} onChange={e=>setSelection({...selection,[club.id]:e.target.value})}><option value="">Choose an active member</option>{club.successors.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</CleanSelect>
      <button type="button" className="primary-action" disabled={busy||!selection[club.id]} onClick={()=>setTransfer({clubId:club.id,successorId:selection[club.id],name:club.successors.find(p=>p.id===selection[club.id])!.name})}>Transfer ownership</button>
     </>:<p>No eligible new owner is available. Ask another person to create a Rally account and join your club, then approve their membership. They must not already own another club. <button onClick={()=>void load()} disabled={busy}>Refresh members</button></p>}</div>)}
     {transfer&&<div className="account-confirm" role="group" aria-label="Confirm ownership transfer"><p>Make <strong>{transfer.name}</strong> the new owner? They will control the club. You cannot take ownership back yourself.</p><button type="button" onClick={()=>void transferOwner()} disabled={busy}>{busy?'Transferring…':'Confirm transfer'}</button><button type="button" onClick={()=>setTransfer(null)} disabled={busy}>Cancel</button></div>}
    </div></details>}
-   <AppearanceSettings/><section className="account-danger"><h2>Delete account</h2><p>This permanently removes your sign-in account, display name and club memberships. Your public player profile will no longer be available. This cannot be undone.</p>
+   <AppearanceSettings/><section id="delete" className="account-danger"><h2>Delete account</h2><p>This permanently removes your sign-in account, display name and club memberships. Your public player profile will no longer be available. This cannot be undone.</p>
     <form onSubmit={remove}>
      <fieldset disabled={busy}><legend>What should happen to your player history?</legend>
       <label className="account-choice"><input type="radio" name="history" checked={mode==='keep_results'} onChange={()=>setMode('keep_results')}/><span><strong>Keep past results as “Deleted player”</strong><small>Retain the connection between your previous match and tournament results without your name or sign-in details.</small></span></label>
