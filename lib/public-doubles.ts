@@ -32,3 +32,32 @@ export async function getPublicPair(db:D1Database,aId:string,bId:string):Promise
  return {ids:[aId,bId],names:[out.get(aId)!,out.get(bId)!],played:together.length,wins,ratings:{[aId]:Math.round((ratings.get(aId)?.rating??0)*10)/10,[bId]:Math.round((ratings.get(bId)?.rating??0)*10)/10},recent,
   opponents:[...opp.values()].sort((x,y)=>y.played-x.played||y.wins-x.wins).slice(0,6).map(o=>({...o,names:[label(o.ids[0]),label(o.ids[1])] as [string,string]}))};
 }
+export type PublicDoublesBoard={players:{id:string;name:string;rating:number;played:number;wins:number;established:boolean}[];pairs:{ids:[string,string];names:[string,string];played:number;wins:number}[]};
+// The public doubles leaderboard: players and pairs from confirmed results in approved clubs.
+export async function getPublicDoublesBoard(db:D1Database):Promise<PublicDoublesBoard>{
+ const rows=(await db.prepare(PUBLIC_DOUBLES).all<Row>()).results,{ratings}=replayDoubles(rows),ids=[...ratings.keys()],{out,deleted}=await profileNames(db,ids);
+ const players=ids.filter(id=>out.has(id)&&!deleted.has(id)&&ratings.get(id)!.played>0).map(id=>{const r=ratings.get(id)!;return {id,name:out.get(id)!,rating:Math.round(r.rating*10)/10,played:r.played,wins:r.wins,established:r.established};}).sort((a,b)=>b.rating-a.rating||b.played-a.played||a.name.localeCompare(b.name)).slice(0,50);
+ const pairs=new Map<string,{ids:[string,string];played:number;wins:number}>();
+ for(const m of rows){const g=games(m),winA=g.filter(x=>x[0]>x[1]).length*2>g.length;
+  for(const [x,y,won] of [[m.a1,m.a2,winA],[m.b1,m.b2,!winA]] as [string,string,boolean][]){if(!out.has(x)||!out.has(y))continue;const k=[x,y].sort().join('|'),p=pairs.get(k)??{ids:[x,y].sort() as [string,string],played:0,wins:0};p.played++;if(won)p.wins++;pairs.set(k,p);}}
+ return {players,pairs:[...pairs.values()].filter(p=>p.played>=2).sort((a,b)=>b.wins/b.played-a.wins/a.played||b.played-a.played).slice(0,10).map(p=>({...p,names:[out.get(p.ids[0])!,out.get(p.ids[1])!] as [string,string]}))};
+}
+export type PublicDoublesPlayer={rating:number;played:number;wins:number;established:boolean;partners:{id:string;name:string;played:number;wins:number}[]};
+// One player's doubles summary for their public page, or null when they have no confirmed public doubles result.
+export async function getPublicDoublesPlayer(db:D1Database,playerId:string):Promise<PublicDoublesPlayer|null>{
+ if(!validId(playerId))return null;
+ const rows=(await db.prepare(PUBLIC_DOUBLES).all<Row>()).results,{ratings,changes}=replayDoubles(rows),r=ratings.get(playerId);if(!r||!r.played)return null;
+ const stats=new Map<string,{played:number;wins:number}>();for(const c of changes.filter(c=>c.playerId===playerId)){const s=stats.get(c.partnerId)??{played:0,wins:0};s.played++;if(c.won)s.wins++;stats.set(c.partnerId,s);}
+ const {out,deleted}=await profileNames(db,[...stats.keys()]);
+ return {rating:Math.round(r.rating*10)/10,played:r.played,wins:r.wins,established:r.established,partners:[...stats].filter(([id])=>out.has(id)&&!deleted.has(id)).map(([id,s])=>({id,name:out.get(id)!,...s})).sort((a,b)=>b.played-a.played||a.name.localeCompare(b.name)).slice(0,6)};
+}
+export type PublicPairHeadToHead={a:{ids:[string,string];names:[string,string];wins:number};b:{ids:[string,string];names:[string,string];wins:number};matches:{id:string;playedOn:string;score:string;aWon:boolean;clubName:string}[]};
+// Record between two specific pairs, shown from the first pair's side.
+export async function getPublicPairHeadToHead(db:D1Database,a:[string,string],b:[string,string]):Promise<PublicPairHeadToHead|null>{
+ const all=[...a,...b];if(all.some(id=>!validId(id))||new Set(all).size!==4)return null;
+ const rows=(await db.prepare(PUBLIC_DOUBLES).all<Row>()).results,sameSide=(m:Row,p:[string,string])=>[[m.a1,m.a2],[m.b1,m.b2]].findIndex(s=>s.includes(p[0])&&s.includes(p[1]));
+ const meetings=rows.filter(m=>{const x=sameSide(m,a),y=sameSide(m,b);return x>=0&&y>=0&&x!==y;});if(!meetings.length)return null;
+ const {out,deleted}=await profileNames(db,all);if(all.some(id=>!out.has(id)||deleted.has(id)))return null;
+ let aWins=0;const matches=[...meetings].sort((x,y)=>y.played_on.localeCompare(x.played_on)).map(m=>{const g=games(m),onA=sameSide(m,a)===0,sideWins=g.filter(s=>s[0]>s[1]).length,aWon=onA?sideWins*2>g.length:sideWins*2<g.length;if(aWon)aWins++;return {id:m.id,playedOn:m.played_on,score:g.map(s=>onA?`${s[0]}\u2013${s[1]}`:`${s[1]}\u2013${s[0]}`).join(' \u00b7 '),aWon,clubName:m.club_name};});
+ return {a:{ids:a,names:[out.get(a[0])!,out.get(a[1])!],wins:aWins},b:{ids:b,names:[out.get(b[0])!,out.get(b[1])!],wins:meetings.length-aWins},matches:matches.slice(0,15)};
+}

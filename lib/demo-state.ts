@@ -9,11 +9,14 @@ import {scoreError} from './match-rules';
 import {createDraw,recordFixture,resetFixture,withdrawPlayer,outcome,type Draw} from './tournament-engine';
 import {suggestSeeds,tournamentWeight,ratingEstimates} from './seeding';
 import {applyDemoDoubles} from './demo-doubles';
+import {replayDoubles} from './doubles-rating';
 
 // Sample actions stay in memory and never call the production API.
 function finish(draw:Draw){let d=draw;while(d.fixtures.some(f=>f.status==='ready')){const f=d.fixtures.find(f=>f.status==='ready')!;d=recordFixture(d,f.id,Array.from({length:Math.floor(d.bestOf/2)+1},()=>[11,7]));}return d;}
 // The players behind an event's entrants: teams for doubles, entries for singles.
 const entrantPlayers=(data:Data,t:{id:string;team_size?:number})=>t.team_size===2?(data.teams??[]).filter(x=>x.tournament_id===t.id).flatMap(x=>[x.p1,x.p2]):data.entries.filter(e=>e.tournament_id===t.id).map(e=>e.player_id);
+// Doubles events seed teams by the average doubles rating of their players.
+const doublesSeeds=(data:Data,tournamentId:string)=>{const {ratings}=replayDoubles((data.doublesMatches??[]).filter(m=>m.status==='confirmed'));return (data.teams??[]).filter(x=>x.tournament_id===tournamentId).map(x=>{const a=ratings.get(x.p1),b=ratings.get(x.p2);return {id:x.id,rating:((a?.rating??400)+(b?.rating??400))/2,played:Math.min(a?.played??0,b?.played??0),wins:Math.min(a?.wins??0,b?.wins??0)};}).sort((p,q)=>q.rating-p.rating);};
 function derive(data:Data){
  for(const c of data.clubs)c.activeMemberCount=data.memberships.filter(m=>m.club_id===c.id&&m.status==='active').length;
  for(const t of data.tournaments){
@@ -21,7 +24,7 @@ function derive(data:Data){
    for(const f of t.state.fixtures.filter(f=>f.status==='played')){const A=data.teams?.find(x=>x.id===f.a),B=data.teams?.find(x=>x.id===f.b);if(t.team_size===2){if(A&&B)data.doublesMatches.push({id:`${t.id}-${f.id}`,club_id:t.club_id,a1:A.p1,a2:A.p2,b1:B.p1,b2:B.p2,games:f.games,best_of:t.state.bestOf,played_on:t.date,status:'confirmed',submitted_by:'alex',confirmed_by:'alex',tournament_id:t.id,tournament_weight:t.rating_weight,revision:0,created_at:t.date+'T12:00:00Z'});continue;}data.matches.push({id:`${t.id}-${f.id}`,club_id:t.club_id,a:f.a!,b:f.b!,games:f.games,best_of:t.state.bestOf,played_on:t.date,status:'confirmed',submitted_by:'alex',confirmed_by:'alex',canConfirm:false,canVoid:false,tournament_id:t.id,tournament_weight:t.rating_weight});}}
  }
  for(const m of data.matches){m.a_initial_rating=data.players.find(p=>p.id===m.a)?.initial_rating;m.b_initial_rating=data.players.find(p=>p.id===m.b)?.initial_rating;}
- for(const t of data.tournaments)t.seedStats=t.team_size===2?[]:suggestSeeds(data.entries.filter(e=>e.tournament_id===t.id).map(e=>e.player_id),data.matches.filter(m=>m.club_id===t.club_id),undefined,ratingEstimates(data.players));
+ for(const t of data.tournaments)t.seedStats=t.team_size===2?doublesSeeds(data,t.id):suggestSeeds(data.entries.filter(e=>e.tournament_id===t.id).map(e=>e.player_id),data.matches.filter(m=>m.club_id===t.club_id),undefined,ratingEstimates(data.players));
  data.matches.sort((a,b)=>b.played_on.localeCompare(a.played_on));data.notifications=notificationsFor(data,data.notificationReads??[],true);return data;
 }
 export function createDemoData():Data{

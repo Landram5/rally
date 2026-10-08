@@ -27,7 +27,7 @@ assert.throws(()=>go('enter_team',{playerId:'jamie',partnerId:'sam'}),/full/);
 go('join_team_waitlist',{playerId:'jamie',partnerId:'sam'});assert.equal(ev().team_waitlist.length,1);
 go('remove_team',{teamId:'demo-team-1'});assert.equal(d.teams.length,2);assert.equal(ev().team_waitlist.length,0,'the waiting team took the place');
 ev().check_in_open=1;const ids=d.entries.filter(e=>e.tournament_id==='metro-doubles').map(e=>e.player_id);go('set_team_check_in',{teamId:ids[0],checkedIn:true});assert.deepEqual(ev().checkedIn,[ids[0]]);
-go('start_tournament',{seeds:ids,bestOf:3,thirdPlace:false});assert.equal(ev().state.seeds.length,2);
+assert.deepEqual(ev().seedStats.map(s=>s.id).sort(),[...ids].sort(),'seed suggestions cover every team');go('start_tournament',{seeds:ids,bestOf:3,thirdPlace:false});assert.equal(ev().state.seeds.length,2);
 const fixture=ev().state.fixtures.find(f=>f.status==='ready');go('score_fixture',{fixtureId:fixture.id,games:[[11,5],[11,7]]});
 assert.ok(d.doublesMatches.some(m=>m.tournament_id==='metro-doubles'&&m.status==='confirmed'),'the result is a doubles match');
 assert.equal(d.matches.filter(m=>m.tournament_id==='metro-doubles').length,0,'and never a singles match');

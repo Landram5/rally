@@ -1083,22 +1083,34 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; -webkit-tap-highl
 @media (max-width: 600px) { .doubles-entry { grid-template-columns: 1fr; } }
 
 /* ───────────────────────── 26. DOUBLES RATINGS ───────────────────────── */
-.doubles-views { display: flex; gap: 6px; margin: 14px 0 16px; overflow-x: auto; }
-.doubles-views button { border: 0; background: var(--surface-2, transparent); color: var(--text-muted, inherit); padding: 8px 14px; border-radius: 10px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.doubles-views { display: flex; gap: 6px; padding: 4px 28px 16px; overflow-x: auto; }
+.doubles-views button { border: 0; background: var(--surface-muted, transparent); color: var(--text-muted); padding: 8px 14px; border-radius: var(--radius-lg, 10px); font-weight: 600; cursor: pointer; white-space: nowrap; transition: background-color .15s, color .15s; }
+.doubles-views button:hover { color: var(--text-strong); }
 .doubles-views button.active, .doubles-views button[aria-selected="true"] { background: var(--brand-600); color: #fff; }
-.doubles-rank, .doubles-partners { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 4px; }
-.doubles-rank li { display: grid; grid-template-columns: 28px 1fr auto auto; align-items: center; gap: 12px; padding: 10px 4px; border-bottom: 1px solid var(--border, rgba(127,127,127,.2)); }
-.doubles-rank .rank { color: var(--text-muted, inherit); font-variant-numeric: tabular-nums; }
-.doubles-rank small { color: var(--text-muted, inherit); min-width: 70px; text-align: right; }
-.doubles-partners li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 4px; border-bottom: 1px solid var(--border, rgba(127,127,127,.2)); }
-.doubles-profile { margin-top: 16px; }
-.doubles-profile h4, .doubles-standings h4 { margin: 18px 0 6px; font-size: .95rem; }
-.doubles-trend { margin: 12px 0 0; }
+.doubles-standings, .doubles-panel .doubles-profile { padding: 0 28px 24px; }
+.doubles-panel .doubles-profile { margin: 0; border: 0; box-shadow: none; background: none; }
+.doubles-standings .leaderboard-scope { margin: 0 0 12px; padding: 0; }
+.doubles-rank, .doubles-partners { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 0; }
+.doubles-rank li { display: grid; grid-template-columns: 24px minmax(0, 1fr) 52px minmax(76px, auto); align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border-subtle); }
+.doubles-rank .rank { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.doubles-rank .elo-cell { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+.doubles-rank small { color: var(--text-muted); text-align: right; font-variant-numeric: tabular-nums; }
+.doubles-partners li { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border-subtle); font-variant-numeric: tabular-nums; }
+.doubles-profile h4, .doubles-standings h4 { margin: 22px 0 4px; font-size: .95rem; }
+.doubles-trend { margin: 14px 0 0; }
 .doubles-trend svg { width: 100%; height: auto; overflow: visible; }
 .doubles-trend svg text { font-size: 10px; fill: currentColor; opacity: .6; }
-.doubles-trend figcaption { font-size: .85rem; margin-top: 6px; color: var(--text-muted, inherit); }
-.doubles-standings .leaderboard-scope { margin-bottom: 12px; }
-
+.doubles-trend svg circle { cursor: pointer; }
+.doubles-trend figcaption { font-size: .85rem; margin-top: 8px; color: var(--text-muted); }
 .doubles-games.is-hidden { display: none; }
 .doubles-live { display: grid; gap: 8px; }
-.doubles-link { font-size: .85rem; color: var(--text-link, var(--brand-600)); }
+.doubles-link { grid-column: 1 / -1; font-size: .85rem; color: var(--text-link, var(--brand-600)); }
+@media (max-width: 600px) { .doubles-views, .doubles-standings, .doubles-panel .doubles-profile { padding-inline: 16px; } }.doubles-trend { max-width: 640px; }
+
+.public-doubles { margin-top: 16px; padding: 20px 28px 24px; }
+.public-doubles-rank li { grid-template-columns: 24px minmax(0, 1fr) 52px minmax(76px, auto); }
+.public-doubles-rank a { color: inherit; text-decoration: none; }
+
+.panel > .doubles-rank, .panel > .doubles-partners { padding: 0 28px 20px; }
+.panel > .doubles-rank li:last-child, .panel > .doubles-partners li:last-child { border-bottom: 0; }
+@media (max-width: 600px) { .panel > .doubles-rank, .panel > .doubles-partners { padding-inline: 16px; } }

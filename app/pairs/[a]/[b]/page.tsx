@@ -31,7 +31,7 @@ export default async function PublicPairPage({params}:Props){
   <section className="panel"><div className="profile-section-heading"><h2>Recent matches</h2></div>
    <ul className="doubles-list">{p.recent.map(m=><li key={m.id} className={`doubles-row ${m.won?'status-confirmed':''}`}><div className="doubles-sides"><span className={m.won?'doubles-winner':''}>{m.won?'Won':'Lost'}</span><span className="versus">vs</span><span><a href={`/pairs/${m.opponentIds[0]}/${m.opponentIds[1]}`}>{m.opponents.join(' & ')}</a></span></div><div className="doubles-score"><strong>{m.score}</strong></div><div className="doubles-meta"><span>{dateLabel(m.playedOn)} {'·'} {m.clubName}</span> <a href={`/doubles/${m.id}`}>Result</a></div></li>)}</ul>
   </section>
-  {p.opponents.length>0&&<section className="panel"><div className="profile-section-heading"><h2>Against other pairs</h2></div><ul className="doubles-partners">{p.opponents.map(o=><li key={o.ids.join('|')}><span><a href={`/pairs/${o.ids[0]}/${o.ids[1]}`}>{o.names.join(' & ')}</a></span><span>{o.wins}{'–'}{o.played-o.wins}</span></li>)}</ul></section>}
+  {p.opponents.length>0&&<section className="panel"><div className="profile-section-heading"><h2>Against other pairs</h2></div><ul className="doubles-partners">{p.opponents.map(o=><li key={o.ids.join('|')}><span><a href={`/pairs/${o.ids[0]}/${o.ids[1]}`}>{o.names.join(' & ')}</a> <a className="doubles-link" href={`/pairs/${p.ids[0]}/${p.ids[1]}/vs/${o.ids[0]}/${o.ids[1]}`}>Head-to-head</a></span><span>{o.wins}{'–'}{o.played-o.wins}</span></li>)}</ul></section>}
   <p className="public-note">Confirmed results from approved clubs. Doubles ratings are separate from singles and from USATT ratings. <a href="/ratings">How ratings work</a></p>
  </div></main></>;
 }

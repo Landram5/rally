@@ -6,7 +6,7 @@ mkdirSync('.test-runtime',{recursive:true});
 for(const name of ['doubles','doubles-rating','doubles-view','doubles-stats','public-doubles','seeding','rally-errors','match-rules','account-deletion','record-ownership','account-write-guard','club-seasons','notification-preferences','summary-cache','feedback-progress','dashboards','clubhouse-summary','rally','activity-pages','match-changes','match-filters','logistics','notifications','profile-photo','rally-service','palettes','announcements','club-sessions','ui-preferences','open-play','public-rally','tournament-engine','tournament-service','live-score','live-draft','head-to-head','match-stakes','player-highlights','public-leaderboard']){let code;try{code=ts.transpileModule(readFileSync(`lib/${name}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText.replace(/from ['"]\.\/([^'"]+)['"]/g,"from './$1.mjs'");}catch{continue}writeFileSync(`.test-runtime/${name}.mjs`,code);}
 const {readDoublesStandings,readDoublesProfile}=await import('../.test-runtime/doubles-stats.mjs');
 const {readDoublesRatings}=await import('../.test-runtime/doubles.mjs');
-const {getPublicDoublesMatch,getPublicPair}=await import('../.test-runtime/public-doubles.mjs');
+const {getPublicDoublesMatch,getPublicPair,getPublicDoublesBoard,getPublicDoublesPlayer,getPublicPairHeadToHead}=await import('../.test-runtime/public-doubles.mjs');
 const sql=new DatabaseSync(':memory:');sql.exec('PRAGMA foreign_keys=ON');for(const f of readdirSync('drizzle').filter(f=>f.endsWith('.sql')).sort())sql.exec(readFileSync('drizzle/'+f,'utf8'));
 const run=(q,...a)=>sql.prepare(q).run(...a);
 function stmt(q,args=[]){return {bind(...a){return stmt(q,a)},async first(){return sql.prepare(q).get(...args)??null},async all(){return {results:sql.prepare(q).all(...args)}},async run(){return {success:true}}}}
@@ -37,7 +37,11 @@ add('m1','2026-09-01',[[11,5],[11,7]]);add('m2','2026-09-10',[[11,5],[7,11],[11,
  assert.deepEqual(m.sides.map(s=>s.names.join(' & ')),['P1 & P2','P3 & P4']);assert.ok(m.changes.p1>0&&m.changes.p3<0&&m.changes.p1===m.changes.p2,'both partners share the change');
  assert.equal(await getPublicDoublesMatch(db,'nope'),null);assert.equal(await getPublicDoublesMatch(db,'bad id!'),null);
  const pair=await getPublicPair(db,'p2','p1');assert.equal(pair.played,3);assert.equal(pair.wins,2);assert.equal(pair.recent.length,3);assert.deepEqual(pair.opponents.map(o=>o.ids.join()),['p3,p4']);
- assert.equal(await getPublicPair(db,'p1','p3'),null,'players who never partnered have no pair page');assert.equal(await getPublicPair(db,'p1','p1'),null);
+ assert.equal(await getPublicPair(db,'p1','p3'),null,'players who never partnered have no pair page');
+ const board=await getPublicDoublesBoard(db);assert.equal(board.players.length,4);assert.ok(board.pairs.some(p=>p.ids.join()==='p1,p2'&&p.wins===2),'the public board lists pairs with two or more matches');
+ const single=await getPublicDoublesPlayer(db,'p1');assert.equal(single.played,3);assert.equal(single.partners[0].id,'p2');assert.equal(await getPublicDoublesPlayer(db,'owner'),null,'players without doubles results have no section');
+ const hh=await getPublicPairHeadToHead(db,['p1','p2'],['p3','p4']);assert.deepEqual([hh.a.wins,hh.b.wins,hh.matches.length],[2,1,3]);assert.deepEqual((await getPublicPairHeadToHead(db,['p3','p4'],['p1','p2'])).a.wins,1,'the record flips with the viewpoint');
+ assert.equal(await getPublicPairHeadToHead(db,['p1','p2'],['p1','p3']),null,'overlapping pairs have no head-to-head');assert.equal(await getPublicPairHeadToHead(db,['p1','p2'],['p3','owner']),null);assert.equal(await getPublicPair(db,'p1','p1'),null);
  run("UPDATE clubs SET approval_status='pending' WHERE id='club'");assert.equal(await getPublicDoublesMatch(db,'m1'),null,'unapproved clubs are never public');assert.equal(await getPublicPair(db,'p1','p2'),null);
  run("UPDATE clubs SET approval_status='approved' WHERE id='club'");
  run("UPDATE profiles SET deleted_at='2026-10-08',auth_id=NULL,name='Deleted player' WHERE id='p4'");assert.equal(await getPublicDoublesMatch(db,'m1'),null,'a deleted player removes the public result');

@@ -18,7 +18,7 @@ export default function SamplePublic({kind,id,id2=''}:{kind:'player'|'tournament
  // Browser session data becomes available after server-rendered sample content hydrates.
  // eslint-disable-next-line react-hooks/set-state-in-effect
  useEffect(()=>{try{const saved=sessionStorage.getItem('rally-demo-preview');if(saved)setData(JSON.parse(saved));}catch{/* Use the seeded sample if storage is unavailable. */}},[]);
- const name=(id:string|null)=>data.players.find(p=>p.id===id)?.name??'Awaiting player';
+ const name=(id:string|null)=>data.players.find(p=>p.id===id)?.name??data.teams?.find(t=>t.id===id)?.name??'Awaiting player';
  const player=data.players.find(p=>p.id===id),event=data.tournaments.find(t=>t.id===id);
  const matches=data.matches.filter(m=>m.status==='confirmed'&&(m.a===id||m.b===id));
  if(kind==='venue'&&event)return <VenueDisplay exitHref={`/demo/tournaments/${event.id}`} t={{id:event.id,name:event.name,date:event.date,format:event.format,capacity:event.capacity,status:event.status,bestOf:event.best_of??3,revision:event.revision??0,club:{id:event.club_id,name:data.clubs.find(c=>c.id===event.club_id)?.name??'Club',location:data.clubs.find(c=>c.id===event.club_id)?.location??''},entrants:data.entries.filter(e=>e.tournament_id===event.id).map(e=>({id:e.player_id,name:name(e.player_id),isGuest:!!data.players.find(p=>p.id===e.player_id)?.is_guest})),state:event.state??null,fixturePlans:event.fixturePlans}}/>;

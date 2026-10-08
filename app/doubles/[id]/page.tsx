@@ -30,8 +30,8 @@ export default async function PublicDoublesMatchPage({params}:Props){
    <div className="public-stat-grid"><article><strong>{aGames}{'–'}{bGames}</strong><span>Games</span><small>{m.games.map(g=>`${g[0]}–${g[1]}`).join(' · ')}</small></article>
     {m.sides.map(s=><article key={s.ids.join('|')}><strong>{s.ids.map(id=>m.changes[id]).every(v=>v===undefined)?'—':<RatingDelta value={m.changes[s.ids[0]]}/>}</strong><span>{s.names.join(' & ')}</span><small>Doubles rating change</small></article>)}</div>
    <p className="footnote">{m.clubName}{m.tournament&&<> {'·'} <a href={`/tournaments/${m.tournament.id}`}>{m.tournament.name}</a></>} {'·'} Best of {m.bestOf}</p>
-   <p className="public-note">{m.sides.map((s,i)=><span key={i}>{i>0&&' · '}<a href={`/pairs/${s.ids[0]}/${s.ids[1]}`}>{s.names.join(' & ')}</a></span>)}</p>
-   <p className="public-note">{m.sides.flatMap(s=>s.ids.map((id,i)=>[id,s.names[i]] as const)).map(([id,name],i)=><span key={id}>{i>0&&' · '}<a href={`/players/${id}`}>{name}</a></span>)}</p>
+   <p className="public-note">Pairs: {m.sides.map((s,i)=><span key={i}>{i>0&&' · '}<a href={`/pairs/${s.ids[0]}/${s.ids[1]}`}>{s.names.join(' & ')}</a></span>)}</p>
+   <p className="public-note">Players: {m.sides.flatMap(s=>s.ids.map((id,i)=>[id,s.names[i]] as const)).map(([id,name],i)=><span key={id}>{i>0&&' · '}<a href={`/players/${id}`}>{name}</a></span>)}</p>
   </section>
   <p className="public-note">Confirmed result from an approved club. Doubles ratings are separate from singles and from USATT ratings. <a href="/ratings">How ratings work</a></p>
  </div></main></>;

@@ -195,4 +195,14 @@ function fixture(){
  await doublesEvent('y',4);await go('p1','y','enter_team',{partnerId:'p2'});await go('p5','y','enter_team',{partnerId:'p6'});
  await go('owner','y','start_tournament',{bestOf:3});assert.equal(one("SELECT rating_weight FROM tournaments WHERE id='y'").rating_weight,2,'one club stays at the normal tournament weight');
  sql.close();
+}{
+ // The seeding the app shows (and sends back when the draw starts) ranks teams by average doubles rating.
+ const {run,go,service,doublesEvent,sql}=fixture();
+ run("INSERT INTO doubles_matches(id,club_id,a1,a2,b1,b2,games,best_of,played_on,status,submitted_by,confirmed_by,tournament_id,revision,created_at) VALUES('s1','club','p5','p6','p1','p2','[[11,5],[11,6]]',3,'2026-09-20','confirmed','p5','p1',NULL,0,'2026-09-20T10:00:00Z')");
+ await doublesEvent('seed',8);await go('p1','seed','enter_team',{partnerId:'p2'});await go('p3','seed','enter_team',{partnerId:'p4'});await go('p5','seed','enter_team',{partnerId:'p6'});
+ const stats=(await service.read('owner-auth',{})).tournaments.find(t=>t.id==='seed').seedStats;
+ assert.deepEqual(stats.map(s=>s.id),[...stats].sort((a,b)=>b.rating-a.rating).map(s=>s.id));
+ const best=stats[0],worst=stats.at(-1),p56=(await service.read('owner-auth',{})).teams.find(t=>t.p1==='p5').id,p12=(await service.read('owner-auth',{})).teams.find(t=>t.p1==='p1').id;
+ assert.equal(best.id,p56,'the winning pair is seeded first');assert.equal(worst.id,p12,'the losing pair is seeded last');assert.ok(best.rating>400&&worst.rating<400);
+ sql.close();
 }console.log('Doubles tournaments passed: creation, team registration rules and constraints, draws seeded by team, results as doubles matches (not singles), correction and reset, ratings, deletion and account removal.');
