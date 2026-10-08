@@ -20,3 +20,5 @@ Security patches: Next 16.3.8, Vinext 1.0.0 / RSC plugin 0.5.34, patched browser
 Official references: [Cloudflare rate limits](https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/), [Turnstile validation](https://developers.cloudflare.com/turnstile/get-started/server-side-validation/), [Supabase CAPTCHA](https://supabase.com/docs/guides/auth/auth-captcha).
 
 Review verification: temporarily granting board export access made the safety suite fail; restoring owner/admin-only access made it pass.
+
+Deployment retains dashboard-managed runtime Variables (`keep_vars: true`), including the public Turnstile Site Key. Secret values stay managed by Cloudflare. Build-environment variables alone do not configure runtime bindings.
