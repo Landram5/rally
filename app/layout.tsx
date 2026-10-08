@@ -8,6 +8,7 @@ import AnnouncementBanner from './announcement-banner';
 import PwaRegistration from "@/app/pwa-registration";
 import PersistentMobileNavigation from './persistent-mobile-navigation';
 import SkipLink from './skip-link';
+import {PALETTE_INIT_SCRIPT} from '@/lib/palettes';
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://rallytt.net"),
@@ -49,10 +50,6 @@ export const viewport: Viewport = {
   themeColor: "#1c352d", // keep in sync with --bg-inverse in theme.css
 };
 
-// Preview only: lets the owner compare palettes with ?palette=ink|ocean|plum|forest (remembered per browser).
-// It does nothing on any host whose name does not contain "preview".
-const PALETTE_PREVIEW_SCRIPT = `try{if(location.hostname.indexOf('preview')>-1){var q=new URLSearchParams(location.search).get('palette');if(q)localStorage.setItem('rally-palette',q);var p=localStorage.getItem('rally-palette');if(p&&p!=='forest')document.documentElement.dataset.palette=p}}catch(e){}`;
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -60,7 +57,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head><script dangerouslySetInnerHTML={{__html: PALETTE_PREVIEW_SCRIPT}} /></head>
+      <head><script dangerouslySetInnerHTML={{__html: PALETTE_INIT_SCRIPT}} /></head>
       <body className="antialiased"><AppearanceProvider><SkipLink/>{children}<SupportFooter/><PersistentMobileNavigation/><AnnouncementBanner/><PwaRegistration /></AppearanceProvider></body>
     </html>
   );
