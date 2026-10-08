@@ -1,3 +1,15 @@
+# Codex handoff — 2026-10-07 — recurring sessions
+
+- Branch: `codex/sessions`, stacked on notifications PR #3. Owns session UI/service, weekly generation, migration 0021 and session checks. No leaderboard, demo source, rating display, sharing card or global CSS edits.
+- Added: weekly schedules in creator/device time zone, rolling eight-week horizon, skip date, stop future recurrence; per-date edits. Going/Maybe/Not going, one guest, FIFO party waitlist and database-triggered automatic promotion. Removed memberships/deleted profiles clear reservations so reactivation cannot overfill capacity.
+- Migration: 0021 applied locally only; export plus owner approval before production application. Do not merge/deploy prematurely.
+- Checked: isolated session suite and local D1 migration pass. Test fixture used actual UI code with sample state on localhost: width 375 = scroll width 375; datetime inputs both 299px within page. API still returned sign-in requirement. Fixture removed before final build. Authenticated browser and physical-device flows remain unchecked. Full reliability, lint, build and TypeScript pass. A mutation ignoring existing guests failed the added capacity check; restored suite passes.
+- Weekly edit behavior: edits apply to one occurrence, not the saved weekly template. Stop/recreate to change the whole pattern. DST overlap picks earlier instant; gap shifts forward. Cron grows future dates. Each date requires its own RSVP.
+- Next: tournament scorekeepers, table-count scheduling/ETA, waitlist offers with claim deadline. Doubles remains deferred.
+- Production CAPTCHA approval and notification provider setup still await Adam. Preexisting CLAUDE_HANDOFF.md untouched.
+
+---
+
 # Codex handoff — 2026-10-07 — notifications
 
 - Branch: `codex/notifications`, stacked on safety PR #2. Owns notification preferences/delivery/device API, service worker push handlers and sign-out device cleanup. Claude's leaderboard, demo sources, rating displays and sharing cards remain untouched.

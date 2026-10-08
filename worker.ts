@@ -3,6 +3,7 @@ import {createAuthAdmin} from './lib/auth-admin';
 import {retryDeletions} from './lib/account-deletion';
 import {limitWrite} from './lib/write-limits';
 import {deliverNotifications} from './lib/notification-delivery';
+import {expandWeeklySessions} from './lib/weekly-sessions';
 
 const worker={
  async fetch(request:Request,env:Cloudflare.Env,ctx:ExecutionContext){
@@ -20,7 +21,7 @@ const worker={
   return response;
  },
  async scheduled(_event:ScheduledController,env:Cloudflare.Env){
-  const jobs:Promise<unknown>[]=[deliverNotifications(env)];
+  const jobs:Promise<unknown>[]=[deliverNotifications(env),expandWeeklySessions(env.DB)];
   if(env.SUPABASE_SECRET_KEY?.trim())jobs.push(retryDeletions(env.DB,createAuthAdmin(env).auth.admin));
   for(const result of await Promise.allSettled(jobs))if(result.status==='rejected')console.error('Scheduled maintenance unavailable');
  },
