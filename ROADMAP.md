@@ -21,3 +21,7 @@ Club ladders/seasons, notification preferences, feedback status tracking, and ra
 ## Safety - October 7, 2026 (prepared; production configuration pending)
 
 Branch `codex/safety` adds native write limits, Turnstile email-auth/feedback widgets and server-authorized owner/admin club CSV exports. No D1 migration. Security dependencies patched; required checks pass. See `SAFETY_RELEASE.md` and newest `HANDOFF.md` entry for configuration, validation and remaining live checks. Notifications, recurring sessions and tournament operations follow in separate PRs; doubles is deferred.
+
+## Tournament operations — prepared for review
+
+Scores-only tournament staff, dependency-aware table schedules and estimated finish, and reserved waitlist offers with claim deadlines. Stacked on safety, notifications and recurring sessions. Not deployed; provider configuration, migration approval and device/pilot checks remain. Doubles is a separate later project.

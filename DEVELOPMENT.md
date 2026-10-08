@@ -133,3 +133,7 @@ See `RELEASE_NOTIFICATIONS_2026-10-07.md`. Email and encrypted Web Push use exis
 ## Recurring sessions (prepared)
 
 See `RELEASE_SESSIONS_2026-10-07.md`. Weekly dates, per-date skips, Maybe/guest RSVPs and FIFO capacity promotion are prepared with local migration 0021. Production approval and physical-device checks remain pending.
+
+## Prepared tournament operations (not deployed)
+
+Tournament-specific scorekeepers, table-count/duration scheduling with finish estimates, and FIFO reserved offers with claim deadlines are prepared on `codex/tournament-operations`. See RELEASE_TOURNAMENT_OPERATIONS_2026-10-07.md and HANDOFF.md. Migration 0022 is local only; production requires explicit approval and backup. No doubles.

@@ -1,3 +1,16 @@
+# Codex handoff — 2026-10-07 — tournament operations
+
+- Branch: `codex/tournament-operations`, stacked on sessions PR #4. Owns tournament management/registration/service/scheduling, migration 0022 and checks. No leaderboard, demo source, rating display, sharing cards or global CSS edits.
+- Added: tournament-specific scorekeeper assignment to active account-holding host members. Played results only; no forfeits, resets, scheduling or organizing. Server checks membership/assignment again inside the write transaction. Membership removal and account deletion revoke assignments.
+- Scheduling: 1–64 tables, 5–120 minutes per match, ready/waiting fixtures, bracket dependencies, known-player conflicts, estimated finish including a possible reset final. Greedy estimates, not predictions. Rebuild after delays. Actual called matches reserve table/players and remain assigned on rebuild; scoring releases the call. Estimates do not generate email/push call-ups.
+- Tournament waitlist: FIFO offers reserve capacity; player (or organizer confirming attendance) claims by deadline. Default 24h, configurable 5–1,440 minutes, capped at registration deadline. Expired/ineligible offers are removed by existing five-minute cron and next eligible player offered. Open offers block starting until resolved or registration closes. Inbox shows offer/deadline; external delivery remains the three requested event types.
+- Migration: 0022 applied to local D1 only. Export plus explicit owner approval required before production application. Do not deploy or merge prematurely.
+- Validation: full reliability, lint, TypeScript and final build passed. New native-SQLite tests check role restrictions, revocation between preflight/write, table/player conflicts, dependencies, reset-final estimate, called locks, FIFO reservations, deadline race rollback and next offer after expiry. Removing the scorekeeper forfeit restriction failed its mutation check; restored suite passes. Local built-Worker UI fixture at 375px has no horizontal overflow and schedule inputs fit. Authentication still enforced; fixture removed. Physical-device and signed-in browser flows remain unchecked. Temporary fixture absent from final build; claim-window field uses existing logistics input layout. Final check results recorded in PR.
+- Release notes: RELEASE_TOURNAMENT_OPERATIONS_2026-10-07.md. No doubles. Production CAPTCHA approval, sender choice/secure provider and VAPID configuration remain pending. Notification scan throughput limit remains documented in its release notes.
+- Preexisting untracked CLAUDE_HANDOFF.md untouched. All PRs remain draft; production unchanged.
+
+---
+
 # Codex handoff — 2026-10-07 — recurring sessions
 
 - Branch: `codex/sessions`, stacked on notifications PR #3. Owns session UI/service, weekly generation, migration 0021 and session checks. No leaderboard, demo source, rating display, sharing card or global CSS edits.

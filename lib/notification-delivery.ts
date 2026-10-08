@@ -5,7 +5,7 @@ import {readPreferences} from './notification-preferences';
 import {validateSubscription} from './push-subscriptions';
 import type {RallyNotification} from './notifications';
 
-export function deliverable(n:RallyNotification){return !n.read&&!!n.actionNeeded&&(n.id.startsWith('match-')||n.id.startsWith('fixture-')||n.id.startsWith('remind-session-'));}
+export function deliverable(n:RallyNotification){return !n.read&&!!n.actionNeeded&&(n.id.startsWith('match-')||n.id.startsWith('fixture-')&&n.callUp===true||n.id.startsWith('remind-session-'));}
 type Delivery={id:string;notification_id:string;channel:'email'|'push';device_id:string;payload:string;attempts:number;created_at:number;retry_at:number;status:string};
 type Device={id:string;endpoint:string;p256dh:string;auth:string};
 type Payload={title:string;detail:string;href:string;email?:string};

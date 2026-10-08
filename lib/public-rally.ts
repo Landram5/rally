@@ -13,9 +13,9 @@ export type PublicPlayer={
  matches:PublicPlayerMatch[];
 };
 
-export type PublicTournament={allowVisitors?:boolean;waitlistCount?:number;
+export type PublicTournament={estimatedEndsAt?:string|null;allowVisitors?:boolean;waitlistCount?:number;
  id:string;name:string;date:string;format:string;capacity:number;
- registrationClosesAt?:string|null;startsAt?:string|null;fixturePlans?:{fixture_id:string;court:string;starts_at:string|null}[];status:'registration'|'active'|'completed';bestOf:number;revision:number;
+ registrationClosesAt?:string|null;startsAt?:string|null;fixturePlans?:{fixture_id:string;court:string;starts_at:string|null;ends_at?:string|null;called_at?:string|null}[];status:'registration'|'active'|'completed';bestOf:number;revision:number;
  club:{id:string;name:string;location:string};
  entrants:{id:string;name:string;isGuest:boolean}[];
  state:Draw|null;
@@ -51,10 +51,10 @@ export async function getPublicPlayer(db:D1Database,playerId:string):Promise<Pub
 
 export async function getPublicTournament(db:D1Database,tournamentId:string):Promise<PublicTournament|null>{
  if(!validId(tournamentId))return null;
- const event=await db.prepare("SELECT t.*,c.name AS club_name,c.location AS club_location FROM tournaments t JOIN clubs c ON c.id=t.club_id WHERE t.id=? AND t.deleted_at IS NULL AND c.approval_status='approved'").bind(tournamentId).first<{id:string;name:string;club_id:string;date:string;format:string;capacity:number;status:'registration'|'active'|'completed';best_of:number;revision:number;state_json:string|null;registration_closes_at:string|null;starts_at:string|null;allow_visitors:number;club_name:string;club_location:string}>();
+ const event=await db.prepare("SELECT t.*,c.name AS club_name,c.location AS club_location FROM tournaments t JOIN clubs c ON c.id=t.club_id WHERE t.id=? AND t.deleted_at IS NULL AND c.approval_status='approved'").bind(tournamentId).first<{id:string;name:string;club_id:string;date:string;format:string;capacity:number;status:'registration'|'active'|'completed';best_of:number;revision:number;state_json:string|null;registration_closes_at:string|null;starts_at:string|null;estimated_ends_at:string|null;allow_visitors:number;club_name:string;club_location:string}>();
  if(!event)return null;
  const entrants=(await db.prepare('SELECT p.id,p.name,p.auth_id IS NULL AS is_guest FROM entries e JOIN profiles p ON p.id=e.player_id WHERE e.tournament_id=? ORDER BY e.created_at,e.id').bind(tournamentId).all<{id:string;name:string;is_guest:number}>()).results;
- const fixturePlans=(await db.prepare('SELECT fixture_id,court,starts_at FROM tournament_fixture_plans WHERE tournament_id=?').bind(tournamentId).all<{fixture_id:string;court:string;starts_at:string|null}>()).results;
+ const fixturePlans=(await db.prepare('SELECT fixture_id,court,starts_at,ends_at,called_at FROM tournament_fixture_plans WHERE tournament_id=?').bind(tournamentId).all<{fixture_id:string;court:string;starts_at:string|null;ends_at?:string|null;called_at?:string|null}>()).results;
  const waitlistCount=(await db.prepare('SELECT count(*) n FROM tournament_waitlist WHERE tournament_id=?').bind(tournamentId).first<{n:number}>())?.n??0;
- return {allowVisitors:!!event.allow_visitors,waitlistCount,fixturePlans,registrationClosesAt:event.registration_closes_at,startsAt:event.starts_at,id:event.id,name:event.name,date:event.date,format:event.format,capacity:event.capacity,status:event.status,bestOf:event.best_of,revision:event.revision,club:{id:event.club_id,name:event.club_name,location:event.club_location},entrants:entrants.map(p=>({...p,isGuest:!!p.is_guest})),state:event.state_json?JSON.parse(event.state_json):null};
+ return {estimatedEndsAt:event.estimated_ends_at,allowVisitors:!!event.allow_visitors,waitlistCount,fixturePlans,registrationClosesAt:event.registration_closes_at,startsAt:event.starts_at,id:event.id,name:event.name,date:event.date,format:event.format,capacity:event.capacity,status:event.status,bestOf:event.best_of,revision:event.revision,club:{id:event.club_id,name:event.club_name,location:event.club_location},entrants:entrants.map(p=>({...p,isGuest:!!p.is_guest})),state:event.state_json?JSON.parse(event.state_json):null};
 }
