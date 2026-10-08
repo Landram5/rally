@@ -1,3 +1,5 @@
+Production rollout: PR #2 merged on 2026-10-07 with subsequent releases #3–#5. Worker version ec4cb981-e281-4a68-87a0-62a12b7b3900 has both Turnstile bindings, native rate limits and push configuration. Owner CSV controls verified live. Supabase CAPTCHA activation still awaits owner confirmation. See newest HANDOFF.md entry; earlier pre-release status below is historical.
+
 # Safety release — prepared October 7, 2026
 
 Write endpoints use Cloudflare native rate limits. Club owners and administrators can download roster, results and current Rally ratings from Club → Management → Manage club. Server checks exclude board members, ordinary members, pending/revoked memberships and administrators of other clubs. CSV cells neutralize formulas and preserve quoted/multiline names. Downloads are private and contain no email or Auth identifiers.

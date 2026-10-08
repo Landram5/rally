@@ -1,3 +1,5 @@
+Production rollout: PRs #2–#5 merged on 2026-10-07. Feature Worker version a9b74058-f1da-4ab2-9a76-91418a92f158; after secure push-key configuration, ec4cb981-e281-4a68-87a0-62a12b7b3900. Migrations 0020–0022 applied after backup. See newest HANDOFF.md entry for outstanding provider and device checks. Earlier pre-release status below is historical.
+
 # Tournament operations — prepared, not deployed
 
 Branch: `codex/tournament-operations`, stacked on sessions. Production version: none.
