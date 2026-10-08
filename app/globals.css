@@ -464,3 +464,7 @@ input[type=date]::-webkit-date-and-time-value,input[type=datetime-local]::-webki
 .match-meta .match-rating-change{display:flex;flex-wrap:wrap;gap:4px 12px;justify-content:flex-end}.match-rating-change>span{white-space:nowrap}
 
 .leaderboard-scope{display:flex;flex-wrap:wrap;align-items:end;gap:12px 24px;margin:12px 0}.leaderboard-scope label{display:grid;gap:6px;font-weight:600}.leaderboard-scope select{min-height:44px;max-width:100%}.leaderboard-scope .notification-choice{display:flex;align-items:center;gap:8px;font-weight:500}
+
+.trend-tournament-marker{fill:none;stroke:currentColor;stroke-width:1.5}.trend-upset-marker{fill:#d98e04}.trend-legend{display:flex;flex-wrap:wrap;gap:6px 18px;margin:8px 0;font-size:.85rem;color:var(--muted-foreground)}.trend-legend span{display:inline-flex;align-items:center;gap:6px}
+
+.rating-trend .trend-legend svg{width:14px;height:14px;flex:none}
