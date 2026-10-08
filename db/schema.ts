@@ -50,3 +50,5 @@ export const tournamentScorekeepers=sqliteTable('tournament_scorekeepers',{tourn
 export const openPlay=sqliteTable('open_play',{id:text('id').primaryKey(),clubId:text('club_id').notNull().references(()=>clubs.id,{onDelete:'cascade'}),playerId:text('player_id').notNull().references(()=>profiles.id,{onDelete:'cascade'}),note:text('note').notNull().default(''),startedAt:text('started_at').notNull(),expiresAt:text('expires_at').notNull(),endedAt:text('ended_at')});
 
 export const uiPreferences=sqliteTable('ui_preferences',{playerId:text('player_id').primaryKey().references(()=>profiles.id,{onDelete:'cascade'}),palette:text('palette').notNull().default('forest'),appearance:text('appearance').notNull().default('light'),onboardingHidden:integer('onboarding_hidden').notNull().default(0),updatedAt:text('updated_at').notNull()});
+
+export const profilePhotoOriginals=sqliteTable('profile_photo_originals',{playerId:text('player_id').primaryKey().references(()=>profiles.id,{onDelete:'cascade'}),imageData:text('image_data').notNull(),updatedAt:text('updated_at').notNull()});

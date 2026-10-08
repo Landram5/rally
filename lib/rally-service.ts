@@ -77,7 +77,7 @@ export function makeService(database:D1Database){
    if(body.bio!==undefined&&(typeof body.bio!=='string'||body.bio.trim().length>500))fail(400,'Bio must be text with at most 500 characters.');
    const bio=typeof body.bio==='string'?body.bio.trim():'',photo=body.photo===undefined?undefined:body.photo===null?null:validateProfilePhoto(body.photo);
    const statements=[q('INSERT INTO profiles (id,auth_id,name,created_at,bio) VALUES (?,?,?,?,?) ON CONFLICT(auth_id) DO UPDATE SET name=excluded.name,bio=CASE WHEN ? THEN excluded.bio ELSE profiles.bio END',crypto.randomUUID(),authId,name,now,bio,body.bio!==undefined?1:0)];
-   if(photo===null)statements.push(q('DELETE FROM profile_photos WHERE player_id IN (SELECT id FROM profiles WHERE auth_id=?)',authId));
+   if(photo===null){statements.push(q('DELETE FROM profile_photos WHERE player_id IN (SELECT id FROM profiles WHERE auth_id=?)',authId));statements.push(q('DELETE FROM profile_photo_originals WHERE player_id IN (SELECT id FROM profiles WHERE auth_id=?)',authId));}
    else if(photo!==undefined)statements.push(q('INSERT INTO profile_photos (player_id,image_data,updated_at) SELECT id,?,? FROM profiles WHERE auth_id=? AND deleted_at IS NULL ON CONFLICT(player_id) DO UPDATE SET image_data=excluded.image_data,updated_at=excluded.updated_at',photo,now,authId));
    await db.batch(statements);return {ok:true};
   }

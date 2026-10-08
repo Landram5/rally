@@ -1,6 +1,6 @@
 import {readPreferences} from './notification-preferences';
 import {readUiPreferences,saveUiPreferences} from './ui-preferences';
-import {profilePhotoUrl} from './profile-photo';
+import {profilePhotoUrl,validatePhotoOriginal} from './profile-photo';
 import {makeService} from './rally-service';
 import {sameOrigin} from './auth-rules';
 import {accountPlan,beginDeletion,finishDeletion,transferOwnership} from './account-deletion';
@@ -9,15 +9,17 @@ import {AppError} from './rally-errors';
 type Session={user:{id:string;email?:string}|null;signOut:()=>Promise<unknown>};
 type Dependencies={db:D1Database;session:()=>Promise<Session>;limit?:(userId:string)=>Promise<Response|null>;admin:()=>{deleteUser:(id:string,soft?:boolean)=>Promise<{error:{code?:string;status?:number}|null}>};configured:()=>boolean};
 const reply=(data:unknown,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'private, no-store','Vary':'Cookie'}});
+const MAX_BODY=700_000;
 async function readBody(request:Request):Promise<Record<string,unknown>> {
  if(!request.headers.get('content-type')?.startsWith('application/json'))throw new AppError(415,'JSON required.');
  const reader=request.body?.getReader();
  if(!reader)throw new AppError(400,'Invalid request.');
  const chunks:Uint8Array[]=[];let size=0;
- for(;;){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>262144){await reader.cancel();throw new AppError(413,'Request too large.')}chunks.push(value)}
+ for(;;){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>MAX_BODY){await reader.cancel();throw new AppError(413,'Request too large.')}chunks.push(value)}
  const bytes=new Uint8Array(size);let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.length}
  let body:unknown;try{body=JSON.parse(new TextDecoder().decode(bytes));}catch{throw new AppError(400,'Invalid request.');}
- if(size>4096&&(!body||typeof body!=='object'||Array.isArray(body)||(body as Record<string,unknown>).action!=='save_profile'))throw new AppError(413,'Request too large.');
+ const action=body&&typeof body==='object'&&!Array.isArray(body)?(body as Record<string,unknown>).action:undefined;
+ if(size>4096&&!(action==='save_profile'&&size<=262144)&&!(action==='save_photo_original'))throw new AppError(413,'Request too large.');
  if(!body||typeof body!=='object'||Array.isArray(body))throw new AppError(400,'Invalid request.');return body as Record<string,unknown>;
 }
 function failure(error:unknown){
@@ -32,6 +34,7 @@ export function accountHandlers(deps:Dependencies) {
     const {user}=await deps.session();if(!user)return reply({error:'Sign in to manage your account.'},401);
     // Lightweight read used on page load to keep colour, mode and dismissed hints in step across devices.
     if(request&&new URL(request.url).searchParams.get('view')==='preferences'){const me=await deps.db.prepare('SELECT id FROM profiles WHERE auth_id=? AND deleted_at IS NULL').bind(user.id).first<{id:string}>();return reply({playerId:me?.id??null,ui:me?await readUiPreferences(deps.db,me.id):null});}
+    if(request&&new URL(request.url).searchParams.get('view')==='photo-original'){const row=await deps.db.prepare('SELECT o.image_data FROM profile_photo_originals o JOIN profiles p ON p.id=o.player_id WHERE p.auth_id=? AND p.deleted_at IS NULL').bind(user.id).first<{image_data:string}>();return reply({original:row?.image_data??null});}
     const plan=await accountPlan(deps.db,user.id);
     const profile=plan.pending?null:await deps.db.prepare('SELECT p.id,p.name,p.bio,p.rally_id,ph.updated_at AS photo_version FROM profiles p LEFT JOIN profile_photos ph ON ph.player_id=p.id WHERE p.auth_id=? AND p.deleted_at IS NULL').bind(user.id).first<{id:string;name:string;bio:string;rally_id:string;photo_version:string|null}>();
     return reply({...plan,preferences:profile?await readPreferences(deps.db,profile.id):null,profile:profile?{id:profile.id,name:profile.name,bio:profile.bio,rally_id:profile.rally_id,photo_url:profilePhotoUrl(profile.id,profile.photo_version)}:null,email:user.email??'',deletionAvailable:deps.configured()});
@@ -45,6 +48,7 @@ export function accountHandlers(deps:Dependencies) {
     if(!user)return reply({error:'Sign in to manage your account.'},401);
     const limited=await deps.limit?.(user.id);if(limited)return limited;
     if(body.action==='save_ui_preferences'){const me=await deps.db.prepare('SELECT id FROM profiles WHERE auth_id=? AND deleted_at IS NULL').bind(user.id).first<{id:string}>();if(!me)throw new AppError(400,'Create your player profile first.');return reply({ok:true,ui:await saveUiPreferences(deps.db,me.id,body)});}
+    if(body.action==='save_photo_original'){const original=validatePhotoOriginal(body.original);await deps.db.prepare('INSERT INTO profile_photo_originals(player_id,image_data,updated_at) SELECT id,?,? FROM profiles WHERE auth_id=? AND deleted_at IS NULL AND EXISTS(SELECT 1 FROM profile_photos WHERE player_id=profiles.id) ON CONFLICT(player_id) DO UPDATE SET image_data=excluded.image_data,updated_at=excluded.updated_at').bind(original,new Date().toISOString(),user.id).run();return reply({ok:true});}
     if(body.action==='save_notification_preferences'){await makeService(deps.db).act(user.id,body);return reply({ok:true});}
     if(body.action==='save_profile'){await makeService(deps.db).act(user.id,{action:'save_profile',name:body.name,bio:body.bio,...(body.photo!==undefined?{photo:body.photo}:{})});return reply({ok:true});}
     if(body.action==='transfer') {

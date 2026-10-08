@@ -1037,3 +1037,5 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; -webkit-tap-highl
 @media (min-width: 901px) {
   .nav-badge { top: -5px; right: -7px; min-width: 14px; height: 14px; padding: 0 3px; font-size: 0.58rem; box-shadow: 0 0 0 1.5px var(--bg-page); }
 }
+/* Photo cropper: rotate and reset controls sit on one row. */
+.crop-tools { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 8px; }
