@@ -66,6 +66,8 @@ export async function beginDeletion(db:D1Database,authId:string,mode:DeletionMod
   const id=profile.id;
   statements.push(q("UPDATE profiles SET name='Deleted player',auth_id=NULL,deleted_at=? WHERE id=?",now,id));
   statements.push(q('DELETE FROM memberships WHERE player_id=?',id));
+  // Club chat: personal chat settings and reports go; the person's messages stay (labelled "Deleted User" with their name).
+  statements.push(q('DELETE FROM chat_members WHERE player_id=?',id),q('DELETE FROM chat_mutes WHERE player_id=?',id),q('DELETE FROM chat_reports WHERE reporter_id=?',id),q('UPDATE chat_messages SET deleted_by=NULL WHERE deleted_by=?',id),q('UPDATE chat_mutes SET muted_by=NULL WHERE muted_by=?',id),q('UPDATE chat_reports SET resolved_by=NULL WHERE resolved_by=?',id));
   statements.push(q('DELETE FROM notification_preferences WHERE player_id=?',id));
   statements.push(q('DELETE FROM ui_preferences WHERE player_id=?',id));
   statements.push(q("UPDATE season_players SET status='withdrawn' WHERE player_id=?",id));
@@ -135,6 +137,8 @@ export async function beginDeletion(db:D1Database,authId:string,mode:DeletionMod
    for(const team of teamRows){const pid=placeholder(`team:${team.id}`);statements.push(q('UPDATE doubles_teams SET p1=CASE WHEN p1=? THEN ? ELSE p1 END,p2=CASE WHEN p2=? THEN ? ELSE p2 END WHERE id=?',id,pid,id,pid,team.id));}
    statements.push(q('DELETE FROM entries WHERE player_id=?',id));
    statements.push(q('DELETE FROM season_players WHERE player_id=?',id));
+   // Removing history deletes this profile row, so their chat messages and uploads move to one "Deleted player" placeholder (the name stays in each message).
+   if((await q('SELECT 1 x FROM chat_messages WHERE author_id=? UNION SELECT 1 FROM chat_media WHERE uploader_id=? LIMIT 1',id,id).first())){const pid=placeholder('chat');statements.push(q('UPDATE chat_messages SET author_id=? WHERE author_id=?',pid,id),q('UPDATE chat_media SET uploader_id=? WHERE uploader_id=?',pid,id));}
    statements.push(q('DELETE FROM profiles WHERE id=?',id));
   }
  }

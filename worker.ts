@@ -5,6 +5,8 @@ import {limitWrite} from './lib/write-limits';
 import {deliverNotifications} from './lib/notification-delivery';
 import {expireWaitlistOffers} from './lib/tournament-scheduling';
 import {expandWeeklySessions} from './lib/weekly-sessions';
+import {cleanupChatMedia} from './lib/chat-media';
+export {ChatRoom} from './lib/chat-room';
 
 const worker={
  async fetch(request:Request,env:Cloudflare.Env,ctx:ExecutionContext){
@@ -22,7 +24,7 @@ const worker={
   return response;
  },
  async scheduled(_event:ScheduledController,env:Cloudflare.Env){
-  const jobs:Promise<unknown>[]=[deliverNotifications(env),expandWeeklySessions(env.DB),expireWaitlistOffers(env.DB)];
+  const jobs:Promise<unknown>[]=[deliverNotifications(env),expandWeeklySessions(env.DB),expireWaitlistOffers(env.DB),cleanupChatMedia(env)];
   if(env.SUPABASE_SECRET_KEY?.trim())jobs.push(retryDeletions(env.DB,createAuthAdmin(env).auth.admin));
   for(const result of await Promise.allSettled(jobs))if(result.status==='rejected')console.error('Scheduled maintenance unavailable');
  },
