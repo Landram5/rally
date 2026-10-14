@@ -1,0 +1,2 @@
+{"name":"chat-room-smoke","main":"worker.ts","compatibility_date":"2026-05-22","compatibility_flags":["nodejs_compat"],
+ "durable_objects":{"bindings":[{"name":"CHAT_ROOM","class_name":"ChatRoom"}]},"r2_buckets":[{"binding":"CHAT_MEDIA","bucket_name":"smoke"}],"migrations":[{"tag":"v1","new_sqlite_classes":["ChatRoom"]}]}

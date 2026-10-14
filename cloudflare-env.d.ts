@@ -4,6 +4,13 @@ declare namespace Cloudflare {
     WRITE_LIMITER: RateLimit;
     AUTH_LIMITER: RateLimit;
     USER_WRITE_LIMITER: RateLimit;
+    CHAT_ROOM: DurableObjectNamespace;
+    CHAT_MEDIA: R2Bucket;
+    DISCORD_GATEWAY: DurableObjectNamespace;
+    DISCORD_BOT_TOKEN?: string;
+    DISCORD_PUBLIC_KEY?: string;
+    DISCORD_APP_ID?: string;
+    DISCORD_GATEWAY_URL?: string;
     TURNSTILE_SITE_KEY?: string;
     TURNSTILE_SECRET_KEY?: string;
     RESEND_API_KEY?: string;

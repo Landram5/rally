@@ -11,6 +11,7 @@ if(databaseId===production.d1_databases?.[0]?.database_id)throw new Error('Refus
 const {configPath:_a,userConfigPath:_b,...rest}=production;
 const preview={...rest,name:'rally-preview',topLevelName:'rally-preview',routes:[],triggers:{crons:[]},keep_vars:false,workers_dev:true,observability:{enabled:false},
  d1_databases:[{binding:'DB',database_name:'rally-preview',database_id:databaseId,migrations_dir:path.resolve('drizzle')}],
+ r2_buckets:(production.r2_buckets??[]).map(b=>({...b,bucket_name:'rally-preview-'+b.bucket_name.replace(/^rally-/,'')})),
  ratelimits:(production.ratelimits??[]).map((r,i)=>({...r,namespace_id:String(72001+i)}))};
 writeFileSync('dist/server/wrangler.preview.json',JSON.stringify(preview));
 console.log('Wrote dist/server/wrangler.preview.json for Worker "rally-preview" (no routes, no cron, database '+databaseId+').');

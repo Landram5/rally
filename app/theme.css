@@ -400,3 +400,18 @@
   --text-strong: #f6f6f8; --text: #e2e2e9; --text-muted: #a9aabc; --text-subtle: #898a9f; --text-brand: #d4c2ff; --text-link: #d4c2ff;
   --cta-subtle: #28204a; --ring: #979ad8;
 }
+
+/* UMBC: official black and gold (#000000, #FDB515). Offered to people who ask to join the UMBC club. */
+:root[data-palette="umbc"] {
+  --brand-50: #f7f7f7; --brand-100: #ececec; --brand-200: #d9d9d9; --brand-300: #b8b8b8; --brand-400: #8a8a8a; --brand-500: #5e5e5e; --brand-600: #404040; --brand-700: #2b2b2b; --brand-800: #1c1c1c; --brand-900: #111111; --brand-950: #000000;
+  --cta: #fdb515; --cta-hover: #e9a400; --on-cta: #000000;
+}
+:root:not(.dark)[data-palette="umbc"] { --text-brand: var(--brand-700); --text-link: var(--brand-700); --bg-tint: #f6f4ee; --cta-subtle: #fff3d1; }
+.dark[data-palette="umbc"] {
+  --bg-page: #050505; --bg-surface: #121212; --bg-subtle: #0b0b0b; --bg-muted: #1b1b1b; --bg-sunken: #000000; --bg-tint: #1d1a12;
+  --bg-inverse: #050505; --bg-inverse-soft: #121212; --bg-inverse-raised: #1b1b1b;
+  --brand: #2a2a2a; --brand-hover: #383838; --on-brand-muted: #d0d0d0; --on-brand-subtle: #9a9a9a;
+  --border: #262626; --border-subtle: #181818; --border-strong: #3a3a3a; --border-inverse: #262626; --border-brand: #8a6a10;
+  --text-strong: #ffffff; --text: #ececec; --text-muted: #b0b0b0; --text-subtle: #909090; --text-brand: #fdb515; --text-link: #fdb515;
+  --cta-subtle: #3a2d08; --ring: #fdb515;
+}
