@@ -54,4 +54,15 @@ assert.match(await txt(await x.handleClubCommand(env,cmd('player',[{name:'name',
 assert.match(await txt(await x.handleClubCommand(env,cmd('player',[{name:'name',value:'Lena'}]),nowD)),/Lena Lead/);
 // /club arrives through the same interaction handler as /rally.
 const res=await d.handleInteraction(env,{type:2,...cmd('next')},ok,nowD);assert.match(await txt(res),/Friday play/);
+
+// Opt-in avatars: only for people who chose it, only when they have a photo, and the version is in the URL.
+run("INSERT INTO profile_photos(player_id,image_data,updated_at) VALUES('lead','data:image/jpeg;base64,AAAA','v1')");
+assert.equal(await x.avatarUrlFor(env,'lead'),null,'off by default');
+await x.setAvatarOptIn(env,'lead',true,now);assert.equal(await x.avatarOptedIn(env,'lead'),true);assert.match(await x.avatarUrlFor(env,'lead'),/^https:\/\/rallytt\.net\/api\/players\/lead\/photo\?v=v1$/);
+assert.equal(await x.avatarUrlFor(env,'mem'),null,'opted in nobody else');
+await x.setAvatarOptIn(env,'mem',true,now);assert.equal(await x.avatarUrlFor(env,'mem'),null,'no photo, no avatar');
+const sent=[];const cap=async(u,i)=>{sent.push(JSON.parse(i.body));return new Response('{}',{status:200});};
+await d.relayToDiscord(env,{id:'r1',clubId:'c1',authorId:'lead',authorName:'Lena Lead',body:'hi',createdAt:now,media:null,mine:false,canDelete:false},cap);assert.match(sent.at(-1).avatar_url,/photo\?v=v1/);
+await d.relayToDiscord(env,{id:'r2',clubId:'c1',authorId:'other',authorName:'other Person',body:'hi',createdAt:now,media:null,mine:false,canDelete:false},cap);assert.equal(sent.at(-1).avatar_url,undefined);
+await x.setAvatarOptIn(env,'lead',false);assert.equal(await x.avatarUrlFor(env,'lead'),null);
 console.log('discord club tests passed');
