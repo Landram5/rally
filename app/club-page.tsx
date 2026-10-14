@@ -27,8 +27,11 @@ export default function ClubPage({id,initialData,demo=false}:{id:string;initialD
  const [section,setSection]=useState('about'),[unread,setUnread]=useState(0);
  useEffect(()=>{if(demo||!data.me)return;let live=true;fetch('/api/chat?counts=1',{cache:'no-store'}).then(r=>r.ok?r.json() as Promise<{counts?:Record<string,number>}>:{counts:{}}).then(b=>{if(live)setUnread(b.counts?.[id]??0)}).catch(()=>{});return()=>{live=false};},[demo,id,data.me]);
  useEffect(()=>{const requested=new URLSearchParams(window.location.search).get('section');if(requested&&['about','members','competition','sessions','announcements','chat','management'].includes(requested))setSection(requested);},[]);
- useEffect(()=>{if(loading||section==='about'||section==='chat')return;document.getElementById('club-'+section)?.scrollIntoView({block:'start'});// eslint-disable-next-line react-hooks/exhaustive-deps
- },[loading]);
+ useEffect(()=>{if(loading||section==='about'||section==='chat')return;
+  // Sections above the target keep loading, so scroll again a few times until the person scrolls themselves.
+  let stop=false;const go=()=>{if(!stop)document.getElementById('club-'+section)?.scrollIntoView({block:'start'});},timers=[0,300,800,1600,2600].map(t=>window.setTimeout(go,t)),cancel=()=>{stop=true;};
+  window.addEventListener('wheel',cancel,{once:true,passive:true});window.addEventListener('touchstart',cancel,{once:true,passive:true});window.addEventListener('keydown',cancel,{once:true});
+  return()=>{timers.forEach(clearTimeout);window.removeEventListener('wheel',cancel);window.removeEventListener('touchstart',cancel);window.removeEventListener('keydown',cancel);};},[loading,section]);
  const openChat=(open:boolean)=>{setSection(open?'chat':'about');window.history.replaceState(null,'',window.location.pathname+(open?'?section=chat':''));};
  const [eventId,setEventIdState]=useState<string|null>(null);
  const setEventId=useCallback((event:string|null)=>{if(event)window.location.assign((demo?'/demo':'')+'/tournaments/'+encodeURIComponent(event)+'/manage');else setEventIdState(null);},[demo]);
