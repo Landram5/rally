@@ -1114,3 +1114,29 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; -webkit-tap-highl
 .panel > .doubles-rank, .panel > .doubles-partners { padding: 0 28px 20px; }
 .panel > .doubles-rank li:last-child, .panel > .doubles-partners li:last-child { border-bottom: 0; }
 @media (max-width: 600px) { .panel > .doubles-rank, .panel > .doubles-partners { padding-inline: 16px; } }
+
+/* ───────────────────────── Public polish ───────────────────────── */
+/* Home directory tabs: a segmented control instead of an underlined row. */
+.directory-tabs { display: inline-flex; gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--bg-muted); max-width: 100%; }
+.directory-tabs a, .directory-tabs a[aria-current="page"] { padding: 8px 16px; border: 1px solid transparent; border-bottom: 1px solid transparent; border-radius: var(--radius-md); text-decoration: none; box-shadow: none; }
+.directory-tabs a::after { display: none !important; }
+.directory-tabs a[aria-current="page"] { background: var(--bg-surface); border-color: var(--border); color: var(--text-strong); }
+.header-signin { color: var(--text-strong); font-weight: 550; }
+.rally-intro a:not([data-slot="button"]):not(.primary-action) { text-decoration: none; }
+
+/* Public player header sits on the page background, so it uses page text colours. */
+.public-hero .hero-sub, .public-hero .player-bio, .public-hero .player-bio-toggle { color: var(--text-muted); }
+.public-hero .player-bio a { color: var(--text-brand); }
+.public-hero .player-bio-toggle:hover { background: var(--bg-muted); color: var(--text-strong); }
+.hero-title-row .share-link [data-size="icon"] { border-color: var(--border-strong); color: var(--text-strong); }
+.hero-title-row .share-link [data-size="icon"]:hover { background: var(--bg-muted); border-color: var(--text-subtle); }
+.hero-title-row .share-link span { color: var(--text-muted); }
+
+/* Profile photo actions: one primary button, quiet secondary actions, never full-width stacks. */
+.account-settings .profile-photo-controls { flex-wrap: wrap; }
+.account-settings .profile-photo-controls .profile-photo-actions { margin-left: 0; flex-wrap: wrap; gap: 8px; }
+.account-settings .profile-photo-actions .photo-picker, .account-settings .profile-photo-actions button { width: auto; height: 40px; min-height: 40px; padding: 0 16px; margin: 0; font-size: 0.875rem; line-height: 1; border-radius: var(--radius-md); }
+.account-settings .profile-photo-actions button { border: 1px solid var(--border-strong); background: var(--bg-surface); color: var(--text-strong); }
+.account-settings .profile-photo-actions button:last-child:not(:only-child) { border-color: transparent; background: transparent; color: var(--text-muted); }
+.account-settings .profile-photo-actions button:hover:not(:disabled) { border-color: var(--text-subtle); }
+.account-settings .profile-photo-actions button:last-child:not(:only-child):hover:not(:disabled) { color: var(--danger); border-color: transparent; }
