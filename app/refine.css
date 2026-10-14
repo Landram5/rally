@@ -1400,3 +1400,11 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; -webkit-tap-highl
 /* Switches keep their full size everywhere (an older rule forced every switch input to 20px wide, leaving only the knob). */
 .notification-choice input[type="checkbox"] { width: 42px !important; height: 24px !important; min-height: 24px !important; border: 0 !important; }
 .leaderboard-filters .notification-choice, .leaderboard-scope .notification-choice { justify-content: flex-start; gap: 12px; }
+
+/* Messages on desktop: use more of the screen, and keep the empty-state text centered in the conversation pane. */
+@media (min-width: 1100px) {
+  .app-shell:has(.messages) { max-width: min(1680px, 100%); }
+  .messages .msg-layout { grid-template-columns: minmax(340px, 420px) minmax(0, 1fr); height: min(calc(100dvh - 120px), 900px); }
+}
+.messages .msg-convo:has(> .msg-empty) { justify-content: center; align-items: center; }
+.messages .msg-empty { margin: 0; text-align: center; border: 0; background: none; }
