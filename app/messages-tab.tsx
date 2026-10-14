@@ -1,12 +1,14 @@
 'use client';
 /* eslint-disable react-hooks/set-state-in-effect */
 import {useCallback,useEffect,useRef,useState} from 'react';
-import {ArrowLeft,Ban,Bell,BellOff,Flag,MoreHorizontal,Plus,Search,Send,ShieldAlert,Trash2,UserX} from 'lucide-react';
+import {ArrowLeft,Ban,Bell,BellOff,Flag,MoreHorizontal,Paperclip,Plus,Search,Send,ShieldAlert,Trash2,UserX} from 'lucide-react';
 import {toast} from 'sonner';
 import {Button} from '@/components/ui/button';
 import {Dialog,DialogContent,DialogDescription,DialogHeader,DialogTitle} from '@/components/ui/dialog';
 import Avatar from './player-avatar';
+import {AttachmentPreview,MediaView,prepareAttachment,type Attachment} from './chat-attach';
 import type {DmMessage,DmPerson,DmThread} from '@/lib/messages';
+type LocalMedia={id:string;kind:'image'|'video';contentType:string;bytes:number;src?:string};
 type Convo={other:DmPerson;canSend:boolean;hasMore:boolean;messages:DmMessage[]};
 type Person=DmPerson&{clubs?:string[]};
 type Report={id:string;kind:string;reason:string;createdAt:string;reporter:string;target:string;targetId:string;context:{author_name:string;body:string;created_at:string}[]};
@@ -20,7 +22,7 @@ const ago=(m:number)=>new Date(Date.now()-m*60000).toISOString();
 // Sample conversations for the demo: nothing is sent anywhere.
 const demoThreads=():{threads:DmThread[];convos:Record<string,Convo>}=>{
  const jordan:DmPerson={id:'jordan',name:'Jordan Lee',photoVersion:null,deleted:false},sam:DmPerson={id:'sam',name:'Sam Rivera',photoVersion:null,deleted:false};
- const msg=(id:string,threadId:string,author:string,body:string,m:number):DmMessage=>({id,threadId,authorId:author,body,createdAt:ago(m),mine:author==='alex'});
+ const msg=(id:string,threadId:string,author:string,body:string,m:number):DmMessage=>({id,threadId,authorId:author,body,createdAt:ago(m),mine:author==='alex',media:null});
  const convos:Record<string,Convo>={
   't-jordan':{other:jordan,canSend:true,hasMore:false,messages:[msg('a1','t-jordan','jordan','Are you up for doubles Thursday?',50),msg('a2','t-jordan','alex','Yes! I will bring the score sheets.',44),msg('a3','t-jordan','jordan','Perfect, see you at 6.',12)]},
   't-sam':{other:sam,canSend:true,hasMore:false,messages:[msg('b1','t-sam','sam','Thanks for the game last week.',1500)]},
@@ -29,9 +31,9 @@ const demoThreads=():{threads:DmThread[];convos:Record<string,Convo>}=>{
 };
 export default function MessagesTab({demo=false,people=[],initialWith,initialThread,onUnread}:{demo?:boolean;people?:{id:string;name:string;is_guest?:number}[];initialWith?:string;initialThread?:string;onUnread?:(n:number)=>void}){
  const [threads,setThreads]=useState<DmThread[]>([]),[admin,setAdmin]=useState(false),[notify,setNotify]=useState(true),[blocked,setBlocked]=useState<DmPerson[]|null>(null);
- const [activeId,setActiveId]=useState<string|null>(null),[convo,setConvo]=useState<Convo|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState(''),[text,setText]=useState(''),[sending,setSending]=useState(false);
+ const [activeId,setActiveId]=useState<string|null>(null),[convo,setConvo]=useState<Convo|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState(''),[text,setText]=useState(''),[sending,setSending]=useState(false),[attachment,setAttachment]=useState<Attachment|null>(null),[uploading,setUploading]=useState(false);
  const [newOpen,setNewOpen]=useState(false),[query,setQuery]=useState(''),[results,setResults]=useState<Person[]>([]),[searching,setSearching]=useState(false),[showBlocks,setShowBlocks]=useState(false),[reports,setReports]=useState<Report[]|null>(null),[showReports,setShowReports]=useState(false);
- const local=useRef(demo?demoThreads():null),list=useRef<HTMLDivElement>(null),stick=useRef(true),activeRef=useRef<string|null>(null),meRef=useRef(demo?'alex':'');
+ const fileInput=useRef<HTMLInputElement>(null),local=useRef(demo?demoThreads():null),list=useRef<HTMLDivElement>(null),stick=useRef(true),activeRef=useRef<string|null>(null),meRef=useRef(demo?'alex':'');
  const setActive=useCallback((id:string|null)=>{activeRef.current=id;setActiveId(id);},[]);
  const loadThreads=useCallback(async()=>{
   if(demo){const l=local.current!;setThreads([...l.threads].sort((a,b)=>b.lastAt.localeCompare(a.lastAt)));onUnread?.(l.threads.reduce((n,t)=>n+t.unread,0));return;}
@@ -40,7 +42,7 @@ export default function MessagesTab({demo=false,people=[],initialWith,initialThr
   meRef.current=b.me;setAdmin(b.admin);setNotify(b.notify);setThreads(b.threads);onUnread?.(b.threads.reduce((n,t)=>n+t.unread,0));
  },[demo,onUnread]);
  const openThread=useCallback(async(id:string)=>{
-  setActive(id);stick.current=true;setConvo(null);
+  setActive(id);stick.current=true;setConvo(null);setAttachment(null);
   try{
    if(demo){const l=local.current!;setConvo(l.convos[id]);l.threads=l.threads.map(t=>t.id===id?{...t,unread:0}:t);await loadThreads();return;}
    const r=await fetch('/api/messages?thread='+encodeURIComponent(id),{cache:'no-store'}),b=await r.json() as Convo&{error?:string};if(!r.ok)throw new Error(b.error||'Could not open this conversation.');
@@ -73,15 +75,16 @@ export default function MessagesTab({demo=false,people=[],initialWith,initialThr
  useEffect(()=>{if(!newOpen)return;const q=query.trim();if(q.length<2){setResults([]);return;}
   if(demo){setResults(people.filter(p=>!p.is_guest&&p.id!=='alex'&&p.name.toLowerCase().includes(q.toLowerCase())).map(p=>({id:p.id,name:p.name,photoVersion:null,deleted:false,clubs:[]})));return;}
   setSearching(true);const t=setTimeout(()=>{fetch('/api/messages?lookup='+encodeURIComponent(q),{cache:'no-store'}).then(r=>r.ok?r.json() as Promise<{people?:Person[]}>:{people:[]}).then(b=>setResults(b.people??[])).catch(()=>setResults([])).finally(()=>setSearching(false));},250);return()=>clearTimeout(t);},[query,newOpen,demo,people]);
+ async function attach(f:File|undefined){if(!f||!activeId)return;if(fileInput.current)fileInput.current.value='';setUploading(true);try{setAttachment(await prepareAttachment(f,'/api/messages/media?thread='+encodeURIComponent(activeId),demo));}catch(e){toast.error(e instanceof Error?e.message:'The upload failed.');}finally{setUploading(false);}}
  async function send(){
-  const body=text.trim();if(!body||!activeId||!convo||sending)return;setSending(true);
+  const body=text.trim();if((!body&&!attachment)||!activeId||!convo||sending||uploading)return;setSending(true);
   const clientId=crypto.randomUUID();
   try{
-   if(demo){const l=local.current!,m:DmMessage={id:'m-'+clientId,threadId:activeId,authorId:'alex',body,createdAt:new Date().toISOString(),mine:true};
-    l.convos[activeId]={...l.convos[activeId],messages:[...l.convos[activeId].messages,m]};l.threads=l.threads.map(t=>t.id===activeId?{...t,lastMessage:body,lastAt:m.createdAt}:t);setConvo(l.convos[activeId]);setText('');stick.current=true;await loadThreads();
-    const tid=activeId;setTimeout(()=>{const r:DmMessage={id:'r-'+clientId,threadId:tid,authorId:l.convos[tid].other.id,body:'Sounds good!',createdAt:new Date().toISOString(),mine:false};l.convos[tid]={...l.convos[tid],messages:[...l.convos[tid].messages,r]};l.threads=l.threads.map(t=>t.id===tid?{...t,lastMessage:r.body,lastAt:r.createdAt}:t);if(activeRef.current===tid)setConvo(l.convos[tid]);void loadThreads();},1800);return;}
-   const r=await api({action:'send',threadId:activeId,text:body,clientId}) as {message:DmMessage};
-   stick.current=true;setConvo(c=>c&&!c.messages.some(x=>x.id===r.message.id)?{...c,messages:[...c.messages,{...r.message,mine:true}]}:c);setText('');void loadThreads().catch(()=>{});
+   if(demo){const l=local.current!,m:DmMessage={id:'m-'+clientId,threadId:activeId,authorId:'alex',body,createdAt:new Date().toISOString(),mine:true,media:attachment?{id:attachment.id,kind:attachment.kind,contentType:attachment.contentType,bytes:attachment.bytes,src:attachment.preview} as LocalMedia as DmMessage['media']:null};
+    l.convos[activeId]={...l.convos[activeId],messages:[...l.convos[activeId].messages,m]};l.threads=l.threads.map(t=>t.id===activeId?{...t,lastMessage:body||(attachment?.kind==='video'?'Video':'Photo'),lastAt:m.createdAt}:t);setConvo(l.convos[activeId]);setText('');setAttachment(null);stick.current=true;await loadThreads();
+    const tid=activeId;setTimeout(()=>{const r:DmMessage={id:'r-'+clientId,threadId:tid,authorId:l.convos[tid].other.id,body:'Sounds good!',createdAt:new Date().toISOString(),mine:false,media:null};l.convos[tid]={...l.convos[tid],messages:[...l.convos[tid].messages,r]};l.threads=l.threads.map(t=>t.id===tid?{...t,lastMessage:r.body,lastAt:r.createdAt}:t);if(activeRef.current===tid)setConvo(l.convos[tid]);void loadThreads();},1800);return;}
+   const r=await api({action:'send',threadId:activeId,text:body,mediaId:attachment?.id,clientId}) as {message:DmMessage};
+   stick.current=true;setConvo(c=>c&&!c.messages.some(x=>x.id===r.message.id)?{...c,messages:[...c.messages,{...r.message,mine:true}]}:c);setText('');setAttachment(null);void loadThreads().catch(()=>{});
   }catch(e){toast.error(e instanceof Error?e.message:'Could not send that.');}finally{setSending(false);}
  }
  const act=async(payload:Record<string,unknown>,done:string,after?:()=>void)=>{try{if(!demo)await api(payload);toast.success(demo?done+' Sample data only.':done);after?.();}catch(e){toast.error(e instanceof Error?e.message:'Could not complete that.');}};
@@ -111,9 +114,9 @@ export default function MessagesTab({demo=false,people=[],initialWith,initialThr
        <header><time dateTime={m.createdAt}>{when(m.createdAt)}</time><details className="chat-menu"><summary aria-label="Message options"><MoreHorizontal size={16}/></summary><div>
         {m.mine?<button type="button" onClick={()=>void act({action:'delete',id:m.id},'Message deleted.',()=>setConvo(c=>c?{...c,messages:c.messages.filter(x=>x.id!==m.id)}:c))}><Trash2 size={14}/>Delete</button>
          :<button type="button" onClick={()=>{const reason=window.prompt('What is wrong with this message? (optional)');if(reason!==null)void act({action:'report_dm',id:m.id,reason},'Reported. An administrator will see this message and the ones before it.');}}><Flag size={14}/>Report</button>}
-       </div></details></header><p>{m.body}</p></article>)}
+       </div></details></header>{m.body&&<p>{m.body}</p>}{m.media&&<MediaView kind={m.media.kind} src={(m.media as LocalMedia).src??`/api/messages/media/${m.media.id}`} onSize={()=>{const el=list.current;if(el&&stick.current)el.scrollTop=el.scrollHeight;}}/>}</article>)}
      </div>
-     {convo.canSend?<form className="chat-composer" onSubmit={e=>{e.preventDefault();void send()}}><div className="chat-row"><textarea value={text} maxLength={2000} rows={1} placeholder={`Message ${other.name}`} aria-label="Message" onChange={e=>setText(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!/Mobi|Android/i.test(navigator.userAgent)){e.preventDefault();void send();}}}/><Button disabled={sending||!text.trim()} aria-label="Send message"><Send size={18}/></Button></div></form>
+     {convo.canSend?<form className="chat-composer" onSubmit={e=>{e.preventDefault();void send()}}>{attachment&&<AttachmentPreview attachment={attachment} onRemove={()=>setAttachment(null)}/>}<div className="chat-row"><input ref={fileInput} type="file" accept="image/*,video/*" hidden onChange={e=>void attach(e.target.files?.[0])}/><Button type="button" variant="ghost" size="icon" aria-label="Attach a photo or video" disabled={uploading||!!attachment} onClick={()=>fileInput.current?.click()}><Paperclip size={20}/></Button><textarea value={text} maxLength={2000} rows={1} placeholder={uploading?'Uploading…':`Message ${other.name}`} aria-label="Message" onChange={e=>setText(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!/Mobi|Android/i.test(navigator.userAgent)){e.preventDefault();void send();}}}/><Button disabled={sending||uploading||(!text.trim()&&!attachment)} aria-label="Send message"><Send size={18}/></Button></div></form>
       :<p className="chat-muted">You can no longer message this person. You still have this conversation.</p>}
     </>}
    </div>

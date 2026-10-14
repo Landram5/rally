@@ -35,6 +35,16 @@ const view=await dm.readThread(db,'ben',threadId);assert.deepEqual(view.messages
 await dm.markThreadRead(db,'ben',threadId,t(9));assert.equal(await dm.unreadDmCount(db,'ben'),0);
 for(let i=0;i<19;i++)await dm.sendDm(db,'amy',threadId,{text:'m'+i,clientId:'r'+i},t(10+i));
 await fail(dm.sendDm(db,'amy',threadId,{text:'too fast',clientId:'rate'},t(29)),429);
+// Attachments: your own, for this conversation, once.
+run("INSERT INTO dm_media(id,thread_id,uploader_id,kind,content_type,bytes,r2_key,created_at) VALUES('pm1',?,'amy','image','image/jpeg',1000,'dm/x/pm1','2026-10-08T10:00:00.000Z')",threadId);
+run("INSERT INTO dm_media(id,thread_id,uploader_id,kind,content_type,bytes,r2_key,created_at) VALUES('pm2',?,'ben','video','video/mp4',1000,'dm/x/pm2','2026-10-08T10:00:00.000Z')",threadId);
+await fail(dm.sendDm(db,'amy',threadId,{mediaId:'pm2',clientId:'p1'},'2026-10-08T10:05:01.000Z'),400);await fail(dm.sendDm(db,'amy',threadId,{mediaId:'nope',clientId:'p1'},'2026-10-08T10:05:01.000Z'),400);
+const pic=await dm.sendDm(db,'amy',threadId,{mediaId:'pm1',clientId:'p2'},'2026-10-08T10:05:02.000Z');assert.equal(pic.message.media.kind,'image');assert.equal(pic.message.body,'');
+await fail(dm.sendDm(db,'amy',threadId,{mediaId:'pm1',clientId:'p3'},'2026-10-08T10:05:03.000Z'),400,'a photo is sent once');
+assert.ok((await dm.listThreads(db,'ben')).threads[0].lastMessage.length>0);
+assert.equal((await dm.listThreads(db,'ben')).threads[0].lastMessage,'Photo');
+await dm.dmMediaAccess(db,'ben',threadId,false);await fail(dm.dmMediaAccess(db,'cara',threadId,false),404);
+const gone=await dm.deleteDm(db,'amy',pic.message.id);assert.equal(gone.r2Key,'dm/x/pm1');
 // Delete: only your own.
 await fail(dm.deleteDm(db,'ben',first.message.id),404);await dm.deleteDm(db,'amy',first.message.id);assert.ok(!(await dm.readThread(db,'ben',threadId)).messages.some(m=>m.id===first.message.id));
 // Reports snapshot the context for administrators and nobody else.

@@ -1,34 +1,17 @@
 'use client';
-/* eslint-disable react-hooks/set-state-in-effect, @next/next/no-img-element, @next/next/no-location-assign-relative-destination */
+/* eslint-disable react-hooks/set-state-in-effect, @next/next/no-location-assign-relative-destination */
 import {useCallback,useEffect,useRef,useState} from 'react';
-import {Ban,Bell,BellOff,Flag,MessageCircle,MoreHorizontal,Paperclip,Send,Trash2,VolumeX,X} from 'lucide-react';
+import {Ban,Bell,BellOff,Flag,MessageCircle,MoreHorizontal,Paperclip,Send,Trash2,VolumeX} from 'lucide-react';
 import {toast} from 'sonner';
 import {Button} from '@/components/ui/button';
 import type {ChatMedia,ChatMessage} from '@/lib/chat';
+import {AttachmentPreview,MediaView,prepareAttachment,type Attachment} from './chat-attach';
 type Report={id:string;messageId:string;reason:string;body:string;authorName:string;reporter:string;createdAt:string};
-type Attachment=ChatMedia&{preview:string};
-const MAX_VIDEO_SECONDS=35,MAX_VIDEO=50*1024*1024;
 const time=(iso:string)=>new Date(iso).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});
 const day=(iso:string)=>new Date(iso).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
 async function api(payload:Record<string,unknown>){
  const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
  const body=await r.json().catch(()=>({})) as {error?:string};if(!r.ok)throw new Error(body.error||'Could not complete that.');return body;
-}
-// Photos are shrunk on the phone before upload (max 1600px, JPEG); GIFs and small photos are sent as they are.
-async function shrinkImage(file:File):Promise<Blob>{
- if(file.type==='image/gif'||file.size<400_000)return file;
- try{
-  const bitmap=await createImageBitmap(file),scale=Math.min(1,1600/Math.max(bitmap.width,bitmap.height)),canvas=document.createElement('canvas');
-  canvas.width=Math.round(bitmap.width*scale);canvas.height=Math.round(bitmap.height*scale);canvas.getContext('2d')!.drawImage(bitmap,0,0,canvas.width,canvas.height);
-  const blob=await new Promise<Blob|null>(res=>canvas.toBlob(res,'image/jpeg',0.82));return blob&&blob.size<file.size?blob:file;
- }catch{return file;}
-}
-function videoSeconds(file:File):Promise<number>{
- return new Promise(resolve=>{const v=document.createElement('video'),url=URL.createObjectURL(file);v.preload='metadata';v.onloadedmetadata=()=>{resolve(v.duration);URL.revokeObjectURL(url)};v.onerror=()=>{resolve(NaN);URL.revokeObjectURL(url)};v.src=url;});
-}
-function Media({m,onSize}:{m:LocalMedia;onSize:()=>void}){
- const src=m.src??`/api/chat/media/${m.id}`;
- return m.kind==='image'?<a href={src} target="_blank" rel="noreferrer"><img className="chat-media" src={src} alt="Shared photo" loading="lazy" onLoad={onSize}/></a>:<video className="chat-media" src={src} controls playsInline preload="metadata" onLoadedMetadata={onSize}/>;
 }
 type LocalMedia=ChatMedia&{src?:string};
 const photo=(a:string,b:string)=>`data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="640" height="420"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient></defs><rect width="640" height="420" fill="url(#g)"/><circle cx="470" cy="150" r="46" fill="#fdb515"/><rect x="150" y="260" width="340" height="14" rx="7" fill="rgba(255,255,255,.7)"/></svg>`)}`;
@@ -78,18 +61,7 @@ export default function ClubChat({clubId,clubName,onRead,demo=false}:{clubId:str
  },[clubId,load,merge,markRead,demo]);
  useEffect(()=>{const el=list.current;if(el&&stick.current)el.scrollTop=el.scrollHeight;},[messages]);
  async function older(){if(demo||!messages.length)return;const el=list.current,before=el?.scrollHeight??0;try{const b=await load({before:messages[0].id});setHasMore(b.hasMore);stick.current=false;merge(b.messages,false);requestAnimationFrame(()=>{if(el)el.scrollTop=el.scrollHeight-before;});}catch(e){toast.error(e instanceof Error?e.message:'Could not load earlier messages.');}}
- async function attach(f:File|undefined){
-  if(!f)return;if(file.current)file.current.value='';
-  const isVideo=f.type.startsWith('video/'),isImage=f.type.startsWith('image/');
-  if(!isVideo&&!isImage){toast.error('Choose a photo or a video.');return;}
-  if(isVideo){if(f.size>MAX_VIDEO){toast.error('Videos can be up to 50 MB.');return;}const s=await videoSeconds(f);if(Number.isFinite(s)&&s>MAX_VIDEO_SECONDS){toast.error('Videos can be about 30 seconds long.');return;}}
-  if(demo){const media:LocalMedia={id:'demo-'+Date.now(),kind:isVideo?'video':'image',contentType:f.type,bytes:f.size,src:URL.createObjectURL(f)};setAttachment({...media,preview:media.src!});return;}
-  setUploading(true);
-  try{
-   const blob=isImage?await shrinkImage(f):f,r=await fetch('/api/chat/media?club='+encodeURIComponent(clubId),{method:'POST',body:blob}),body=await r.json() as ChatMedia&{error?:string};
-   if(!r.ok)throw new Error(body.error||'The upload failed.');setAttachment({...body,preview:URL.createObjectURL(blob)});
-  }catch(e){toast.error(e instanceof Error?e.message:'The upload failed.');}finally{setUploading(false);}
- }
+ async function attach(f:File|undefined){if(!f)return;if(file.current)file.current.value='';setUploading(true);try{setAttachment(await prepareAttachment(f,'/api/chat/media?club='+encodeURIComponent(clubId),demo));}catch(e){toast.error(e instanceof Error?e.message:'The upload failed.');}finally{setUploading(false);}}
  async function send(){
   const body=text.trim();if((!body&&!attachment)||sending||uploading||muted)return;
   const clientId=crypto.randomUUID(),mediaId=attachment?.id;setSending(true);
@@ -122,11 +94,11 @@ export default function ClubChat({clubId,clubName,onRead,demo=false}:{clubId:str
        {admin&&!m.mine&&m.authorId&&<button type="button" onClick={()=>{if(window.confirm(`Mute ${m.authorName} in this chat?`))void act({action:'mute',clubId,playerId:m.authorId,muted:true},`${m.authorName} was muted.`);}}><VolumeX size={14}/>Mute member</button>}
       </div></details>}
      </header>
-     {m.body&&<p>{m.body}</p>}{m.media&&<Media m={m.media} onSize={()=>{const el=list.current;if(el&&stick.current)el.scrollTop=el.scrollHeight;}}/>}
+     {m.body&&<p>{m.body}</p>}{m.media&&<MediaView kind={m.media.kind} src={(m.media as LocalMedia).src??`/api/chat/media/${m.media.id}`} onSize={()=>{const el=list.current;if(el&&stick.current)el.scrollTop=el.scrollHeight;}}/>}
     </article></div>;})}
   </div>
   {muted?<p className="chat-muted">An organizer has muted you in this chat. You can still read messages.</p>:<form className="chat-composer" onSubmit={e=>{e.preventDefault();void send()}}>
-   {attachment&&<div className="chat-attachment">{attachment.kind==='image'?<img src={attachment.preview} alt="Attachment preview"/>:<video src={attachment.preview} muted playsInline/>}<Button type="button" size="icon" variant="ghost" aria-label="Remove attachment" onClick={()=>setAttachment(null)}><X size={16}/></Button></div>}
+   {attachment&&<AttachmentPreview attachment={attachment} onRemove={()=>setAttachment(null)}/>}
    <div className="chat-row"><input ref={file} type="file" accept="image/*,video/*" hidden onChange={e=>void attach(e.target.files?.[0])}/>
     <Button type="button" variant="ghost" size="icon" aria-label="Attach a photo or video" disabled={uploading||!!attachment} onClick={()=>file.current?.click()}><Paperclip size={20}/></Button>
     <textarea value={text} maxLength={2000} rows={1} placeholder={uploading?'Uploading…':'Message the club'} aria-label="Message" onChange={e=>setText(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!/Mobi|Android/i.test(navigator.userAgent)){e.preventDefault();void send();}}}/>

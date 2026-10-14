@@ -35,9 +35,9 @@ export async function POST(request:Request){
    case 'start':return response(await startThread(db,me.id,body.personId));
    case 'send':{
     const r=await sendDm(db,me.id,body.threadId,body);
-    if(r.created)waitUntil((async()=>{const event={type:'dm',message:{...r.message,mine:false}};const online=await publishChat(env,`inbox:${r.other}`,event);await publishChat(env,`inbox:${me.id}`,{type:'dm',message:r.message});await pushDirectMessage(env,r.message,me.name,r.other,online);})());
+    if(r.created)waitUntil((async()=>{const event={type:'dm',message:{...r.message,mine:false}};const online=await publishChat(env,`inbox:${r.other}`,event);await publishChat(env,`inbox:${me.id}`,{type:'dm',message:r.message});await pushDirectMessage(env,{...r.message,body:r.message.body||(r.message.media?.kind==='video'?'Sent a video':'Sent a photo')},me.name,r.other,online);})());
     return response({message:r.message});}
-   case 'delete':{const r=await deleteDm(db,me.id,body.id);waitUntil(Promise.all(r.participants.map(p=>publishChat(env,`inbox:${p}`,{type:'dm_delete',id:r.id,threadId:r.threadId}))));return response({ok:true});}
+   case 'delete':{const r=await deleteDm(db,me.id,body.id);if(r.r2Key)waitUntil(env.CHAT_MEDIA.delete(r.r2Key).catch(()=>{}));waitUntil(Promise.all(r.participants.map(p=>publishChat(env,`inbox:${p}`,{type:'dm_delete',id:r.id,threadId:r.threadId}))));return response({ok:true});}
    case 'read':return response(await markThreadRead(db,me.id,body.threadId));
    case 'block':return response(await setBlock(db,me.id,body.personId,body.blocked));
    case 'report_dm':return response(await reportDm(db,me.id,body.id,body.reason));
