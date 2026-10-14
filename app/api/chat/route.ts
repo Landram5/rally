@@ -7,6 +7,7 @@ import {deleteMessage,listReports,markRead,postMessage,readMessages,reportMessag
 import {publishChat} from '@/lib/chat-room';
 import {blockedIds} from '@/lib/messages';
 import {pushChatMessage} from '@/lib/chat-push';
+import {relayToDiscord} from '@/lib/discord';
 export const dynamic='force-dynamic';
 const response=(data:unknown,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'private, no-store','Vary':'Cookie'}});
 async function viewer(){const user=await getAuthenticatedUser();if(!user)throw new AppError(401,'Sign in to use club chat.');const p=await env.DB.prepare('SELECT id FROM profiles WHERE auth_id=? AND deleted_at IS NULL').bind(user.id).first<{id:string}>();if(!p)throw new AppError(403,'Create your player profile first.');return {id:p.id,authId:user.id};}
@@ -30,7 +31,7 @@ export async function POST(request:Request){
   switch(body.action){
    case 'send':{
     const {message,created}=await postMessage(db,me.id,body.clubId,body);
-    if(created)waitUntil((async()=>{const online=await publishChat(env,message.clubId,{type:'message',message:{...message,mine:false,canDelete:false}});await pushChatMessage(env,message,online);})());
+    if(created)waitUntil((async()=>{const online=await publishChat(env,message.clubId,{type:'message',message:{...message,mine:false,canDelete:false}});await pushChatMessage(env,message,online);await relayToDiscord(env,{...message,mine:false,canDelete:false});})());
     return response({message});}
    case 'delete':{
     const r=await deleteMessage(db,me.id,body.id);

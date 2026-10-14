@@ -58,3 +58,5 @@ tsconfig.tsbuildinfo
 !.dev.vars.example
 
 .wrangler/
+
+.wrangler-discord-smoke/
