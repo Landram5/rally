@@ -9,6 +9,7 @@ export const PALETTES=[
   {id:'teal',label:'Teal',colors:['#184341','#ffcf70']},
   {id:'crimson',label:'Crimson',colors:['#431820','#f6e3c3']},
   {id:'indigo',label:'Indigo',colors:['#1b1c41','#d4c2ff']},
+  {id:'umbc',label:'UMBC',colors:['#000000','#fdb515']},
 ] as const;
 export type PaletteId=(typeof PALETTES)[number]['id'];
 export const PALETTE_STORAGE_KEY='rally-palette';
