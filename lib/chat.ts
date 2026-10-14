@@ -18,9 +18,9 @@ export async function readMessages(db:D1Database,viewer:string,clubIdRaw:unknown
  const cursor=async(v:unknown)=>{if(v===undefined||v===null||v==='')return null;const mid=id(v,'cursor'),r=await db.prepare('SELECT created_at,id FROM chat_messages WHERE id=? AND club_id=?').bind(mid,clubId).first<{created_at:string;id:string}>();if(!r)throw new AppError(404,'Message not found.');return r;};
  const before=await cursor(opts.before),after=await cursor(opts.after),limit=CHAT_LIMITS.page;
  let rows:Row[];
- if(after)rows=(await db.prepare(`${SELECT} WHERE m.club_id=? AND m.deleted_at IS NULL AND (m.created_at>? OR (m.created_at=? AND m.id>?)) ORDER BY m.created_at,m.id LIMIT 200`).bind(clubId,after.created_at,after.created_at,after.id).all<Row>()).results;
- else{const q=before?`${SELECT} WHERE m.club_id=? AND m.deleted_at IS NULL AND (m.created_at<? OR (m.created_at=? AND m.id<?)) ORDER BY m.created_at DESC,m.id DESC LIMIT ?`:`${SELECT} WHERE m.club_id=? AND m.deleted_at IS NULL ORDER BY m.created_at DESC,m.id DESC LIMIT ?`;
-  rows=(await db.prepare(q).bind(...(before?[clubId,before.created_at,before.created_at,before.id,limit+1]:[clubId,limit+1])).all<Row>()).results;}
+ if(after)rows=(await db.prepare(`${SELECT} WHERE m.club_id=? AND m.deleted_at IS NULL AND (m.created_at>? OR (m.created_at=? AND m.id>?)) AND NOT EXISTS(SELECT 1 FROM blocks bk WHERE bk.blocker_id=? AND bk.blocked_id=m.author_id) ORDER BY m.created_at,m.id LIMIT 200`).bind(clubId,after.created_at,after.created_at,after.id,viewer).all<Row>()).results;
+ else{const q=before?`${SELECT} WHERE m.club_id=? AND m.deleted_at IS NULL AND (m.created_at<? OR (m.created_at=? AND m.id<?)) AND NOT EXISTS(SELECT 1 FROM blocks bk WHERE bk.blocker_id=? AND bk.blocked_id=m.author_id) ORDER BY m.created_at DESC,m.id DESC LIMIT ?`:`${SELECT} WHERE m.club_id=? AND m.deleted_at IS NULL AND NOT EXISTS(SELECT 1 FROM blocks bk WHERE bk.blocker_id=? AND bk.blocked_id=m.author_id) ORDER BY m.created_at DESC,m.id DESC LIMIT ?`;
+  rows=(await db.prepare(q).bind(...(before?[clubId,before.created_at,before.created_at,before.id,viewer,limit+1]:[clubId,viewer,limit+1])).all<Row>()).results;}
  const hasMore=!after&&rows.length>limit;if(!after)rows=rows.slice(0,limit).reverse();
  const state=await db.prepare('SELECT notify FROM chat_members WHERE club_id=? AND player_id=?').bind(clubId,viewer).first<{notify:number}>();
  return {messages:rows.map(r=>view(r,viewer,admin)),hasMore,admin,muted,notify:!!state?.notify};
@@ -88,6 +88,6 @@ export async function setNotify(db:D1Database,viewer:string,clubIdRaw:unknown,on
 }
 // Unread messages per club for the signed-in member (messages from others since they last opened the chat).
 export async function unreadCounts(db:D1Database,viewer:string){
- const rows=(await db.prepare("SELECT m.club_id,count(*) n FROM memberships mb JOIN clubs c ON c.id=mb.club_id AND c.approval_status='approved' JOIN chat_messages m ON m.club_id=mb.club_id AND m.deleted_at IS NULL AND m.author_id<>mb.player_id LEFT JOIN chat_members cr ON cr.club_id=mb.club_id AND cr.player_id=mb.player_id WHERE mb.player_id=? AND mb.status='active' AND mb.role!='guest' AND m.created_at>coalesce(cr.last_read_at,'') GROUP BY m.club_id").bind(viewer).all<{club_id:string;n:number}>()).results;
+ const rows=(await db.prepare("SELECT m.club_id,count(*) n FROM memberships mb JOIN clubs c ON c.id=mb.club_id AND c.approval_status='approved' JOIN chat_messages m ON m.club_id=mb.club_id AND m.deleted_at IS NULL AND m.author_id<>mb.player_id AND NOT EXISTS(SELECT 1 FROM blocks bk WHERE bk.blocker_id=mb.player_id AND bk.blocked_id=m.author_id) LEFT JOIN chat_members cr ON cr.club_id=mb.club_id AND cr.player_id=mb.player_id WHERE mb.player_id=? AND mb.status='active' AND mb.role!='guest' AND m.created_at>coalesce(cr.last_read_at,'') GROUP BY m.club_id").bind(viewer).all<{club_id:string;n:number}>()).results;
  return Object.fromEntries(rows.map(r=>[r.club_id,Math.min(r.n,99)]));
 }

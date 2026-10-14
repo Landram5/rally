@@ -1,7 +1,7 @@
 'use client';
-/* eslint-disable react-hooks/set-state-in-effect, @next/next/no-img-element */
+/* eslint-disable react-hooks/set-state-in-effect, @next/next/no-img-element, @next/next/no-location-assign-relative-destination */
 import {useCallback,useEffect,useRef,useState} from 'react';
-import {Bell,BellOff,Flag,MoreHorizontal,Paperclip,Send,Trash2,VolumeX,X} from 'lucide-react';
+import {Ban,Bell,BellOff,Flag,MessageCircle,MoreHorizontal,Paperclip,Send,Trash2,VolumeX,X} from 'lucide-react';
 import {toast} from 'sonner';
 import {Button} from '@/components/ui/button';
 import type {ChatMedia,ChatMessage} from '@/lib/chat';
@@ -44,16 +44,16 @@ export default function ClubChat({clubId,clubName,onRead,demo=false}:{clubId:str
  const [messages,setMessages]=useState<ChatMessage[]>([]),[me,setMe]=useState(''),[admin,setAdmin]=useState(false),[muted,setMuted]=useState(false),[notify,setNotify]=useState(false),[hasMore,setHasMore]=useState(false);
  const [loading,setLoading]=useState(true),[error,setError]=useState(''),[live,setLive]=useState(false),[text,setText]=useState(''),[attachment,setAttachment]=useState<Attachment|null>(null),[uploading,setUploading]=useState(false),[sending,setSending]=useState(false);
  const [reports,setReports]=useState<Report[]|null>(null),[showReports,setShowReports]=useState(false);
- const list=useRef<HTMLDivElement>(null),stick=useRef(true),lastId=useRef(''),meRef=useRef(''),adminRef=useRef(false),file=useRef<HTMLInputElement>(null);
+ const list=useRef<HTMLDivElement>(null),stick=useRef(true),lastId=useRef(''),blockedRef=useRef<string[]>([]),meRef=useRef(''),adminRef=useRef(false),file=useRef<HTMLInputElement>(null);
  const personal=useCallback((m:ChatMessage):ChatMessage=>({...m,mine:m.authorId!==null&&m.authorId===meRef.current,canDelete:adminRef.current||(m.authorId!==null&&m.authorId===meRef.current)}),[]);
  const known=useRef(new Set<string>()),[fresh,setFresh]=useState<Set<string>>(()=>new Set());
  const merge=useCallback((incoming:ChatMessage[],animate=true)=>{const added=incoming.filter(m=>!known.current.has(m.id)).map(m=>m.id);for(const m of incoming)known.current.add(m.id);if(animate&&added.length)setFresh(f=>new Set([...f,...added]));setMessages(prev=>{const seen=new Map(prev.map(m=>[m.id,m]));for(const m of incoming)seen.set(m.id,personal(m));const next=[...seen.values()].sort((a,b)=>a.createdAt.localeCompare(b.createdAt)||a.id.localeCompare(b.id));lastId.current=next.filter(m=>!m.id.startsWith('pending-')).at(-1)?.id??'';return next;});},[personal]);
  const markRead=useCallback(()=>{if(!demo&&document.visibilityState==='visible'){void api({action:'read',clubId}).then(()=>onRead?.()).catch(()=>{});}},[clubId,onRead,demo]);
  const load=useCallback(async(opts:{before?:string;after?:string}={})=>{
   const q=new URLSearchParams({club:clubId,...(opts.before?{before:opts.before}:{}),...(opts.after?{after:opts.after}:{})});
-  const r=await fetch('/api/chat?'+q,{cache:'no-store'}),body=await r.json() as {error?:string;me:string;messages:ChatMessage[];hasMore:boolean;admin:boolean;muted:boolean;notify:boolean};
+  const r=await fetch('/api/chat?'+q,{cache:'no-store'}),body=await r.json() as {error?:string;blocked?:string[];me:string;messages:ChatMessage[];hasMore:boolean;admin:boolean;muted:boolean;notify:boolean};
   if(!r.ok)throw new Error(body.error||'Could not load the chat.');
-  meRef.current=body.me;adminRef.current=body.admin;setMe(body.me);setAdmin(body.admin);setMuted(body.muted);setNotify(body.notify);
+  meRef.current=body.me;blockedRef.current=body.blocked??[];adminRef.current=body.admin;setMe(body.me);setAdmin(body.admin);setMuted(body.muted);setNotify(body.notify);
   return body;
  },[clubId]);
  useEffect(()=>{if(demo){meRef.current='alex';adminRef.current=true;setMe('alex');setAdmin(true);{const seed=demoSeed(clubId);seed.forEach(m=>known.current.add(m.id));setMessages(seed.map(personal));}setLive(true);setLoading(false);return;}let gone=false;setLoading(true);load().then(b=>{if(gone)return;b.messages.forEach(m=>known.current.add(m.id));setMessages(b.messages.map(personal));lastId.current=b.messages.at(-1)?.id??'';setHasMore(b.hasMore);setError('');markRead();}).catch(e=>{if(!gone)setError(e instanceof Error?e.message:'Could not load the chat.')}).finally(()=>{if(!gone)setLoading(false)});return()=>{gone=true};},[load,personal,markRead,demo,clubId]);
@@ -66,7 +66,7 @@ export default function ClubChat({clubId,clubName,onRead,demo=false}:{clubId:str
    if(closed)return;
    ws=new WebSocket(`${location.protocol==='https:'?'wss':'ws'}://${location.host}/api/chat/ws?club=${encodeURIComponent(clubId)}`);
    ws.onopen=()=>{retry=0;setLive(true);catchUp();};
-   ws.onmessage=e=>{try{const ev=JSON.parse(String(e.data)) as {type:string;message?:ChatMessage;id?:string};if(ev.type==='message'&&ev.message){merge([ev.message]);markRead();}else if(ev.type==='delete'&&ev.id)setMessages(p=>p.filter(m=>m.id!==ev.id));}catch{/* ignore malformed events */}};
+   ws.onmessage=e=>{try{const ev=JSON.parse(String(e.data)) as {type:string;message?:ChatMessage;id?:string};if(ev.type==='message'&&ev.message){if(ev.message.authorId&&blockedRef.current.includes(ev.message.authorId))return;merge([ev.message]);markRead();}else if(ev.type==='delete'&&ev.id)setMessages(p=>p.filter(m=>m.id!==ev.id));}catch{/* ignore malformed events */}};
    ws.onclose=()=>{setLive(false);if(!closed){timer=setTimeout(connect,Math.min(30000,1000*2**retry++));}};
    ws.onerror=()=>ws?.close();
   };
@@ -99,7 +99,7 @@ export default function ClubChat({clubId,clubName,onRead,demo=false}:{clubId:str
   try{const r=await api({action:'send',clubId,text:body,mediaId,clientId}) as {message:ChatMessage};stick.current=true;merge([r.message]);setText('');setAttachment(null);}
   catch(e){toast.error(e instanceof Error?e.message:'Could not send that.');}finally{setSending(false);}
  }
- const act=async(payload:Record<string,unknown>,done:string,after?:()=>void)=>{try{if(!demo)await api(payload);toast.success(done);after?.();}catch(e){toast.error(e instanceof Error?e.message:'Could not complete that.');}};
+ const act=async(payload:Record<string,unknown>,done:string,after?:()=>void)=>{try{if(!demo){if(payload.action==='__block'){const r=await fetch('/api/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'block',personId:payload.personId,blocked:true})});if(!r.ok)throw new Error(((await r.json().catch(()=>({}))) as {error?:string}).error||'Could not block.');}else await api(payload);}toast.success(done);after?.();}catch(e){toast.error(e instanceof Error?e.message:'Could not complete that.');}};
  async function openReports(){setShowReports(v=>!v);if(demo){setReports([{id:'r1',messageId:'d3',reason:'Off topic',body:'Good luck on Thursday everyone.',authorName:'Deleted User (Riley Chen)',reporter:'Sam Rivera',createdAt:new Date().toISOString()}]);return;}if(!showReports){try{const r=await fetch('/api/chat?reports=1&club='+encodeURIComponent(clubId),{cache:'no-store'}),b=await r.json() as {reports?:Report[];error?:string};if(!r.ok)throw new Error(b.error);setReports(b.reports??[]);}catch{toast.error('Could not load reports.');}}}
  let lastDay='';
  return <section className="panel club-chat" aria-label={`${clubName} chat`}>
@@ -117,6 +117,8 @@ export default function ClubChat({clubId,clubName,onRead,demo=false}:{clubId:str
       {(m.canDelete||!m.mine)&&<details className="chat-menu"><summary aria-label="Message options"><MoreHorizontal size={16}/></summary><div>
        {m.canDelete&&<button type="button" onClick={()=>void act({action:'delete',id:m.id},'Message deleted.',()=>setMessages(p=>p.filter(x=>x.id!==m.id)))}><Trash2 size={14}/>Delete</button>}
        {!m.mine&&<button type="button" onClick={()=>{const reason=window.prompt('What is wrong with this message? (optional)')??null;if(reason!==null)void act({action:'report',id:m.id,reason},'Reported to the club organizers.');}}><Flag size={14}/>Report</button>}
+       {!m.mine&&m.authorId&&!demo&&<button type="button" onClick={()=>window.location.assign(`/clubhouse?tab=messages&with=${m.authorId}`)}><MessageCircle size={14}/>Message</button>}
+       {!m.mine&&m.authorId&&<button type="button" onClick={()=>{if(window.confirm(`Block ${m.authorName}? You will no longer see their messages, and they cannot message you.`)){const who=m.authorId!;void act({action:'__block',personId:who},`${m.authorName} is blocked.`,()=>{blockedRef.current=[...blockedRef.current,who];setMessages(p=>p.filter(x=>x.authorId!==who));});}}}><Ban size={14}/>Block</button>}
        {admin&&!m.mine&&m.authorId&&<button type="button" onClick={()=>{if(window.confirm(`Mute ${m.authorName} in this chat?`))void act({action:'mute',clubId,playerId:m.authorId,muted:true},`${m.authorName} was muted.`);}}><VolumeX size={14}/>Mute member</button>}
       </div></details>}
      </header>

@@ -5,6 +5,7 @@ import {rateLimit} from '@/lib/write-limits';
 import {guardAccountWrites} from '@/lib/account-write-guard';
 import {deleteMessage,listReports,markRead,postMessage,readMessages,reportMessage,resolveReport,setMute,setNotify,unreadCounts} from '@/lib/chat';
 import {publishChat} from '@/lib/chat-room';
+import {blockedIds} from '@/lib/messages';
 import {pushChatMessage} from '@/lib/chat-push';
 export const dynamic='force-dynamic';
 const response=(data:unknown,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'private, no-store','Vary':'Cookie'}});
@@ -15,7 +16,7 @@ export async function GET(request:Request){
   const me=await viewer(),url=new URL(request.url);
   if(url.searchParams.get('counts'))return response({counts:await unreadCounts(env.DB,me.id)});
   if(url.searchParams.get('reports'))return response(await listReports(env.DB,me.id,url.searchParams.get('club')));
-  return response({me:me.id,...await readMessages(env.DB,me.id,url.searchParams.get('club'),{before:url.searchParams.get('before')??undefined,after:url.searchParams.get('after')??undefined})});
+  return response({me:me.id,blocked:await blockedIds(env.DB,me.id),...await readMessages(env.DB,me.id,url.searchParams.get('club'),{before:url.searchParams.get('before')??undefined,after:url.searchParams.get('after')??undefined})});
  }catch(e){return failure(e);}
 }
 export async function POST(request:Request){

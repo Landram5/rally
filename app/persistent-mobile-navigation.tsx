@@ -2,7 +2,7 @@
 import {useEffect,useState} from 'react';
 import {usePathname} from 'next/navigation';
 import {createPortal} from 'react-dom';
-import {LayoutDashboard,Users,CircleDot,Globe2,Trophy,Bell} from 'lucide-react';
+import {LayoutDashboard,Users,CircleDot,Globe2,Trophy,Bell,MessageSquare} from 'lucide-react';
 
 export default function PersistentMobileNavigation(){
  const pathname=usePathname()??'/',demo=pathname==='/demo'||pathname.startsWith('/demo/');
@@ -19,7 +19,7 @@ export default function PersistentMobileNavigation(){
  useEffect(()=>{if(!visible)return;document.body.classList.add('has-persistent-navigation');return()=>document.body.classList.remove('has-persistent-navigation')},[visible]);
  if(!visible)return null;
  const base=demo?'/demo':'/clubhouse';
- const items=[{id:'overview',label:'Overview',Icon:LayoutDashboard},{id:'players',label:'Players',Icon:Users},{id:'matches',label:'Matches',Icon:CircleDot},{id:'clubs',label:'Clubs',Icon:Globe2},{id:'tournaments',label:'Tournaments',Icon:Trophy},{id:'notifications',label:'Inbox',Icon:Bell}];
+ const items=[{id:'overview',label:'Overview',Icon:LayoutDashboard},{id:'players',label:'Players',Icon:Users},{id:'matches',label:'Matches',Icon:CircleDot},{id:'clubs',label:'Clubs',Icon:Globe2},{id:'tournaments',label:'Tournaments',Icon:Trophy},{id:'messages',label:'Messages',Icon:MessageSquare},{id:'notifications',label:'Inbox',Icon:Bell}];
  const active=pathname.includes('/players/')?'players':pathname.includes('/tournaments/')?'tournaments':pathname==='/clubs'||pathname.includes('/clubs/')?'clubs':pathname==='/announcements'?'notifications':null;
- return createPortal(<nav className="nav-wrap persistent-mobile-navigation" aria-label="Member clubhouse navigation"><div className="main-nav">{items.map(({id,label,Icon})=><a href={`${base}?tab=${id}`} key={id} aria-current={active===id?'page':undefined}><Icon size={19}/><span>{label}</span></a>)}</div></nav>,document.body);
+ return createPortal(<nav className="nav-wrap persistent-mobile-navigation" aria-label="Member clubhouse navigation"><div className="main-nav">{items.map(({id,label,Icon})=><a href={`${base}?tab=${id}`} key={id} aria-current={active===id?'page':undefined}><Icon size={19}/><span>{id==='tournaments'?<><span className="nav-long">Tournaments</span><span className="nav-short">Events</span></>:label}</span></a>)}</div></nav>,document.body);
 }

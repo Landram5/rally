@@ -67,6 +67,8 @@ export async function beginDeletion(db:D1Database,authId:string,mode:DeletionMod
   statements.push(q("UPDATE profiles SET name='Deleted player',auth_id=NULL,deleted_at=? WHERE id=?",now,id));
   statements.push(q('DELETE FROM memberships WHERE player_id=?',id));
   // Club chat: personal chat settings and reports go; the person's messages stay (labelled "Deleted User" with their name).
+  // Direct messages are private conversations, so they are removed with the account, along with blocks and safety reports involving it.
+  statements.push(q('DELETE FROM dm_threads WHERE a_id=? OR b_id=?',id,id),q('DELETE FROM dm_settings WHERE player_id=?',id),q('DELETE FROM blocks WHERE blocker_id=? OR blocked_id=?',id,id),q('DELETE FROM safety_reports WHERE reporter_id=? OR target_id=?',id,id),q('UPDATE safety_reports SET resolved_by=NULL WHERE resolved_by=?',id));
   statements.push(q('DELETE FROM chat_members WHERE player_id=?',id),q('DELETE FROM chat_mutes WHERE player_id=?',id),q('DELETE FROM chat_reports WHERE reporter_id=?',id),q('UPDATE chat_messages SET deleted_by=NULL WHERE deleted_by=?',id),q('UPDATE chat_mutes SET muted_by=NULL WHERE muted_by=?',id),q('UPDATE chat_reports SET resolved_by=NULL WHERE resolved_by=?',id));
   statements.push(q('DELETE FROM notification_preferences WHERE player_id=?',id));
   statements.push(q('DELETE FROM ui_preferences WHERE player_id=?',id));
