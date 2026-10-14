@@ -1,6 +1,7 @@
 import {AppError} from './rally-errors';
 import {CHAT_LIMITS,chatAccess} from './chat';
 import {dmMediaAccess} from './messages';
+import {roomMediaAccess} from './rooms';
 // Chat photos and videos for club chat, direct messages and leader rooms. Files live in R2; only people who can read the conversation can see them.
 // Videos are not converted, so upload limits (50 MB, about 30 seconds) keep playback working on most phones.
 export function sniffMedia(b:Uint8Array):{kind:'image'|'video';contentType:string}|null{
@@ -20,6 +21,7 @@ export type MediaScope={table:'chat_media'|'dm_media'|'room_media';scopeCol:'clu
 type Env={DB:D1Database;CHAT_MEDIA:R2Bucket};
 export const clubScope=(db:D1Database):MediaScope=>({table:'chat_media',scopeCol:'club_id',messageTable:'chat_messages',prefix:'chat',access:async(clubId,viewer,upload)=>{const {muted}=await chatAccess(db,viewer,clubId);if(upload&&muted)throw new AppError(403,'You are muted in this chat.');}});
 export const dmScope=(db:D1Database):MediaScope=>({table:'dm_media',scopeCol:'thread_id',messageTable:'dm_messages',prefix:'dm',access:(threadId,viewer,upload)=>dmMediaAccess(db,viewer,threadId,upload)});
+export const roomScope=(db:D1Database):MediaScope=>({table:'room_media',scopeCol:'room_id',messageTable:'room_messages',prefix:'room',access:(roomId,viewer,upload)=>roomMediaAccess(db,viewer,roomId,upload)});
 const ID=/^[a-zA-Z0-9_-]{1,80}$/;
 export async function uploadMedia(env:Env,scope:MediaScope,scopeId:string,viewer:string,request:Request,now=new Date().toISOString()){
  if(!ID.test(scopeId))throw new AppError(400,'Invalid conversation.');

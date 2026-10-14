@@ -1250,3 +1250,19 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; -webkit-tap-highl
 @media (max-width: 700px) { .nav-long { display: none; } .nav-short { display: inline; } .main-nav [role="tab"], .persistent-mobile-navigation .main-nav a { font-size: .58rem; } }
 
 .chat-attachment-remove { position: absolute; top: 4px; right: 4px; width: 26px; height: 26px; border: 0; border-radius: 50%; background: rgba(0,0,0,.6); color: #fff; font-size: 18px; line-height: 1; cursor: pointer; display: grid; place-items: center; }
+
+.msg-switch { display: inline-flex; gap: 4px; padding: 4px; margin-bottom: 12px; border-radius: 999px; background: var(--bg-muted); }
+.msg-switch button { border: 0; background: none; color: var(--text-muted); font: inherit; font-weight: 600; font-size: .88rem; padding: 8px 16px; border-radius: 999px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.msg-switch button.active { background: var(--bg-surface); color: var(--text-strong); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+.room-icon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: var(--brand); color: var(--on-brand, #fff); flex: none; }
+.room-title { border: 0; background: none; padding: 0; font: inherit; text-align: left; cursor: pointer; display: grid; margin-right: auto; }
+.room-title small { color: var(--text-muted); }
+.room-invites { padding: 0 16px 8px; display: grid; gap: 8px; }
+.room-invites h3 { margin: 6px 0 0; font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted); }
+.room-invite { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border); }
+.room-invite small { display: block; color: var(--text-muted); }
+.room-invite > span:last-child { display: flex; gap: 4px; }
+.msg-block-row > span { flex: 1; min-width: 0; }
+.msg-block-row small { display: block; color: var(--text-muted); font-weight: 400; }
+.msg-block-row button { width: auto; flex: none; }
+.msg-block-row b { margin-right: 0; }

@@ -4,6 +4,7 @@ import {AppError} from '@/lib/rally-errors';
 import {rateLimit} from '@/lib/write-limits';
 import {guardAccountWrites} from '@/lib/account-write-guard';
 import {blockedIds,deleteDm,dmNotifyEnabled,listBlocks,listSafetyReports,listThreads,lookupPeople,markThreadRead,readThread,reportDm,reportUser,resolveSafetyReport,sendDm,setBlock,setDmNotify,startThread,unreadDmCount,canMessage} from '@/lib/messages';
+import {unreadRoomCount} from '@/lib/rooms';
 import {publishChat} from '@/lib/chat-room';
 import {pushDirectMessage} from '@/lib/chat-push';
 export const dynamic='force-dynamic';
@@ -19,7 +20,7 @@ export async function GET(request:Request){
   if(q.get('blocks'))return response(await listBlocks(env.DB,me.id));
   if(q.get('reports'))return response(await listSafetyReports(env.DB,me.admin));
   if(q.get('can')){return response({canMessage:await canMessage(env.DB,me.id,q.get('can')??'')});}
-  if(q.get('unread'))return response({unread:await unreadDmCount(env.DB,me.id)});
+  if(q.get('unread'))return response({unread:await unreadDmCount(env.DB,me.id)+await unreadRoomCount(env.DB,me.id)});
   return response({me:me.id,admin:me.admin,notify:await dmNotifyEnabled(env.DB,me.id),blocked:await blockedIds(env.DB,me.id),...await listThreads(env.DB,me.id)});
  }catch(e){return failure(e);}
 }

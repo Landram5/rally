@@ -1,6 +1,7 @@
 import {buildPushPayload} from '@block65/webcrypto-web-push';
 import {validateSubscription} from './push-subscriptions';
 import type {ChatMessage} from './chat';
+import type {RoomMessage} from './rooms';
 type PushEnv=Pick<Cloudflare.Env,'DB'|'VAPID_PUBLIC_KEY'|'VAPID_PRIVATE_KEY'|'VAPID_SUBJECT'>;
 // Sends one notification to every device a person has registered (at most five). Failures never block the caller.
 export async function pushToPlayer(env:PushEnv,playerId:string,notice:{id:string;title:string;detail:string;href:string}){
@@ -33,4 +34,16 @@ export async function pushDirectMessage(env:PushEnv,message:{id:string;threadId:
  if(!s||!s.notify||s.last>new Date(now-300000).toISOString())return;
  await env.DB.prepare('INSERT INTO dm_state(thread_id,player_id,last_push_at) VALUES(?,?,?) ON CONFLICT(thread_id,player_id) DO UPDATE SET last_push_at=excluded.last_push_at').bind(message.threadId,recipient,new Date(now).toISOString()).run();
  await pushToPlayer(env,recipient,{id:`dm-${message.threadId}`,title:fromName,detail:message.body.slice(0,120),href:`/clubhouse?tab=messages&thread=${message.threadId}`});
+}
+// Leader room alerts: opt-in per room, not while the person is in the room, at most one every 10 minutes per room.
+export async function pushRoomMessage(env:PushEnv,roomId:string,message:RoomMessage,online:string[],now=Date.now()){
+ if(!(env.VAPID_PUBLIC_KEY&&env.VAPID_PRIVATE_KEY&&env.VAPID_SUBJECT))return;
+ const room=await env.DB.prepare('SELECT name FROM leader_rooms WHERE id=? AND archived_at IS NULL').bind(roomId).first<{name:string}>();if(!room)return;
+ const since=new Date(now-600000).toISOString();
+ const members=(await env.DB.prepare("SELECT rm.player_id FROM room_members rm WHERE rm.room_id=? AND rm.status='active' AND rm.notify=1 AND rm.player_id<>? AND rm.last_push_at<? AND NOT EXISTS(SELECT 1 FROM blocks b WHERE b.blocker_id=rm.player_id AND b.blocked_id=?) LIMIT 60").bind(roomId,message.authorId??'',since,message.authorId??'').all<{player_id:string}>()).results.filter(r=>!online.includes(r.player_id));
+ const detail=`${message.authorName}: ${message.body?message.body.slice(0,120):message.media?.kind==='video'?'Sent a video':'Sent a photo'}`;
+ for(const member of members){
+  await env.DB.prepare('UPDATE room_members SET last_push_at=? WHERE room_id=? AND player_id=?').bind(new Date(now).toISOString(),roomId,member.player_id).run();
+  await pushToPlayer(env,member.player_id,{id:`room-${roomId}`,title:room.name,detail,href:`/clubhouse?tab=messages&room=${roomId}`});
+ }
 }

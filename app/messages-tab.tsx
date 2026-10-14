@@ -7,6 +7,7 @@ import {Button} from '@/components/ui/button';
 import {Dialog,DialogContent,DialogDescription,DialogHeader,DialogTitle} from '@/components/ui/dialog';
 import Avatar from './player-avatar';
 import {AttachmentPreview,MediaView,prepareAttachment,type Attachment} from './chat-attach';
+import LeaderRooms from './leader-rooms';
 import type {DmMessage,DmPerson,DmThread} from '@/lib/messages';
 type LocalMedia={id:string;kind:'image'|'video';contentType:string;bytes:number;src?:string};
 type Convo={other:DmPerson;canSend:boolean;hasMore:boolean;messages:DmMessage[]};
@@ -29,18 +30,22 @@ const demoThreads=():{threads:DmThread[];convos:Record<string,Convo>}=>{
  };
  return {convos,threads:[{id:'t-jordan',other:jordan,lastMessage:'Perfect, see you at 6.',lastAt:ago(12),unread:1,canSend:true},{id:'t-sam',other:sam,lastMessage:'Thanks for the game last week.',lastAt:ago(1500),unread:0,canSend:true}]};
 };
-export default function MessagesTab({demo=false,people=[],initialWith,initialThread,onUnread}:{demo?:boolean;people?:{id:string;name:string;is_guest?:number}[];initialWith?:string;initialThread?:string;onUnread?:(n:number)=>void}){
+export default function MessagesTab({demo=false,people=[],initialWith,initialThread,initialRoom,onUnread}:{demo?:boolean;people?:{id:string;name:string;is_guest?:number}[];initialWith?:string;initialThread?:string;initialRoom?:string;onUnread?:(n:number)=>void}){
+ const [pane,setPane]=useState<'direct'|'rooms'>(initialRoom?'rooms':'direct'),[showRooms,setShowRooms]=useState(demo),[dmCount,setDmCount]=useState(0),[roomCount,setRoomCount]=useState(0);
+ const onDm=useCallback((n:number)=>setDmCount(n),[]),onRooms=useCallback((unread:number,invites:number)=>{setRoomCount(unread+invites);if(invites>0)setShowRooms(true);},[]);
+ useEffect(()=>{onUnread?.(dmCount+roomCount);},[dmCount,roomCount,onUnread]);
+ useEffect(()=>{if(demo)return;let live=true;fetch('/api/rooms',{cache:'no-store'}).then(r=>r.ok?r.json() as Promise<{leader:boolean;rooms:{unread:number}[];invitations:unknown[]}>:null).then(b=>{if(live&&b){setShowRooms(b.leader||b.invitations.length>0);setRoomCount(b.rooms.reduce((n,r)=>n+r.unread,0)+b.invitations.length);}}).catch(()=>{});return()=>{live=false};},[demo]);
  const [threads,setThreads]=useState<DmThread[]>([]),[admin,setAdmin]=useState(false),[notify,setNotify]=useState(true),[blocked,setBlocked]=useState<DmPerson[]|null>(null);
  const [activeId,setActiveId]=useState<string|null>(null),[convo,setConvo]=useState<Convo|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState(''),[text,setText]=useState(''),[sending,setSending]=useState(false),[attachment,setAttachment]=useState<Attachment|null>(null),[uploading,setUploading]=useState(false);
  const [newOpen,setNewOpen]=useState(false),[query,setQuery]=useState(''),[results,setResults]=useState<Person[]>([]),[searching,setSearching]=useState(false),[showBlocks,setShowBlocks]=useState(false),[reports,setReports]=useState<Report[]|null>(null),[showReports,setShowReports]=useState(false);
  const fileInput=useRef<HTMLInputElement>(null),local=useRef(demo?demoThreads():null),list=useRef<HTMLDivElement>(null),stick=useRef(true),activeRef=useRef<string|null>(null),meRef=useRef(demo?'alex':'');
  const setActive=useCallback((id:string|null)=>{activeRef.current=id;setActiveId(id);},[]);
  const loadThreads=useCallback(async()=>{
-  if(demo){const l=local.current!;setThreads([...l.threads].sort((a,b)=>b.lastAt.localeCompare(a.lastAt)));onUnread?.(l.threads.reduce((n,t)=>n+t.unread,0));return;}
+  if(demo){const l=local.current!;setThreads([...l.threads].sort((a,b)=>b.lastAt.localeCompare(a.lastAt)));onDm(l.threads.reduce((n,t)=>n+t.unread,0));return;}
   const r=await fetch('/api/messages',{cache:'no-store'}),b=await r.json() as {error?:string;me:string;admin:boolean;notify:boolean;threads:DmThread[]};
   if(!r.ok)throw new Error(b.error||'Could not load messages.');
-  meRef.current=b.me;setAdmin(b.admin);setNotify(b.notify);setThreads(b.threads);onUnread?.(b.threads.reduce((n,t)=>n+t.unread,0));
- },[demo,onUnread]);
+  meRef.current=b.me;setAdmin(b.admin);setNotify(b.notify);setThreads(b.threads);onDm(b.threads.reduce((n,t)=>n+t.unread,0));
+ },[demo,onDm]);
  const openThread=useCallback(async(id:string)=>{
   setActive(id);stick.current=true;setConvo(null);setAttachment(null);
   try{
@@ -90,6 +95,9 @@ export default function MessagesTab({demo=false,people=[],initialWith,initialThr
  const act=async(payload:Record<string,unknown>,done:string,after?:()=>void)=>{try{if(!demo)await api(payload);toast.success(demo?done+' Sample data only.':done);after?.();}catch(e){toast.error(e instanceof Error?e.message:'Could not complete that.');}};
  const other=convo?.other;
  return <section className="messages" aria-label="Messages">
+  {showRooms&&<div className="msg-switch" role="tablist" aria-label="Message type"><button type="button" role="tab" aria-selected={pane==='direct'} className={pane==='direct'?'active':''} onClick={()=>setPane('direct')}>Direct{dmCount>0&&<span className="badge">{dmCount}</span>}</button><button type="button" role="tab" aria-selected={pane==='rooms'} className={pane==='rooms'?'active':''} onClick={()=>setPane('rooms')}>Leader rooms{roomCount>0&&<span className="badge">{roomCount}</span>}</button></div>}
+  {pane==='rooms'&&<LeaderRooms demo={demo} initialRoom={initialRoom} onCounts={onRooms}/>}
+  <div hidden={pane==='rooms'}>
   <div className={`msg-layout${activeId?' has-thread':''}`}>
    <aside className="msg-list" aria-label="Conversations">
     <div className="msg-list-head"><h2>Messages</h2><div className="msg-tools">
@@ -129,9 +137,10 @@ export default function MessagesTab({demo=false,people=[],initialWith,initialThr
    <ul className="msg-results">{blocked===null?<li className="doubles-empty">Loading…</li>:!blocked.length?<li className="doubles-empty">You have not blocked anyone.</li>:blocked.map(p=><li key={p.id}><div className="msg-block-row"><Avatar name={p.name} photoUrl={photo(p)}/><b>{p.name}</b><Button size="sm" variant="outline" onClick={()=>void act({action:'block',personId:p.id,blocked:false},`${p.name} is unblocked.`,()=>{setBlocked(b=>b?.filter(x=>x.id!==p.id)??null);void loadThreads().catch(()=>{});})}>Unblock</Button></div></li>)}</ul>
   </DialogContent></Dialog>
   <Dialog open={showReports} onOpenChange={setShowReports}><DialogContent><DialogHeader><DialogTitle>Safety reports</DialogTitle><DialogDescription>Reports from people about messages and profiles. Only Rally administrators see this.</DialogDescription></DialogHeader>
-   <div className="chat-reports">{reports===null?<p className="doubles-empty">Loading…</p>:!reports.length?<p className="doubles-empty">No open reports.</p>:reports.map(r=><div key={r.id} className="chat-report"><p><b>{r.kind==='dm'?'Message':'Profile'} report</b> · {r.target}</p><small>Reported by {r.reporter}{r.reason?` · “${r.reason}”`:''}</small>
+   <div className="chat-reports">{reports===null?<p className="doubles-empty">Loading…</p>:!reports.length?<p className="doubles-empty">No open reports.</p>:reports.map(r=><div key={r.id} className="chat-report"><p><b>{r.kind==='dm'?'Message':r.kind==='room'?'Leader room message':'Profile'} report</b> · {r.target}</p><small>Reported by {r.reporter}{r.reason?` · “${r.reason}”`:''}</small>
     {r.context.map((c,i)=><p key={i} className="msg-context"><b>{c.author_name}:</b> {c.body}</p>)}
     <div><Button size="sm" variant="outline" onClick={()=>void act({action:'resolve_report',id:r.id},'Report closed.',()=>setReports(p=>p?.filter(x=>x.id!==r.id)??null))}>Mark reviewed</Button></div></div>)}</div>
   </DialogContent></Dialog>
+ </div>
  </section>;
 }
