@@ -1,7 +1,7 @@
 'use client';
 /* eslint-disable react-hooks/set-state-in-effect */
 import {useCallback,useEffect,useRef,useState} from 'react';
-import {ArrowLeft,Ban,Bell,BellOff,Flag,MoreHorizontal,Paperclip,Plus,Search,Send,ShieldAlert,Trash2,UserX} from 'lucide-react';
+import {ArrowLeft,Ban,Bell,BellOff,Flag,MoreHorizontal,Paperclip,Search,ShieldAlert,SquarePen,Trash2,UserX} from 'lucide-react';
 import {toast} from 'sonner';
 import {Button} from '@/components/ui/button';
 import {Dialog,DialogContent,DialogDescription,DialogHeader,DialogTitle} from '@/components/ui/dialog';
@@ -18,6 +18,8 @@ async function api(payload:Record<string,unknown>){
  const r=await fetch('/api/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
  const body=await r.json().catch(()=>({})) as {error?:string};if(!r.ok)throw new Error(body.error||'Could not complete that.');return body;
 }
+const stamp=(iso:string)=>{const d=new Date(iso),now=new Date(),t=d.toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}),day=Math.round((new Date(now.getFullYear(),now.getMonth(),now.getDate()).getTime()-new Date(d.getFullYear(),d.getMonth(),d.getDate()).getTime())/86400000);return day===0?`Today ${t}`:day===1?`Yesterday ${t}`:day<7?`${d.toLocaleDateString('en-US',{weekday:'long'})} ${t}`:`${d.toLocaleDateString('en-US',{month:'short',day:'numeric'})}, ${t}`;};
+const gap=(a:string,b:string)=>Math.abs(Date.parse(b)-Date.parse(a));
 const photo=(p:DmPerson)=>p.photoVersion?`/api/players/${p.id}/photo?v=${encodeURIComponent(p.photoVersion)}`:undefined;
 const ago=(m:number)=>new Date(Date.now()-m*60000).toISOString();
 // Sample conversations for the demo: nothing is sent anywhere.
@@ -104,10 +106,10 @@ export default function MessagesTab({demo=false,people=[],initialWith,initialThr
      <Button variant="ghost" size="icon" aria-label={notify?'Turn off message alerts':'Turn on message alerts'} aria-pressed={notify} title={notify?'Alerts on':'Alerts off'} onClick={()=>void act({action:'notify',on:!notify},notify?'Message alerts off.':'Message alerts on.',()=>setNotify(!notify))}>{notify?<Bell size={18}/>:<BellOff size={18}/>}</Button>
      <Button variant="ghost" size="icon" aria-label="Blocked people" title="Blocked people" onClick={()=>{setShowBlocks(true);if(!demo)void fetch('/api/messages?blocks=1',{cache:'no-store'}).then(r=>r.json() as Promise<{blocked?:DmPerson[]}>).then(b=>setBlocked(b.blocked??[])).catch(()=>setBlocked([]));else setBlocked([]);}}><UserX size={18}/></Button>
      {admin&&<Button variant="ghost" size="icon" aria-label="Safety reports" title="Safety reports" onClick={()=>{setShowReports(true);void fetch('/api/messages?reports=1',{cache:'no-store'}).then(r=>r.json() as Promise<{reports?:Report[]}>).then(b=>setReports(b.reports??[])).catch(()=>setReports([]));}}><ShieldAlert size={18}/></Button>}
-     <Button size="sm" onClick={()=>{setQuery('');setResults([]);setNewOpen(true);}}><Plus size={16}/>New</Button></div></div>
+     <Button variant="ghost" size="icon" aria-label="New message" title="New message" onClick={()=>{setQuery('');setResults([]);setNewOpen(true);}}><SquarePen size={20}/></Button></div></div>
     {error&&<p className="auth-error" role="alert">{error}</p>}
-    {loading?<p role="status" className="doubles-empty">Loading messages…</p>:!threads.length?<p className="doubles-empty">No conversations yet. Tap New to message someone from your clubs.</p>:<ul>{threads.map(t=><li key={t.id}><button type="button" className={`msg-thread${t.id===activeId?' is-active':''}`} onClick={()=>void openThread(t.id)}>
-     <Avatar name={t.other.name} photoUrl={photo(t.other)}/><span className="msg-thread-main"><b>{t.other.name}</b><small>{t.lastMessage||'No messages yet'}</small></span><span className="msg-thread-meta"><time>{t.lastAt?when(t.lastAt):''}</time>{t.unread>0&&<span className="badge" aria-label={`${t.unread} unread`}>{t.unread}</span>}</span></button></li>)}</ul>}
+    {loading?<p role="status" className="doubles-empty">Loading messages…</p>:!threads.length?<p className="doubles-empty">No conversations yet. Tap New to message someone from your clubs.</p>:<ul>{threads.map(t=><li key={t.id}><button type="button" className={`msg-thread${t.id===activeId?' is-active':''}${t.unread>0?' has-unread':''}`} onClick={()=>void openThread(t.id)}>
+     <Avatar name={t.other.name} photoUrl={photo(t.other)} large/><span className="msg-thread-main"><b>{t.other.name}</b><small>{t.unread>0&&t.unread>1?`${t.unread} new messages`:(t.lastMessage||'No messages yet')}{t.lastAt?` · ${when(t.lastAt)}`:''}</small></span>{t.unread>0&&<span className="msg-dot" role="img" aria-label={`${t.unread} unread`}/>}</button></li>)}</ul>}
    </aside>
    <div className="msg-convo">
     {!activeId?<p className="doubles-empty msg-empty">Select a conversation or start a new one.</p>:!convo||!other?<p role="status" className="doubles-empty">Opening…</p>:<>
@@ -118,13 +120,18 @@ export default function MessagesTab({demo=false,people=[],initialWith,initialThr
        <button type="button" onClick={()=>{const reason=window.prompt(`Why are you reporting ${other.name}? (optional)`);if(reason!==null)void act({action:'report_user',personId:other.id,reason},'Thanks. A Rally administrator will review your report.');}}><Flag size={14}/>Report person</button>
       </div></details>}</header>
      <div className="msg-scroll" ref={list} onScroll={e=>{const el=e.currentTarget;stick.current=el.scrollHeight-el.scrollTop-el.clientHeight<80;}} role="log" aria-live="polite" aria-label={`Conversation with ${other.name}`}>
-      {convo.messages.length===0?<p className="doubles-empty">Say hello to {other.name}.</p>:convo.messages.map(m=><article key={m.id} className={m.mine?'chat-msg is-mine':'chat-msg'}>
-       <header><time dateTime={m.createdAt}>{when(m.createdAt)}</time><details className="chat-menu"><summary aria-label="Message options"><MoreHorizontal size={16}/></summary><div>
-        {m.mine?<button type="button" onClick={()=>void act({action:'delete',id:m.id},'Message deleted.',()=>setConvo(c=>c?{...c,messages:c.messages.filter(x=>x.id!==m.id)}:c))}><Trash2 size={14}/>Delete</button>
-         :<button type="button" onClick={()=>{const reason=window.prompt('What is wrong with this message? (optional)');if(reason!==null)void act({action:'report_dm',id:m.id,reason},'Reported. An administrator will see this message and the ones before it.');}}><Flag size={14}/>Report</button>}
-       </div></details></header>{m.body&&<p>{m.body}</p>}{m.media&&<MediaView kind={m.media.kind} src={(m.media as LocalMedia).src??`/api/messages/media/${m.media.id}`} onSize={()=>{const el=list.current;if(el&&stick.current)el.scrollTop=el.scrollHeight;}}/>}</article>)}
+      {convo.messages.length===0?<div className="dm-empty"><Avatar name={other.name} photoUrl={photo(other)} large/><b>{other.name}</b><p>Say hello to start the conversation.</p></div>:convo.messages.map((m,i)=>{
+       const prev=convo.messages[i-1],next=convo.messages[i+1],showTime=!prev||gap(prev.createdAt,m.createdAt)>3600000,startsGroup=showTime||prev.mine!==m.mine||gap(prev.createdAt,m.createdAt)>300000,endsGroup=!next||next.mine!==m.mine||gap(m.createdAt,next.createdAt)>300000||gap(m.createdAt,next.createdAt)>3600000;
+       return <div key={m.id} className={`dm-row${m.mine?' is-mine':''}${startsGroup?' starts':''}${endsGroup?' ends':''}`}>
+        {showTime&&<div className="dm-time">{stamp(m.createdAt)}</div>}
+        <div className="dm-line">{!m.mine&&<span className="dm-avatar">{endsGroup&&<Avatar name={other.name} photoUrl={photo(other)}/>}</span>}
+         <div className={`dm-bubble${m.media&&!m.body?' media-only':''}`} title={stamp(m.createdAt)}>{m.media&&<MediaView kind={m.media.kind} src={(m.media as LocalMedia).src??`/api/messages/media/${m.media.id}`} onSize={()=>{const el=list.current;if(el&&stick.current)el.scrollTop=el.scrollHeight;}}/>}{m.body&&<span className="dm-text">{m.body}</span>}</div>
+         <details className="chat-menu dm-menu"><summary aria-label="Message options"><MoreHorizontal size={16}/></summary><div>
+          {m.mine?<button type="button" onClick={()=>void act({action:'delete',id:m.id},'Message deleted.',()=>setConvo(c=>c?{...c,messages:c.messages.filter(x=>x.id!==m.id)}:c))}><Trash2 size={14}/>Unsend</button>
+           :<button type="button" onClick={()=>{const reason=window.prompt('What is wrong with this message? (optional)');if(reason!==null)void act({action:'report_dm',id:m.id,reason},'Reported. An administrator will see this message and the ones before it.');}}><Flag size={14}/>Report</button>}
+         </div></details></div></div>;})}
      </div>
-     {convo.canSend?<form className="chat-composer" onSubmit={e=>{e.preventDefault();void send()}}>{attachment&&<AttachmentPreview attachment={attachment} onRemove={()=>setAttachment(null)}/>}<div className="chat-row"><input ref={fileInput} type="file" accept="image/*,video/*" hidden onChange={e=>void attach(e.target.files?.[0])}/><Button type="button" variant="ghost" size="icon" aria-label="Attach a photo or video" disabled={uploading||!!attachment} onClick={()=>fileInput.current?.click()}><Paperclip size={20}/></Button><textarea value={text} maxLength={2000} rows={1} placeholder={uploading?'Uploading…':`Message ${other.name}`} aria-label="Message" onChange={e=>setText(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!/Mobi|Android/i.test(navigator.userAgent)){e.preventDefault();void send();}}}/><Button disabled={sending||uploading||(!text.trim()&&!attachment)} aria-label="Send message"><Send size={18}/></Button></div></form>
+     {convo.canSend?<form className="dm-composer" onSubmit={e=>{e.preventDefault();void send()}}>{attachment&&<AttachmentPreview attachment={attachment} onRemove={()=>setAttachment(null)}/>}<div className="dm-pill"><input ref={fileInput} type="file" accept="image/*,video/*" hidden onChange={e=>void attach(e.target.files?.[0])}/><button type="button" className="dm-attach" aria-label="Attach a photo or video" disabled={uploading||!!attachment} onClick={()=>fileInput.current?.click()}><Paperclip size={20}/></button><textarea value={text} maxLength={2000} rows={1} placeholder={uploading?'Uploading…':'Message…'} aria-label="Message" onChange={e=>setText(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!/Mobi|Android/i.test(navigator.userAgent)){e.preventDefault();void send();}}}/><button type="submit" className="dm-send" disabled={sending||uploading||(!text.trim()&&!attachment)}>Send</button></div></form>
       :<p className="chat-muted">You can no longer message this person. You still have this conversation.</p>}
     </>}
    </div>
