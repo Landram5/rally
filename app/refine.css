@@ -1270,3 +1270,6 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; -webkit-tap-highl
 .club-discord .discord-steps { padding-left: 20px; display: grid; gap: 8px; }
 .discord-code { display: inline-block; padding: 2px 10px; border-radius: 8px; background: var(--bg-muted); letter-spacing: .15em; font-size: 1.05rem; }
 .discord-actions { display: flex; gap: 8px; margin-top: 12px; }
+
+/* Panels stacked inside one club section (for example Management) need space between them. */
+.club-sections > .club-block > * + * { margin-top: 16px; }
