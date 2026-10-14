@@ -56,3 +56,5 @@ tsconfig.tsbuildinfo
 /rally-mac-source.zip
 .dev.vars.*
 !.dev.vars.example
+
+.wrangler/
