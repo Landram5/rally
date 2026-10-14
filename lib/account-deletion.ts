@@ -66,6 +66,12 @@ export async function beginDeletion(db:D1Database,authId:string,mode:DeletionMod
   const id=profile.id;
   statements.push(q("UPDATE profiles SET name='Deleted player',auth_id=NULL,deleted_at=? WHERE id=?",now,id));
   statements.push(q('DELETE FROM memberships WHERE player_id=?',id));
+  // Club chat: personal chat settings and reports go; the person's messages stay (labelled "Deleted User" with their name).
+  // Direct messages are private conversations, so they are removed with the account, along with blocks and safety reports involving it.
+  statements.push(q('DELETE FROM dm_threads WHERE a_id=? OR b_id=?',id,id),q('DELETE FROM dm_settings WHERE player_id=?',id),q('DELETE FROM blocks WHERE blocker_id=? OR blocked_id=?',id,id),q('DELETE FROM safety_reports WHERE reporter_id=? OR target_id=?',id,id),q('UPDATE safety_reports SET resolved_by=NULL WHERE resolved_by=?',id));
+  // Leader rooms: pass ownership on, archive rooms nobody else is in, then remove this person. Their messages stay, labelled "Deleted User".
+  statements.push(q("UPDATE room_members SET role='owner' WHERE rowid IN (SELECT rowid FROM (SELECT rowid,row_number() OVER (PARTITION BY room_id ORDER BY created_at) rn FROM room_members WHERE status='active' AND player_id<>?1 AND room_id IN (SELECT room_id FROM room_members WHERE player_id=?1 AND role='owner')) WHERE rn=1)",id),q("UPDATE leader_rooms SET archived_at=?1 WHERE archived_at IS NULL AND id IN (SELECT room_id FROM room_members WHERE player_id=?2) AND NOT EXISTS(SELECT 1 FROM room_members m WHERE m.room_id=leader_rooms.id AND m.status='active' AND m.player_id<>?2)",now,id),q('DELETE FROM room_members WHERE player_id=?',id),q('UPDATE room_members SET invited_by=NULL WHERE invited_by=?',id));
+  statements.push(q('DELETE FROM chat_members WHERE player_id=?',id),q('DELETE FROM chat_mutes WHERE player_id=?',id),q('DELETE FROM chat_reports WHERE reporter_id=?',id),q('UPDATE chat_messages SET deleted_by=NULL WHERE deleted_by=?',id),q('UPDATE chat_mutes SET muted_by=NULL WHERE muted_by=?',id),q('UPDATE chat_reports SET resolved_by=NULL WHERE resolved_by=?',id));
   statements.push(q('DELETE FROM notification_preferences WHERE player_id=?',id));
   statements.push(q('DELETE FROM ui_preferences WHERE player_id=?',id));
   statements.push(q("UPDATE season_players SET status='withdrawn' WHERE player_id=?",id));
@@ -135,6 +141,9 @@ export async function beginDeletion(db:D1Database,authId:string,mode:DeletionMod
    for(const team of teamRows){const pid=placeholder(`team:${team.id}`);statements.push(q('UPDATE doubles_teams SET p1=CASE WHEN p1=? THEN ? ELSE p1 END,p2=CASE WHEN p2=? THEN ? ELSE p2 END WHERE id=?',id,pid,id,pid,team.id));}
    statements.push(q('DELETE FROM entries WHERE player_id=?',id));
    statements.push(q('DELETE FROM season_players WHERE player_id=?',id));
+   // Removing history deletes this profile row, so their chat messages and uploads move to one "Deleted player" placeholder (the name stays in each message).
+   if((await q('SELECT 1 x FROM room_messages WHERE author_id=? UNION SELECT 1 FROM room_media WHERE uploader_id=? UNION SELECT 1 FROM leader_rooms WHERE created_by=? LIMIT 1',id,id,id).first())){const pid=placeholder('rooms');statements.push(q('UPDATE room_messages SET author_id=? WHERE author_id=?',pid,id),q('UPDATE room_media SET uploader_id=? WHERE uploader_id=?',pid,id),q('UPDATE leader_rooms SET created_by=? WHERE created_by=?',pid,id));}
+   if((await q('SELECT 1 x FROM chat_messages WHERE author_id=? UNION SELECT 1 FROM chat_media WHERE uploader_id=? LIMIT 1',id,id).first())){const pid=placeholder('chat');statements.push(q('UPDATE chat_messages SET author_id=? WHERE author_id=?',pid,id),q('UPDATE chat_media SET uploader_id=? WHERE uploader_id=?',pid,id));}
    statements.push(q('DELETE FROM profiles WHERE id=?',id));
   }
  }
