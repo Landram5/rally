@@ -3,7 +3,7 @@ import {chatAccess} from './chat';
 import type {ChatMessage} from './chat';
 import {publishChat} from './chat-room';
 import {pushChatMessage} from './chat-push';
-import {handleClubCommand,rallyNameFor} from './discord-club';
+import {handleClubCommand,rallyNameFor,avatarUrlFor} from './discord-club';
 // Discord bridge. A club's chat is linked to one Discord channel:
 //  - Rally -> Discord: each new club chat message is posted through a channel webhook under the sender's name.
 //  - Discord -> Rally: the gateway connection (lib/discord-gateway.ts) hands each message from the channel to ingestDiscordMessage.
@@ -102,8 +102,9 @@ export async function relayToDiscord(env:DiscordEnv,message:ChatMessage,http:Htt
  const link=await env.DB.prepare('SELECT webhook_id,webhook_token FROM discord_links WHERE club_id=?').bind(message.clubId).first<{webhook_id:string;webhook_token:string}>();if(!link)return false;
  const note=message.media?(message.media.kind==='video'?'🎥 Shared a video in Rally':'📷 Shared a photo in Rally'):'';
  const content=[message.body,note].filter(Boolean).join('\n').slice(0,MAX);if(!content)return false;
+ const avatar=await avatarUrlFor(env,message.authorId);
  try{
-  const res=await http(`${DISCORD_API}/webhooks/${link.webhook_id}/${link.webhook_token}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:webhookName(message.authorName),content,allowed_mentions:{parse:[]}})});
+  const res=await http(`${DISCORD_API}/webhooks/${link.webhook_id}/${link.webhook_token}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:webhookName(message.authorName),content,allowed_mentions:{parse:[]},...(avatar?{avatar_url:avatar}:{})})});
   // The webhook was deleted in Discord: stop relaying until it is linked again.
   if(res.status===404||res.status===401)await env.DB.prepare('DELETE FROM discord_links WHERE club_id=?').bind(message.clubId).run();
   return res.ok;
