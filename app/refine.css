@@ -342,7 +342,6 @@ table tbody tr:hover { background: var(--bg-subtle); }
 
 /* ───────────────────────── 9. PUBLIC PAGES ───────────────────────── */
 .public-page, .public-directory { padding-top: 32px; }
-.directory-tabs a { border-radius: var(--radius-md); font-weight: 550; }
 .leaderboard-row { border-radius: var(--radius-lg); box-shadow: var(--shadow-xs); transition: border-color var(--duration) var(--ease), box-shadow var(--duration) var(--ease); }
 .leaderboard-row:hover { border-color: var(--border-strong); box-shadow: var(--shadow-md); }
 .support-footer { color: var(--text-muted); font-size: 0.8rem; }
@@ -1368,13 +1367,6 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; -webkit-tap-highl
 @media (max-width: 600px) { [role="dialog"].club-chat-dialog { height: 100dvh; } }
 
 /* ───────────────────────── Public polish ───────────────────────── */
-/* Home directory tabs: a segmented control instead of an underlined row. */
-.directory-tabs { display: inline-flex; gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--bg-muted); max-width: 100%; }
-.directory-tabs a, .directory-tabs a[aria-current="page"] { padding: 8px 16px; border: 1px solid transparent; border-bottom: 1px solid transparent; border-radius: var(--radius-md); text-decoration: none; box-shadow: none; }
-.directory-tabs a::after { display: none !important; }
-.directory-tabs a[aria-current="page"] { background: var(--bg-surface); border-color: var(--border); color: var(--text-strong); }
-.header-signin { color: var(--text-strong); font-weight: 550; }
-.rally-intro a:not([data-slot="button"]):not(.primary-action) { text-decoration: none; }
 
 /* Public player header sits on the page background, so it uses page text colours. */
 .public-hero .hero-sub, .public-hero .player-bio, .public-hero .player-bio-toggle { color: var(--text-muted); }
@@ -1392,3 +1384,7 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; -webkit-tap-highl
 .account-settings .profile-photo-actions button:last-child:not(:only-child) { border-color: transparent; background: transparent; color: var(--text-muted); }
 .account-settings .profile-photo-actions button:hover:not(:disabled) { border-color: var(--text-subtle); }
 .account-settings .profile-photo-actions button:last-child:not(:only-child):hover:not(:disabled) { color: var(--danger); border-color: transparent; }
+
+/* Browse tabs and header Sign in are plain buttons now. */
+.browse-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+.browse-tabs [data-slot="button"] { text-decoration: none; }
