@@ -1151,3 +1151,9 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; -webkit-tap-highl
 .chat-report p { margin: 0; overflow-wrap: anywhere; }
 .chat-report > div { display: flex; gap: 8px; }
 @media (max-width: 600px) { .chat-head, .chat-list, .chat-reports { padding-inline: 14px; } .chat-msg { max-width: 90%; } .chat-list { height: min(58dvh, 520px); } }
+
+/* New chat bubbles settle in: a short rise and fade (skipped for people who prefer reduced motion). */
+@keyframes chat-bubble-in { from { opacity: 0; transform: translateY(6px) scale(.985); } to { opacity: 1; transform: none; } }
+.chat-msg.is-new { animation: chat-bubble-in 220ms var(--ease-out, cubic-bezier(.22,.61,.36,1)) both; transform-origin: left bottom; }
+.chat-msg.is-new.is-mine { transform-origin: right bottom; }
+@media (prefers-reduced-motion: reduce) { .chat-msg.is-new { animation: none; } }

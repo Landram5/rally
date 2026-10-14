@@ -46,7 +46,8 @@ export default function ClubChat({clubId,clubName,onRead,demo=false}:{clubId:str
  const [reports,setReports]=useState<Report[]|null>(null),[showReports,setShowReports]=useState(false);
  const list=useRef<HTMLDivElement>(null),stick=useRef(true),lastId=useRef(''),meRef=useRef(''),adminRef=useRef(false),file=useRef<HTMLInputElement>(null);
  const personal=useCallback((m:ChatMessage):ChatMessage=>({...m,mine:m.authorId!==null&&m.authorId===meRef.current,canDelete:adminRef.current||(m.authorId!==null&&m.authorId===meRef.current)}),[]);
- const merge=useCallback((incoming:ChatMessage[])=>setMessages(prev=>{const seen=new Map(prev.map(m=>[m.id,m]));for(const m of incoming)seen.set(m.id,personal(m));const next=[...seen.values()].sort((a,b)=>a.createdAt.localeCompare(b.createdAt)||a.id.localeCompare(b.id));lastId.current=next.filter(m=>!m.id.startsWith('pending-')).at(-1)?.id??'';return next;}),[personal]);
+ const known=useRef(new Set<string>()),[fresh,setFresh]=useState<Set<string>>(()=>new Set());
+ const merge=useCallback((incoming:ChatMessage[],animate=true)=>{const added=incoming.filter(m=>!known.current.has(m.id)).map(m=>m.id);for(const m of incoming)known.current.add(m.id);if(animate&&added.length)setFresh(f=>new Set([...f,...added]));setMessages(prev=>{const seen=new Map(prev.map(m=>[m.id,m]));for(const m of incoming)seen.set(m.id,personal(m));const next=[...seen.values()].sort((a,b)=>a.createdAt.localeCompare(b.createdAt)||a.id.localeCompare(b.id));lastId.current=next.filter(m=>!m.id.startsWith('pending-')).at(-1)?.id??'';return next;});},[personal]);
  const markRead=useCallback(()=>{if(!demo&&document.visibilityState==='visible'){void api({action:'read',clubId}).then(()=>onRead?.()).catch(()=>{});}},[clubId,onRead,demo]);
  const load=useCallback(async(opts:{before?:string;after?:string}={})=>{
   const q=new URLSearchParams({club:clubId,...(opts.before?{before:opts.before}:{}),...(opts.after?{after:opts.after}:{})});
@@ -55,7 +56,7 @@ export default function ClubChat({clubId,clubName,onRead,demo=false}:{clubId:str
   meRef.current=body.me;adminRef.current=body.admin;setMe(body.me);setAdmin(body.admin);setMuted(body.muted);setNotify(body.notify);
   return body;
  },[clubId]);
- useEffect(()=>{if(demo){meRef.current='alex';adminRef.current=true;setMe('alex');setAdmin(true);setMessages(demoSeed(clubId).map(personal));setLive(true);setLoading(false);return;}let gone=false;setLoading(true);load().then(b=>{if(gone)return;setMessages(b.messages.map(personal));lastId.current=b.messages.at(-1)?.id??'';setHasMore(b.hasMore);setError('');markRead();}).catch(e=>{if(!gone)setError(e instanceof Error?e.message:'Could not load the chat.')}).finally(()=>{if(!gone)setLoading(false)});return()=>{gone=true};},[load,personal,markRead,demo,clubId]);
+ useEffect(()=>{if(demo){meRef.current='alex';adminRef.current=true;setMe('alex');setAdmin(true);{const seed=demoSeed(clubId);seed.forEach(m=>known.current.add(m.id));setMessages(seed.map(personal));}setLive(true);setLoading(false);return;}let gone=false;setLoading(true);load().then(b=>{if(gone)return;b.messages.forEach(m=>known.current.add(m.id));setMessages(b.messages.map(personal));lastId.current=b.messages.at(-1)?.id??'';setHasMore(b.hasMore);setError('');markRead();}).catch(e=>{if(!gone)setError(e instanceof Error?e.message:'Could not load the chat.')}).finally(()=>{if(!gone)setLoading(false)});return()=>{gone=true};},[load,personal,markRead,demo,clubId]);
  // Live connection, with a polling fallback while it is down. Connections renew every 15 minutes (the server re-checks membership).
  useEffect(()=>{
   if(demo)return;
@@ -76,7 +77,7 @@ export default function ClubChat({clubId,clubName,onRead,demo=false}:{clubId:str
   return()=>{closed=true;clearTimeout(timer);clearInterval(poll);clearInterval(ping);document.removeEventListener('visibilitychange',visible);ws?.close();};
  },[clubId,load,merge,markRead,demo]);
  useEffect(()=>{const el=list.current;if(el&&stick.current)el.scrollTop=el.scrollHeight;},[messages]);
- async function older(){if(demo||!messages.length)return;const el=list.current,before=el?.scrollHeight??0;try{const b=await load({before:messages[0].id});setHasMore(b.hasMore);stick.current=false;merge(b.messages);requestAnimationFrame(()=>{if(el)el.scrollTop=el.scrollHeight-before;});}catch(e){toast.error(e instanceof Error?e.message:'Could not load earlier messages.');}}
+ async function older(){if(demo||!messages.length)return;const el=list.current,before=el?.scrollHeight??0;try{const b=await load({before:messages[0].id});setHasMore(b.hasMore);stick.current=false;merge(b.messages,false);requestAnimationFrame(()=>{if(el)el.scrollTop=el.scrollHeight-before;});}catch(e){toast.error(e instanceof Error?e.message:'Could not load earlier messages.');}}
  async function attach(f:File|undefined){
   if(!f)return;if(file.current)file.current.value='';
   const isVideo=f.type.startsWith('video/'),isImage=f.type.startsWith('image/');
@@ -111,7 +112,7 @@ export default function ClubChat({clubId,clubName,onRead,demo=false}:{clubId:str
    {hasMore&&<Button variant="ghost" size="sm" className="chat-older" onClick={()=>void older()}>Load earlier messages</Button>}
    {loading?<p role="status" className="doubles-empty">Loading chat…</p>:!messages.length?<p className="doubles-empty">No messages yet. Say hello to the club.</p>:messages.map(m=>{const d=day(m.createdAt),sep=d!==lastDay;lastDay=d;return <div key={m.id}>
     {sep&&<div className="chat-day">{d}</div>}
-    <article className={m.mine?'chat-msg is-mine':'chat-msg'}>
+    <article className={`chat-msg${m.mine?' is-mine':''}${fresh.has(m.id)?' is-new':''}`}>
      <header><b className={m.authorId?'':'is-deleted'}>{m.mine?'You':m.authorName}</b><time dateTime={m.createdAt}>{time(m.createdAt)}</time>
       {(m.canDelete||!m.mine)&&<details className="chat-menu"><summary aria-label="Message options"><MoreHorizontal size={16}/></summary><div>
        {m.canDelete&&<button type="button" onClick={()=>void act({action:'delete',id:m.id},'Message deleted.',()=>setMessages(p=>p.filter(x=>x.id!==m.id)))}><Trash2 size={14}/>Delete</button>}
