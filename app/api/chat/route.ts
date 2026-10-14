@@ -3,7 +3,7 @@ import {getAuthenticatedUser} from '@/lib/auth';
 import {AppError} from '@/lib/rally-errors';
 import {rateLimit} from '@/lib/write-limits';
 import {guardAccountWrites} from '@/lib/account-write-guard';
-import {deleteMessage,listReports,markRead,postMessage,readMessages,reportMessage,resolveReport,setMute,setNotify,unreadCounts} from '@/lib/chat';
+import {deleteMessage,listClubChats,listReports,markRead,postMessage,readMessages,reportMessage,resolveReport,setMute,setNotify,unreadCounts} from '@/lib/chat';
 import {publishChat} from '@/lib/chat-room';
 import {blockedIds} from '@/lib/messages';
 import {pushChatMessage} from '@/lib/chat-push';
@@ -15,6 +15,7 @@ const failure=(e:unknown)=>{if(e instanceof AppError)return response({error:e.me
 export async function GET(request:Request){
  try{
   const me=await viewer(),url=new URL(request.url);
+  if(url.searchParams.get('clubs'))return response(await listClubChats(env.DB,me.id));
   if(url.searchParams.get('counts'))return response({counts:await unreadCounts(env.DB,me.id)});
   if(url.searchParams.get('reports'))return response(await listReports(env.DB,me.id,url.searchParams.get('club')));
   return response({me:me.id,blocked:await blockedIds(env.DB,me.id),...await readMessages(env.DB,me.id,url.searchParams.get('club'),{before:url.searchParams.get('before')??undefined,after:url.searchParams.get('after')??undefined})});

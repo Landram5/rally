@@ -3,7 +3,7 @@ import {getAuthenticatedUser} from '@/lib/auth';
 import {AppError} from '@/lib/rally-errors';
 import {rateLimit} from '@/lib/write-limits';
 import {guardAccountWrites} from '@/lib/account-write-guard';
-import {createRoom,deleteRoomMessage,invite,leaveRoom,listRooms,lookupLeaders,markRoomRead,postRoomMessage,readRoom,removeMember,reportRoomMessage,respondToInvite,setRoomNotify,updateRoom} from '@/lib/rooms';
+import {createRoom,deleteRoomMessage,invite,leaveRoom,listRooms,lookupInvitees,markRoomRead,postRoomMessage,readRoom,removeMember,reportRoomMessage,respondToInvite,setRoomNotify,updateRoom} from '@/lib/rooms';
 import {publishChat} from '@/lib/chat-room';
 import {pushRoomMessage} from '@/lib/chat-push';
 export const dynamic='force-dynamic';
@@ -13,7 +13,7 @@ const failure=(e:unknown)=>{if(e instanceof AppError)return response({error:e.me
 export async function GET(request:Request){
  try{
   const me=await viewer(),q=new URL(request.url).searchParams;
-  if(q.get('lookup')!==null)return response(await lookupLeaders(env.DB,me.id,q.get('room'),q.get('lookup')));
+  if(q.get('lookup')!==null)return response(await lookupInvitees(env.DB,me.id,q.get('room'),q.get('lookup')));
   if(q.get('room'))return response(await readRoom(env.DB,me.id,q.get('room'),{before:q.get('before')??undefined}));
   return response(await listRooms(env.DB,me.id));
  }catch(e){return failure(e);}

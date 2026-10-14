@@ -91,3 +91,15 @@ export async function unreadCounts(db:D1Database,viewer:string){
  const rows=(await db.prepare("SELECT m.club_id,count(*) n FROM memberships mb JOIN clubs c ON c.id=mb.club_id AND c.approval_status='approved' JOIN chat_messages m ON m.club_id=mb.club_id AND m.deleted_at IS NULL AND m.author_id<>mb.player_id AND NOT EXISTS(SELECT 1 FROM blocks bk WHERE bk.blocker_id=mb.player_id AND bk.blocked_id=m.author_id) LEFT JOIN chat_members cr ON cr.club_id=mb.club_id AND cr.player_id=mb.player_id WHERE mb.player_id=? AND mb.status='active' AND mb.role!='guest' AND m.created_at>coalesce(cr.last_read_at,'') GROUP BY m.club_id").bind(viewer).all<{club_id:string;n:number}>()).results;
  return Object.fromEntries(rows.map(r=>[r.club_id,Math.min(r.n,99)]));
 }
+
+export type ClubChatItem={clubId:string;name:string;lastMessage:string;lastAt:string;unread:number};
+// Every club chat the person can open, for the combined chat list: newest activity first, with unread counts.
+export async function listClubChats(db:D1Database,viewer:string){
+ const rows=(await db.prepare(`SELECT c.id,c.name,
+   (SELECT CASE WHEN m.source='discord' THEN coalesce(m.external_name,'Discord') ELSE p.name END||': '||coalesce(nullif(m.body,''),CASE (SELECT kind FROM chat_media WHERE id=m.media_id) WHEN 'video' THEN 'Video' ELSE 'Photo' END) FROM chat_messages m JOIN profiles p ON p.id=m.author_id WHERE m.club_id=c.id AND m.deleted_at IS NULL AND NOT EXISTS(SELECT 1 FROM blocks bk WHERE bk.blocker_id=?1 AND bk.blocked_id=m.author_id) ORDER BY m.created_at DESC,m.id DESC LIMIT 1) last_body,
+   (SELECT max(m.created_at) FROM chat_messages m WHERE m.club_id=c.id AND m.deleted_at IS NULL) last_at,
+   (SELECT count(*) FROM chat_messages m WHERE m.club_id=c.id AND m.deleted_at IS NULL AND m.author_id<>?1 AND NOT EXISTS(SELECT 1 FROM blocks bk WHERE bk.blocker_id=?1 AND bk.blocked_id=m.author_id) AND m.created_at>coalesce((SELECT last_read_at FROM chat_members cr WHERE cr.club_id=c.id AND cr.player_id=?1),'')) unread
+  FROM memberships mb JOIN clubs c ON c.id=mb.club_id AND c.approval_status='approved' JOIN profiles me ON me.id=mb.player_id AND me.deleted_at IS NULL AND me.auth_id IS NOT NULL
+  WHERE mb.player_id=?1 AND mb.status='active' AND mb.role!='guest' ORDER BY coalesce(last_at,'') DESC,c.name LIMIT 100`).bind(viewer).all<{id:string;name:string;last_body:string|null;last_at:string|null;unread:number}>()).results;
+ return {clubs:rows.map(r=>({clubId:r.id,name:r.name,lastMessage:(r.last_body??'').slice(0,120),lastAt:r.last_at??'',unread:Math.min(r.unread,99)}) as ClubChatItem)};
+}

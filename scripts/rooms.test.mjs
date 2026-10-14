@@ -18,14 +18,15 @@ const fail=async(p,status)=>assert.rejects(p,e=>e.status===status,`expected ${st
 const t=n=>`2026-10-08T10:00:${String(n).padStart(2,'0')}.000Z`;
 // Only leaders of approved clubs.
 assert.equal(await rooms.isLeader(db,'ana'),true);assert.equal(await rooms.isLeader(db,'member'),false);assert.equal(await rooms.isLeader(db,'pending'),false,'a pending board role is not leadership');assert.equal(await rooms.isLeader(db,'dee'),false,'a club awaiting approval does not count');
-await fail(rooms.createRoom(db,'member',{name:'Nope'}),403);await fail(rooms.createRoom(db,'ana',{name:'   '}),400);await fail(rooms.createRoom(db,'ana',{name:'x'.repeat(81)}),400);
+await fail(rooms.createRoom(db,'ana',{name:'   '}),400);await fail(rooms.createRoom(db,'ana',{name:'x'.repeat(81)}),400);
+const plain=await rooms.createRoom(db,'member',{name:'Doubles friends'},t(0));assert.equal((await rooms.listRooms(db,'member')).rooms.length,1,'any member can start a group chat');await rooms.invite(db,'member',plain.roomId,'ana',t(0));assert.equal((await rooms.listRooms(db,'ana')).invitations.length,1);await rooms.respondToInvite(db,'ana',plain.roomId,false);await rooms.leaveRoom(db,'member',plain.roomId);
 const {roomId}=await rooms.createRoom(db,'ana',{name:'Regional leaders',description:'Scheduling'},t(1));
-assert.equal((await rooms.listRooms(db,'ana')).rooms.length,1);assert.equal((await rooms.listRooms(db,'member')).leader,false);assert.deepEqual((await rooms.listRooms(db,'member')).rooms,[]);
+assert.equal((await rooms.listRooms(db,'ana')).rooms.length,1);assert.deepEqual((await rooms.listRooms(db,'member')).rooms,[]);
 await fail(rooms.readRoom(db,'bo',roomId),404,'not a member yet');await fail(rooms.postRoomMessage(db,'member',roomId,{text:'hi',clientId:'a'}),404);
 // Invitations: owner only, leaders only, never across a block.
-assert.deepEqual((await rooms.lookupLeaders(db,'ana',roomId,'Leader')).people.map(p=>p.id).sort(),['bo','cy']);assert.deepEqual((await rooms.lookupLeaders(db,'ana',roomId,'x')).people,[]);
-await fail(rooms.invite(db,'bo',roomId,'cy'),404);await fail(rooms.invite(db,'ana',roomId,'member'),400,'a non-leader cannot be invited');await fail(rooms.invite(db,'ana',roomId,'dee'),400);
-await dm.setBlock(db,'cy','ana',true);await fail(rooms.invite(db,'ana',roomId,'cy'),403,'blocks stop invitations');assert.deepEqual((await rooms.lookupLeaders(db,'ana',roomId,'Cy')).people,[]);await dm.setBlock(db,'cy','ana',false);
+assert.deepEqual((await rooms.lookupInvitees(db,'ana',roomId,'Leader')).people.map(p=>p.id).sort(),['bo','cy','member','pending'],'people who share a club, and other leaders; not someone unrelated');assert.deepEqual((await rooms.lookupInvitees(db,'ana',roomId,'x')).people,[]);
+await fail(rooms.invite(db,'bo',roomId,'cy'),404);await fail(rooms.invite(db,'ana',roomId,'dee'),403,'someone with no shared club who is not a leader cannot be invited');
+await dm.setBlock(db,'cy','ana',true);await fail(rooms.invite(db,'ana',roomId,'cy'),403,'blocks stop invitations');assert.deepEqual((await rooms.lookupInvitees(db,'ana',roomId,'Cy')).people,[]);await dm.setBlock(db,'cy','ana',false);
 await rooms.invite(db,'ana',roomId,'bo',t(2));await rooms.invite(db,'ana',roomId,'cy',t(2));
 let mine=await rooms.listRooms(db,'bo');assert.equal(mine.rooms.length,0);assert.equal(mine.invitations.length,1);assert.equal(mine.invitations[0].invitedBy,'Ana Leader');
 await fail(rooms.readRoom(db,'bo',roomId),404,'an invitation is not membership');
@@ -51,8 +52,8 @@ const target=(await rooms.readRoom(db,'ana',roomId)).messages.find(m=>m.body==='
 const reports=(await dm.listSafetyReports(db,true)).reports;assert.equal(reports.length,1);assert.equal(reports[0].kind,'room');assert.equal(reports[0].context.at(-1).body,'m5');
 // Owner controls.
 await fail(rooms.updateRoom(db,'bo',roomId,{name:'Mine now'}),403);await rooms.updateRoom(db,'ana',roomId,{name:'Leaders',description:''});await fail(rooms.removeMember(db,'bo',roomId,'ana'),403);await fail(rooms.removeMember(db,'ana',roomId,'ana'),400);
-// Losing leadership ends access.
-run("UPDATE memberships SET role='member' WHERE player_id='bo'");await fail(rooms.readRoom(db,'bo',roomId),403);assert.deepEqual((await rooms.listRooms(db,'bo')).rooms,[]);run("UPDATE memberships SET role='owner' WHERE player_id='bo' AND club_id='c2'");run("UPDATE memberships SET role='board' WHERE player_id='bo' AND club_id='c1'");
+// Group chats do not depend on leadership.
+run("UPDATE memberships SET role='member' WHERE player_id='bo'");assert.equal((await rooms.readRoom(db,'bo',roomId)).room.id,roomId,'losing a leader role does not remove someone from a group chat');run("UPDATE memberships SET role='owner' WHERE player_id='bo' AND club_id='c2'");run("UPDATE memberships SET role='board' WHERE player_id='bo' AND club_id='c1'");
 // Archiving stops new messages and hides the room; removal kicks people out.
 await rooms.invite(db,'ana',roomId,'cy',t(50));await rooms.respondToInvite(db,'cy',roomId,true);await rooms.removeMember(db,'ana',roomId,'cy');await fail(rooms.readRoom(db,'cy',roomId),404);
 // The owner leaving hands the room to the longest-standing member.

@@ -1339,3 +1339,19 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; -webkit-tap-highl
 /* Any tab row that still has to scroll sideways hides the browser scroll bar. */
 [data-slot="tabs-list"], .section-tabs { scrollbar-width: none; }
 [data-slot="tabs-list"]::-webkit-scrollbar, .section-tabs::-webkit-scrollbar { display: none; }
+
+/* Combined chat list: club chats and group chats next to direct messages. */
+.room-icon.club { background: var(--cta, var(--brand)); color: var(--on-cta, #000); font-weight: 700; }
+.room-icon.big { width: 72px; height: 72px; border-radius: 22px; }
+.messages .msg-thread .room-icon { width: 56px; height: 56px; border-radius: 50%; }
+.msg-kind { font-style: normal; font-weight: 600; font-size: .68rem; margin-left: 8px; padding: 2px 7px; border-radius: 999px; background: var(--bg-muted); color: var(--text-muted); vertical-align: middle; }
+.dm-author { font-size: .72rem; color: var(--text-muted); margin: 6px 0 2px 36px; }
+.dm-menu-wrap { align-self: center; }
+.dm-menu-wrap .chat-menu { opacity: 0; transition: opacity .12s; }
+.dm-row:hover .dm-menu-wrap .chat-menu, .dm-menu-wrap .chat-menu[open], .dm-menu-wrap .chat-menu:focus-within { opacity: 1; }
+@media (hover: none) { .dm-menu-wrap .chat-menu { opacity: .45; } }
+.dm-row.is-mine .dm-menu-wrap { order: -1; }
+.dm-avatar .avatar { display: grid; place-items: center; background: var(--bg-muted); border-radius: 50%; font-weight: 600; }
+.msg-convo > .club-chat { border: 0; box-shadow: none; border-radius: 0; margin: 0; background: none; flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.msg-convo > .club-chat .msg-scroll { flex: 1; }
+.msg-convo > .club-chat .chat-reports { padding-top: 8px; }
