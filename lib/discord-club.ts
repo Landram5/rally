@@ -61,6 +61,16 @@ export async function rallyNameFor(env:DiscordEnv,discordUserId:string,clubId:st
  const r=await env.DB.prepare("SELECT p.name FROM discord_accounts a JOIN profiles p ON p.id=a.profile_id AND p.deleted_at IS NULL JOIN memberships m ON m.player_id=p.id AND m.club_id=? AND m.status='active' WHERE a.discord_user_id=?").bind(clubId,discordUserId).first<{name:string}>();
  return r?.name??null;
 }
+// ---- Opt-in: Rally photo as the Discord avatar ----
+export const avatarOptedIn=async(env:DiscordEnv,profileId:string)=>!!await env.DB.prepare('SELECT 1 x FROM discord_avatar_optin WHERE profile_id=?').bind(profileId).first();
+export async function setAvatarOptIn(env:DiscordEnv,profileId:string,on:boolean,now=new Date().toISOString()){
+ await env.DB.prepare(on?'INSERT OR IGNORE INTO discord_avatar_optin(profile_id,created_at) VALUES(?,?)':'DELETE FROM discord_avatar_optin WHERE profile_id=?').bind(...(on?[profileId,now]:[profileId])).run();return {ok:true};
+}
+// The public photo URL for a player who opted in and has a photo; the version in the URL changes when the photo does.
+export async function avatarUrlFor(env:DiscordEnv,profileId:string){
+ const r=await env.DB.prepare('SELECT ph.updated_at v FROM discord_avatar_optin o JOIN profile_photos ph ON ph.player_id=o.profile_id JOIN profiles p ON p.id=o.profile_id AND p.deleted_at IS NULL WHERE o.profile_id=?').bind(profileId).first<{v:string}>();
+ return r?`${SITE}/api/players/${encodeURIComponent(profileId)}/photo?v=${encodeURIComponent(r.v)}`:null;
+}
 // ---- Discord side: /club ----
 type Option={name:string;type?:number;value?:unknown;options?:Option[]};
 export type ClubInteraction={guild_id?:string;channel_id?:string;channel?:{id:string};member?:{user?:{id:string}};user?:{id:string};data?:{name?:string;options?:Option[]}};
