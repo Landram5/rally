@@ -1396,3 +1396,11 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; -webkit-tap-highl
 .panel > .footnote, .panel > .public-note { margin: 0; padding: 14px 24px 0; }
 .panel > .public-note:last-child { padding-bottom: 20px; }
 .player-profile > .public-note { margin-top: 16px; }
+
+/* Messages on desktop: use more of the screen, and keep the empty-state text centered in the conversation pane. */
+@media (min-width: 1100px) {
+  .app-shell:has(.messages) { max-width: min(1680px, 100%); }
+  .messages .msg-layout { grid-template-columns: minmax(340px, 420px) minmax(0, 1fr); height: min(calc(100dvh - 120px), 900px); }
+}
+.messages .msg-convo:has(> .msg-empty) { justify-content: center; align-items: center; }
+.messages .msg-empty { margin: 0; text-align: center; border: 0; background: none; }
