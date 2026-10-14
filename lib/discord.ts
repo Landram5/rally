@@ -3,6 +3,7 @@ import {chatAccess} from './chat';
 import type {ChatMessage} from './chat';
 import {publishChat} from './chat-room';
 import {pushChatMessage} from './chat-push';
+import {handleClubCommand,rallyNameFor} from './discord-club';
 // Discord bridge. A club's chat is linked to one Discord channel:
 //  - Rally -> Discord: each new club chat message is posted through a channel webhook under the sender's name.
 //  - Discord -> Rally: the gateway connection (lib/discord-gateway.ts) hands each message from the channel to ingestDiscordMessage.
@@ -36,8 +37,8 @@ export const newCode=()=>{const a=crypto.getRandomValues(new Uint8Array(6)),char
 // ---- Rally side: link management for organizers ----
 export async function discordStatus(env:DiscordEnv,viewer:string,clubId:string){
  const {admin}=await chatAccess(env.DB,viewer,clubId);if(!admin)throw new AppError(403,'Only club organizers can manage the Discord link.');
- const link=await env.DB.prepare('SELECT channel_name,guild_id,created_at FROM discord_links WHERE club_id=?').bind(clubId).first<{channel_name:string;guild_id:string;created_at:string}>();
- return {configured:discordConfigured(env),inviteUrl:inviteUrl(env.DISCORD_APP_ID),link:link?{channelName:link.channel_name,linkedAt:link.created_at}:null};
+ const link=await env.DB.prepare('SELECT channel_name,guild_id,created_at,announce FROM discord_links WHERE club_id=?').bind(clubId).first<{channel_name:string;guild_id:string;created_at:string;announce:number}>();
+ return {configured:discordConfigured(env),inviteUrl:inviteUrl(env.DISCORD_APP_ID),link:link?{channelName:link.channel_name,linkedAt:link.created_at,announce:!!link.announce}:null};
 }
 export async function createLinkCode(env:DiscordEnv,viewer:string,clubId:string,now=new Date()){
  const {admin}=await chatAccess(env.DB,viewer,clubId);if(!admin)throw new AppError(403,'Only club organizers can manage the Discord link.');
@@ -57,10 +58,11 @@ export async function unlinkClub(env:DiscordEnv,viewer:string,clubId:string,http
 }
 // ---- Discord side: slash commands ----
 const ADMINISTRATOR=BigInt(8),MANAGE_GUILD=BigInt(32);
-type Interaction={type:number;guild_id?:string;channel_id?:string;channel?:{id:string;name?:string};member?:{permissions?:string};data?:{name?:string;options?:{name:string;type?:number;value?:unknown;options?:{name:string;value?:unknown}[]}[]}};
+type Interaction={type:number;user?:{id:string};guild_id?:string;channel_id?:string;channel?:{id:string;name?:string};member?:{permissions?:string;user?:{id:string}};data?:{name?:string;options?:{name:string;type?:number;value?:unknown;options?:{name:string;value?:unknown}[]}[]}};
 const say=(content:string)=>Response.json({type:4,data:{content,flags:64,allowed_mentions:{parse:[]}}});
 export async function handleInteraction(env:DiscordEnv,i:Interaction,http:Http=fetch,now=new Date()):Promise<Response>{
  if(i.type===1)return Response.json({type:1});
+ if(i.type===2&&i.data?.name==='club')return handleClubCommand(env,i,now);
  if(i.type!==2||i.data?.name!=='rally')return say('That command is not available.');
  const sub=i.data.options?.[0],guild=i.guild_id,channel=i.channel?.id??i.channel_id;
  if(!guild||!channel)return say('Use this command in a server channel.');
@@ -112,7 +114,7 @@ export async function ingestDiscordMessage(env:DiscordEnv,msg:DiscordMessage,now
  if(msg.author?.bot||msg.webhook_id||(msg.type!==undefined&&msg.type!==0&&msg.type!==19))return null;
  const link=await env.DB.prepare('SELECT club_id FROM discord_links WHERE channel_id=?').bind(msg.channel_id).first<{club_id:string}>();if(!link)return null;
  const files=(msg.attachments??[]).slice(0,4).map(a=>`📎 ${a.filename}: ${a.url}`),body=[cleanContent(msg),...files].filter(Boolean).join('\n').slice(0,MAX);if(!body)return null;
- const name=displayName(msg),id=crypto.randomUUID();
+ const name=(msg.author?.id?await rallyNameFor(env,msg.author.id,link.club_id):null)||displayName(msg),id=crypto.randomUUID();
  const res=await env.DB.prepare('INSERT OR IGNORE INTO chat_messages(id,club_id,author_id,author_name,body,client_id,created_at,source,external_name) VALUES(?,?,?,?,?,?,?,?,?)').bind(id,link.club_id,BRIDGE_PROFILE,name,body,'discord-'+msg.id,now,'discord',name).run();
  if(!res.meta?.changes)return null;
  const message:ChatMessage={id,clubId:link.club_id,authorId:null,authorName:`${name} (Discord)`,body,createdAt:now,media:null,mine:false,canDelete:false};

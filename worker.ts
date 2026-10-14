@@ -7,6 +7,7 @@ import {expireWaitlistOffers} from './lib/tournament-scheduling';
 import {expandWeeklySessions} from './lib/weekly-sessions';
 import {cleanupChatMedia} from './lib/chat-media';
 import {ensureDiscordGateway} from './lib/discord-ensure';
+import {announceFinishedTournaments} from './lib/discord-club';
 export {ChatRoom} from './lib/chat-room';
 export {DiscordGateway} from './lib/discord-gateway';
 
@@ -26,7 +27,7 @@ const worker={
   return response;
  },
  async scheduled(_event:ScheduledController,env:Cloudflare.Env){
-  const jobs:Promise<unknown>[]=[deliverNotifications(env),expandWeeklySessions(env.DB),expireWaitlistOffers(env.DB),cleanupChatMedia(env),ensureDiscordGateway(env)];
+  const jobs:Promise<unknown>[]=[deliverNotifications(env),expandWeeklySessions(env.DB),expireWaitlistOffers(env.DB),cleanupChatMedia(env),ensureDiscordGateway(env),announceFinishedTournaments(env)];
   if(env.SUPABASE_SECRET_KEY?.trim())jobs.push(retryDeletions(env.DB,createAuthAdmin(env).auth.admin));
   for(const result of await Promise.allSettled(jobs))if(result.status==='rejected')console.error('Scheduled maintenance unavailable');
  },

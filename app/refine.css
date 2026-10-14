@@ -1356,3 +1356,5 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; -webkit-tap-highl
 .msg-convo > .club-chat .msg-scroll { flex: 1; }
 .msg-convo > .club-chat .chat-reports { padding-top: 8px; }
 .discord-invite { margin: 8px 0 4px; }
+.discord-announce { display: flex; gap: 10px; align-items: flex-start; margin: 12px 0; }
+.account-discord { display: grid; gap: 12px; justify-items: start; }
