@@ -1358,3 +1358,11 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; -webkit-tap-highl
 .discord-invite { margin: 8px 0 4px; }
 .discord-announce { display: flex; gap: 10px; align-items: flex-start; margin: 12px 0; }
 .account-discord { display: grid; gap: 12px; justify-items: start; }
+
+/* Club page Chat dialog uses the same Instagram-style conversation as the Messages tab. */
+[role="dialog"].club-chat-dialog { height: min(82dvh, 700px); display: flex; flex-direction: column; }
+[role="dialog"].club-chat-dialog .club-chat-embed { flex: 1; min-height: 0; }
+.club-chat-embed .msg-convo-head { padding: 12px 56px 12px 16px; gap: 12px; }
+.club-chat-embed .msg-convo-head .room-icon { width: 40px; height: 40px; }
+.club-chat-embed .msg-scroll { max-height: none; min-height: 0; flex: 1; padding: 12px 18px 8px; gap: 0; }
+@media (max-width: 600px) { [role="dialog"].club-chat-dialog { height: 100dvh; } }

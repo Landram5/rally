@@ -25,3 +25,14 @@ Branch `codex/safety` adds native write limits, Turnstile email-auth/feedback wi
 ## Tournament operations — prepared for review
 
 Scores-only tournament staff, dependency-aware table schedules and estimated finish, and reserved waitlist offers with claim deadlines. Stacked on safety, notifications and recurring sessions. Not deployed; provider configuration, migration approval and device/pilot checks remain. Doubles is a separate later project.
+
+## Status as of October 14, 2026 (live on rallytt.net)
+
+Deployed with production migrations 0028 to 0035: doubles tournaments, ratings and public leaderboard; scorekeepers, table schedules and waitlist offers; club chat with photos and videos; the profile-style club page; the Messages tab (direct messages, club chats, group chats, blocking and reporting); the UMBC colorway; the Discord bridge with announcements, `/club` commands and account linking. Docs: `DOUBLES.md`, `CHAT.md`, `MESSAGES.md`, `GROUP_CHATS.md`, `DISCORD.md`.
+
+Still open:
+- Check the signed-in chat, Messages and group chat screens on real phones, and the live-delivery behavior on mobile networks.
+- Discord: Rally profile photos are not sent as Discord avatars (decision needed on exposing photos to Discord); multiple channels per club; per-event post settings.
+- Apple sign-in work (`codex/apple-signin`) is not merged.
+- Supabase leaked-password protection and the email flow checks.
+- Older release notes above describe work that has since shipped; `HANDOFF.md` has the detailed history.
