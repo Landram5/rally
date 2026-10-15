@@ -19,6 +19,7 @@ const MORE:[Key,string,string][]=[
 const DELIVERY:[Key,string,string][]=[
  ['email_delivery','Email','Match confirmations, tournament call-ups and session reminders by email.'],
  ['push_delivery','Phone alerts','The same alerts on this phone or computer. Turn it on below for each device.'],
+ ['weekly_digest','Weekly summary email','Once a week, on Monday: anything waiting for you and what is coming up at your clubs. Skipped when there is nothing to say.'],
 ];
 export default function NotificationSettings({initial,onSave,disabled=false,live=false}:{initial?:NotificationPreferences|null;onSave:(p:NotificationPreferences)=>Promise<void>;disabled?:boolean;live?:boolean}){
  const [values,setValues]=useState({...defaultPreferences,...initial}),[saving,setSaving]=useState<Key|null>(null),[message,setMessage]=useState(''),[error,setError]=useState('');

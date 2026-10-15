@@ -8,6 +8,7 @@ import {expandWeeklySessions} from './lib/weekly-sessions';
 import {cleanupChatMedia} from './lib/chat-media';
 import {ensureDiscordGateway} from './lib/discord-ensure';
 import {announceConfirmedMatches,announceFinishedTournaments} from './lib/discord-club';
+import {sendWeeklyDigests} from './lib/weekly-digest';
 export {ChatRoom} from './lib/chat-room';
 export {DiscordGateway} from './lib/discord-gateway';
 
@@ -27,7 +28,7 @@ const worker={
   return response;
  },
  async scheduled(_event:ScheduledController,env:Cloudflare.Env){
-  const jobs:Promise<unknown>[]=[deliverNotifications(env),expandWeeklySessions(env.DB),expireWaitlistOffers(env.DB),cleanupChatMedia(env),ensureDiscordGateway(env),announceFinishedTournaments(env),announceConfirmedMatches(env)];
+  const jobs:Promise<unknown>[]=[deliverNotifications(env),expandWeeklySessions(env.DB),expireWaitlistOffers(env.DB),cleanupChatMedia(env),ensureDiscordGateway(env),announceFinishedTournaments(env),announceConfirmedMatches(env),sendWeeklyDigests(env)];
   if(env.SUPABASE_SECRET_KEY?.trim())jobs.push(retryDeletions(env.DB,createAuthAdmin(env).auth.admin));
   for(const result of await Promise.allSettled(jobs))if(result.status==='rejected')console.error('Scheduled maintenance unavailable');
  },
