@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next";
 import "./theme.css";
 import "./globals.css";
 import "./refine.css";
+import "./styles/chat-messages.css";
 import AppearanceProvider from "./appearance-provider";
 import AnnouncementBanner from './announcement-banner';
 import PwaRegistration from "@/app/pwa-registration";
