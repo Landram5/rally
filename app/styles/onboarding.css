@@ -30,3 +30,17 @@
 .onboarding-foot-actions { display: grid; gap: 8px; }
 .onboarding-actions { display: grid; gap: 10px; width: 100%; }
 .onboarding-install { font-size: 0.9rem; color: var(--text-muted); }
+
+/* Find your club */
+.onboarding-search { display: flex; align-items: center; gap: 10px; padding: 0 14px; min-height: 48px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--bg-surface); color: var(--text-muted); }
+.onboarding-search:focus-within { border-color: var(--text-strong); }
+.onboarding-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font-size: 16px; color: var(--text-strong); box-shadow: none; padding: 0; min-height: 44px; }
+.onboarding-clubs { list-style: none; margin: 0; padding: 0; display: grid; max-height: min(46dvh, 420px); overflow-y: auto; overscroll-behavior: contain; }
+.onboarding-clubs li { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--border-subtle); }
+.onboarding-clubs li:first-child { border-top: 0; }
+.onboarding-clubs .room-icon { width: 44px; height: 44px; }
+.onboarding-club-main { display: grid; min-width: 0; }
+.onboarding-club-main b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.onboarding-club-main small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.onboarding-club-state { display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; font-weight: 600; color: var(--text-muted); }
+.onboarding-empty { display: grid; gap: 10px; justify-items: start; margin: 8px 0; color: var(--text-muted); }
