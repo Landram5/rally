@@ -81,7 +81,7 @@ export async function handleInteraction(env:DiscordEnv,i:Interaction,http:Http=f
  const code=String(sub.options?.find(o=>o.name==='code')?.value??'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
  if(code.length!==6)return say('Enter the 6 character code shown in Rally (club > Manage > Discord).');
  const row=await env.DB.prepare('SELECT c.club_id,cl.name,cl.approval_status FROM discord_link_codes c JOIN clubs cl ON cl.id=c.club_id WHERE c.code=? AND c.expires_at>?').bind(code,now.toISOString()).first<{club_id:string;name:string;approval_status:string}>();
- if(!row||row.approval_status!=='approved')return say('That code is wrong or has expired. Generate a new one in Rally.');
+ if(!row||row.approval_status==='rejected')return say('That code is wrong or has expired. Generate a new one in Rally.');
  if(existing&&existing.club_id!==row.club_id)return say('This channel is already linked to another Rally club. Run /rally unlink first.');
  const wh=await http(`${DISCORD_API}/channels/${channel}/webhooks`,{method:'POST',headers:{Authorization:`Bot ${env.DISCORD_BOT_TOKEN}`,'Content-Type':'application/json'},body:JSON.stringify({name:'Rally'})}).catch(()=>null);
  if(!wh||!wh.ok)return say('Rally could not create a webhook here. Give the Rally bot the Manage Webhooks and Send Messages permissions in this channel, then try again.');

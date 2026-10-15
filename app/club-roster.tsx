@@ -8,7 +8,7 @@ import InitialRatingEditor from './initial-rating-editor';
 import type {Data} from './rally-app';
 type Member={initial_rating?:number|null;initial_rating_revision?:number;id:string;name:string;role:string;is_guest:number;photo_url?:string|null};
 export default function ClubRoster({id,data,demo,owner,busy,act,readOnly=false}:{id:string;data:Data;demo:boolean;owner:boolean;readOnly?:boolean;busy:boolean;act:(p:Record<string,unknown>,message:string)=>Promise<boolean>}){
- const club=data.clubs.find(c=>c.id===id),canEstimate=club?.approvalStatus==='approved'&&(club.canManage||data.isSiteAdmin);
+ const club=data.clubs.find(c=>c.id===id),canEstimate=!!club&&club.approvalStatus!=='rejected'&&(club.canManage||data.isSiteAdmin);
  const [search,setSearch]=useState(''),[role,setRole]=useState('all'),[editing,setEditing]=useState<string|null>(null);
  useEffect(()=>{const query=new URLSearchParams(window.location.search);setSearch(query.get('memberSearch')??'');setRole(query.get('memberRole')??'all');},[]);
  const members=data.memberships.filter(m=>m.club_id===id&&m.status==='active').flatMap(m=>{const p=data.players.find(p=>p.id===m.player_id);return p?[{...p,role:m.role}]:[]}).filter(p=>p.name.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase())&&(role==='all'||(p.is_guest?'guest':p.role)===role)).sort((a,b)=>Number(b.role==='owner')-Number(a.role==='owner')||a.name.localeCompare(b.name));

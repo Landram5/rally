@@ -1,4 +1,5 @@
-import {env} from 'cloudflare:workers';
+import {env,waitUntil} from 'cloudflare:workers';
+import {alertAdminsOfNewClub} from '@/lib/club-review-alert';
 import {getAuthenticatedUser} from '@/lib/auth';
 import {readActivityPage} from '@/lib/activity-pages';
 import {seasonViews} from '@/lib/club-seasons';
@@ -44,5 +45,8 @@ export async function POST(request:Request){try{
  if(!body||typeof body!=='object'||Array.isArray(body))return response({error:'Invalid request.'},400);
  if(body.action==='submit_feedback')await verifyTurnstile(request,body.captchaToken,env.TURNSTILE_SECRET_KEY);
  if(body.action==='create_club'&&!user.emailVerified)return response({error:'Verify your email address before creating a club.'},403);
- return response(await service().act(user.id,body,{isSiteAdmin:isSiteAdmin(user.email),reviewerId:user.id}));
+ const result=await service().act(user.id,body,{isSiteAdmin:isSiteAdmin(user.email),reviewerId:user.id});
+ // A new club works right away; the administrators are emailed so they can verify it (listing it publicly).
+ if(body.action==='create_club'&&(result as {status?:string}).status==='pending'&&typeof body.id==='string')waitUntil(alertAdminsOfNewClub(env,{id:body.id,name:String(body.name??'').slice(0,80),location:String(body.location??'').slice(0,100)}).catch(()=>0));
+ return response(result);
 }catch(e){return error(e)}}

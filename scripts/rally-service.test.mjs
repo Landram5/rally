@@ -50,7 +50,14 @@ await act('owner-auth',{action:'create_club',id:'club-one',name:'Club One',locat
 assert.equal((await service.read('owner-auth')).clubs[0].approvalStatus,'pending');
 assert.equal((await service.read('member-auth')).clubs.length,0,'pending club must be hidden from other accounts');
 assert.equal((await getPublicPlayer(db,owner)).clubs.length,0,'pending club must be hidden from public profiles');
-await assert.rejects(act('member-auth',{action:'request_join',clubId:'club-one'}),e=>e.status===403);
+// A new club works before it is verified: people can ask to join it by its link, but it stays out of every list.
+assert.equal((await service.read(null,{clubId:'club-one',compact:true})).clubs.length,1,'its own link opens the unlisted club');
+assert.equal((await service.read(null)).clubs.length,0,'but it is not in any club list');
+assert.equal((await service.read(null,{clubId:'club-one',compact:true})).clubs[0].approvalStatus,'pending');
+await act('member-auth',{action:'request_join',clubId:'club-one'});
+assert.equal((await service.read('member-auth')).clubs.length,1,'a requester can see the club they asked to join');
+await act('member-auth',{action:'cancel_join_request',clubId:'club-one'});
+assert.equal((await service.read('member-auth')).clubs.length,0,'and it is hidden again after cancelling');
 await act('owner-auth',{action:'create_tournament',id:'pending-event',clubId:'club-one',name:'Pending Event',date:'2026-10-01',format:'Round robin',capacity:4});
 assert.equal(await getPublicTournament(db,'pending-event'),null,'pending club tournament must not be public');
 assert.equal((await getPublicDirectory(db,'tournaments')).tournaments.length,0,'pending tournaments excluded from public home');
@@ -449,7 +456,7 @@ for(const summary of Object.values(scoped.summaries)){
  for(const opponents of Object.values(summary.opponents))assert.equal(Object.getPrototypeOf(opponents),Object.prototype);
 }
 await act('page-private-auth',{action:'save_profile',name:'Private organizer'});await act('page-private-auth',{action:'create_club',id:'page-private-club',name:'Private club',location:'Baltimore'});await act('page-private-auth',{action:'create_tournament',id:'page-private-event',clubId:'page-private-club',name:'Private event',date:'2099-10-10',format:'Round robin',capacity:4});
-assert.equal((await readActivityPage(db,null,{view:'members',club:'page-private-club'})).total,0);assert.equal((await readActivityPage(db,'member-auth',{view:'members',club:'page-private-club'})).total,0);assert.equal((await readActivityPage(db,'page-private-auth',{view:'members',club:'page-private-club'})).total,1);assert.equal((await readActivityPage(db,null,{view:'tournaments',club:'page-private-club'})).total,0);assert.equal((await readActivityPage(db,'page-private-auth',{view:'tournaments',club:'page-private-club'})).total,1);assert.equal((await service.read(null,{clubId:'page-private-club',compact:true})).clubs.length,0);
+assert.equal((await readActivityPage(db,null,{view:'members',club:'page-private-club'})).total,0);assert.equal((await readActivityPage(db,'member-auth',{view:'members',club:'page-private-club'})).total,0);assert.equal((await readActivityPage(db,'page-private-auth',{view:'members',club:'page-private-club'})).total,1);assert.equal((await readActivityPage(db,null,{view:'tournaments',club:'page-private-club'})).total,0);assert.equal((await readActivityPage(db,'page-private-auth',{view:'tournaments',club:'page-private-club'})).total,1);assert.equal((await service.read(null,{clubId:'page-private-club',compact:true})).clubs.length,1,'an unverified club opens by its own link (so people can ask to join), while its activity lists stay private');assert.equal((await service.read(null,{clubId:'other-club-that-is-not-linked',compact:true})).clubs.length,0);
 console.log('Passed server-side member/event/result pagination, literal search, anonymous visibility, focused results, scoped club reads and full-history compact summaries.');
 
 // No membership is needed to record, find, verify, or rate an unaffiliated game.

@@ -64,5 +64,14 @@ run("INSERT INTO chat_messages(id,club_id,author_id,author_name,body,client_id,c
 await beginDeletion(db,'m2-auth','remove_history');
 const kept=(await chat.readMessages(db,'owner','club')).messages.filter(m=>m.authorName==='Deleted User (M2)');assert.ok(kept.length>0,'messages stay');assert.ok(kept.every(m=>m.authorId===null));
 assert.equal(one("SELECT count(*) n FROM chat_reports WHERE reporter_id='m2'").n,0);assert.equal(one("SELECT count(*) n FROM profiles WHERE id='m2'").n,0);
+// A new club works before Rally verifies it; a rejected club does not.
+for(const [id,owner,status] of [['unverified','uo','pending'],['rejected','ro','rejected']]){
+ for(const p of [owner,owner+'m'])run('INSERT INTO profiles(id,auth_id,name,created_at) VALUES(?,?,?,?)',p,p+'-auth',p.toUpperCase(),'2026-10-01');
+ run("INSERT INTO clubs(id,name,location,owner_id,created_at,approval_status) VALUES(?,?,?,?,'2026-10-01',?)",id,id,'City',owner,status);
+ for(const [p,role] of [[owner,'owner'],[owner+'m','member']])run("INSERT INTO memberships(id,club_id,player_id,role,status,created_at) VALUES(?,?,?,?,'active','2026-10-01')",p+id,id,p,role);
+}
+const live=await chat.postMessage(db,'uom','unverified',{text:'hello before verification',clientId:'u1'},t(40));assert.equal(live.created,true,'members can chat in an unverified club');
+assert.equal((await chat.readMessages(db,'uo','unverified')).messages.length,1);
+await fail(chat.postMessage(db,'rom','rejected',{text:'nope',clientId:'r1'}),403);
 assert.equal(one('PRAGMA foreign_key_check'),undefined);
 console.log('Club chat checks passed: membership gate, idempotent posts, attachments, paging, rate limit, delete rights, reports, mutes, unread counts and deleted-user labels.');

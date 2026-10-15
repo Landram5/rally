@@ -27,7 +27,7 @@ export async function ownershipAction(db:D1Database,user:{id:string},body:Record
  const leader=async(club:string)=>!!await q("SELECT 1 FROM memberships WHERE club_id=? AND player_id=? AND status='active' AND role IN ('owner','admin','board')",club,user.id).first();
  if(action==='request_guest_claim'){
   const guest=id(body.guestId),club=id(body.clubId),evidence=note(body.note),request=id(body.id);
-  if(!await q("SELECT 1 FROM profiles p JOIN memberships m ON m.player_id=p.id JOIN clubs c ON c.id=m.club_id WHERE p.id=? AND p.auth_id IS NULL AND p.deleted_at IS NULL AND m.club_id=? AND m.status='active' AND c.approval_status='approved'",guest,club).first())fail(400,'Choose an active guest in an approved club.');
+  if(!await q("SELECT 1 FROM profiles p JOIN memberships m ON m.player_id=p.id JOIN clubs c ON c.id=m.club_id WHERE p.id=? AND p.auth_id IS NULL AND p.deleted_at IS NULL AND m.club_id=? AND m.status='active' AND c.approval_status IN ('approved','pending')",guest,club).first())fail(400,'Choose an active guest in an approved club.');
   const duplicate=await q('SELECT * FROM guest_claims WHERE id=?',request).first<{claimant_id:string;guest_id:string;evidence:string;club_id:string}>();if(duplicate){if(duplicate.claimant_id!==user.id||duplicate.guest_id!==guest||duplicate.evidence!==evidence||duplicate.club_id!==club)fail(409,'Request ID already used.');return {ok:true};}
   if((await q("SELECT count(*) n FROM guest_claims WHERE claimant_id=? AND status='pending'",user.id).first<{n:number}>())!.n>=3)fail(429,'You may have three pending guest claims.');
   if(await q("SELECT 1 FROM guest_claims WHERE guest_id=? AND claimant_id=? AND status='pending'",guest,user.id).first())fail(409,'You already requested this guest record.');
