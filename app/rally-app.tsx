@@ -43,7 +43,7 @@ import ClubhouseNavigation from './clubhouse-navigation';
 import {dashboardsFor,type Dashboards} from '@/lib/dashboards';
 import {createDemoData,applyDemoAction} from '@/lib/demo-state';
 type Player={initial_rating?:number|null;initial_rating_revision?:number;id:string;name:string;is_guest:number;photo_url?:string|null;bio?:string;rally_id?:string};
-type Club={venue?:string;meeting_schedule?:string;contact?:string;joining_info?:string;id:string;name:string;location:string;bio?:string;canManage:boolean;canAssignRoles?:boolean;photo_url?:string|null;banner_url?:string|null;approvalStatus:'pending'|'approved'|'rejected';activeMemberCount:number};
+type Club={slug?:string|null;venue?:string;meeting_schedule?:string;contact?:string;joining_info?:string;id:string;name:string;location:string;bio?:string;canManage:boolean;canAssignRoles?:boolean;photo_url?:string|null;banner_url?:string|null;approvalStatus:'pending'|'approved'|'rejected';activeMemberCount:number};
 type Member={club_id:string;player_id:string;role:string;status:string};
 type Result={revision?:number;canReview?:boolean;id:string;club_id:string;a:string;b:string;games:[number,number][];best_of:number;played_on:string;status:string;submitted_by:string;confirmed_by:string|null;canConfirm:boolean;canVoid:boolean;tournament_id:string|null;tournament_weight?:number;a_initial_rating?:number|null;b_initial_rating?:number|null};
 type Event=Tournament;

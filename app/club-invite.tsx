@@ -5,9 +5,9 @@ import {Share2,Copy,Download} from 'lucide-react';
 import {Button} from '@/components/ui/button';
 import {Dialog,DialogContent,DialogDescription,DialogHeader,DialogTitle} from '@/components/ui/dialog';
 
-export default function ClubInvite({id,name,demo=false}:{id:string;name:string;demo?:boolean}){
+export default function ClubInvite({id,name,slug,demo=false}:{id:string;name:string;slug?:string|null;demo?:boolean}){
  const [open,setOpen]=useState(false),[message,setMessage]=useState('');
- const panelId=useId(),url=`https://rallytt.net${demo?'/demo':''}/clubs/${encodeURIComponent(id)}`;
+ const panelId=useId(),url=slug&&!demo?`https://rallytt.net/c/${slug}`:`https://rallytt.net${demo?'/demo':''}/clubs/${encodeURIComponent(id)}`;
  const qr=QRCode.create(url,{errorCorrectionLevel:'M'}),size=qr.modules.size+8;
  const path=Array.from(qr.modules.data).flatMap((dark,i)=>dark?[`M${i%qr.modules.size+4} ${Math.floor(i/qr.modules.size)+4}h1v1h-1z`]:[]).join('');
  const svg=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}"><rect width="100%" height="100%" fill="white"/><path d="${path}" fill="black"/></svg>`;

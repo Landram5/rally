@@ -19,3 +19,14 @@
 .club-invite-link .invite-content input { width: 100%; font-size: 0.85rem; }
 .club-invite-link .invite-meta { margin: 0; font-size: 0.85rem; color: var(--text-muted); }
 @media (max-width: 520px) { .club-invite-link .invite-content { grid-template-columns: 1fr; } .club-invite-link .invite-content > svg { width: 160px; height: 160px; } }
+
+/* Web address */
+.club-address { display: grid; gap: 12px; }
+.club-address > p { margin: 0; color: var(--text-muted); }
+.club-address .address-current { display: flex; align-items: center; gap: 8px; color: var(--text-strong); }
+.club-address form { display: grid; gap: 8px; justify-items: start; }
+.club-address label { font-weight: 600; font-size: 0.9rem; }
+.club-address .address-field { display: flex; align-items: center; width: 100%; max-width: 460px; border: 1px solid var(--border-strong); border-radius: var(--radius-md); background: var(--bg-surface); overflow: hidden; }
+.club-address .address-field span { padding: 0 4px 0 14px; color: var(--text-muted); white-space: nowrap; font-size: 0.9rem; }
+.club-address .address-field input { flex: 1; min-width: 0; border: 0; box-shadow: none; background: transparent; min-height: 44px; padding-left: 0; outline: 0; font-size: 16px; }
+.club-address .address-field:focus-within { border-color: var(--text-strong); }

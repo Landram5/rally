@@ -519,6 +519,18 @@ console.log('Passed: unaffiliated recording, permissions, confirmation, public h
  await act(third,{action:'request_join',clubId:'club-one'});await act(third,{action:'cancel_join_request',clubId:'club-one'});await act(third,{action:'request_join',clubId:'club-one'});assert.equal(sql.prepare("SELECT status FROM memberships WHERE club_id='club-one' AND player_id=?").get(thirdId).status,'pending','a person can ask again after cancelling');
  console.log('Passed: join requests notify organizers, answers notify the person, cancel works and never touches members.');
 }
+// Short club addresses: a new club gets one from its name, organizers can change it, nobody can take another club's.
+{
+ const slugOf=async(auth,club)=>(await service.read(auth)).clubs.find(c=>c.id===club)?.slug;
+ assert.equal(await slugOf('owner-auth','club-one'),'club-one','created clubs get an address from their name');
+ await assert.rejects(act('member-auth',{action:'set_club_slug',clubId:'club-one',slug:'members-cannot'}),e=>e.status===403,'only organizers choose the address');
+ await assert.rejects(act('outsider-auth',{action:'set_club_slug',clubId:'club-one',slug:'outsiders-cannot'}),e=>e.status===403);
+ assert.deepEqual({...await act('owner-auth',{action:'set_club_slug',clubId:'club-one',slug:'Harbor-TT'})},{slug:'harbor-tt'});assert.equal(await slugOf('owner-auth','club-one'),'harbor-tt');
+ await assert.rejects(act('outsider-auth',{action:'set_club_slug',clubId:'club-two',slug:'harbor-tt'}),e=>e.status===409,'another club cannot take it');
+ await assert.rejects(act('outsider-auth',{action:'set_club_slug',clubId:'club-two',slug:'club-one'}),e=>e.status===409,'or an address a club used before');
+ await assert.rejects(act('owner-auth',{action:'set_club_slug',clubId:'club-one',slug:'login'}),e=>e.status===400,'reserved words are refused');
+ console.log('Passed: short club addresses are assigned, organizer-only, unique and keep old addresses.');
+}
 sql.close();console.log('Passed: arbitrary integer capacity, capacity edits, atomic no-account guest registration, guest permissions, statistic-based auto seeds, post-start registration lock.');
 
 {
