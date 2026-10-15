@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { CircleDot, WifiOff } from "lucide-react";
+import type {Metadata} from 'next';
+export const metadata:Metadata={title:'Offline · Rally'};
 
 export default function OfflinePage() {
   return <main className="offline-page">

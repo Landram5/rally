@@ -1,5 +1,7 @@
 import { CircleDot, Share, PlusSquare, EllipsisVertical, Download } from "lucide-react";
 import PublicHeader from "@/app/public-header";
+import type {Metadata} from 'next';
+export const metadata:Metadata={title:'Install Rally'};
 
 export default function InstallPage() {
   return <><PublicHeader/><main className="install-page">
