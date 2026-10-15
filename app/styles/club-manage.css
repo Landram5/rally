@@ -1,0 +1,19 @@
+/* Club page > Manage club: a tidy disclosure with the site's chevron and grouped sections. */
+.club-management > summary { list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; }
+.club-management > summary::-webkit-details-marker { display: none; }
+.club-management > summary::marker { content: ""; }
+.club-management > summary svg { flex: none; color: var(--text-muted); transition: transform var(--duration) var(--ease-out); }
+.club-management[open] > summary svg { transform: rotate(180deg); }
+.club-management > summary:hover svg { color: var(--text-strong); }
+
+.club-management .manage-group { display: grid; gap: 12px; padding: 20px 0; border-top: 1px solid var(--border-subtle); }
+.club-management .manage-group:first-of-type { border-top: 0; padding-top: 4px; }
+.club-management .manage-group > h3, .club-management .manage-group > section > h3 { margin: 0; font-size: 0.8rem; font-weight: 650; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted); }
+.club-management .manage-group .club-buttons { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+/* The guest form: field and button on one row. */
+.club-management .club-guest-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; }
+.club-management .club-guest-form label { flex: 1 1 240px; display: grid; gap: 6px; font-size: 0.875rem; font-weight: 550; }
+.club-management .club-guest-form input { width: 100%; }
+
+.club-management .manage-group > section { display: grid; gap: 12px; }
