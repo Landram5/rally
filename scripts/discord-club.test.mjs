@@ -20,7 +20,7 @@ const link=()=>run("INSERT INTO discord_links(club_id,guild_id,channel_id,channe
 assert.equal(await x.announceClubAnnouncement(env,{id:'a1',clubId:'c1',title:'Hi',body:'Body'},ok,now),false);assert.equal(one('SELECT count(*) n FROM discord_posted').n,0);
 link();
 assert.equal(await x.announceClubAnnouncement(env,{id:'a1',clubId:'c1',title:'Hi',body:'Body'},ok,now),true);assert.equal(calls.length,1);
-assert.deepEqual(calls[0][1].allowed_mentions,{parse:[]});assert.match(calls[0][1].embeds[0].title,/Hi/);
+assert.deepEqual(calls[0][1].allowed_mentions,{parse:[]});assert.equal(calls[0][1].avatar_url,x.RALLY_AVATAR,'announcements carry the Rally logo');assert.match(calls[0][1].embeds[0].title,/Hi/);
 assert.equal(await x.announceClubAnnouncement(env,{id:'a1',clubId:'c1',title:'Hi',body:'Body'},ok,now),false,'never posted twice');assert.equal(calls.length,1);
 // The organizer switch turns automatic posts off.
 await assert.rejects(x.setAnnounce(env,'mem','c1',false),e=>e.status===403);await x.setAnnounce(env,'lead','c1',false);
@@ -63,7 +63,7 @@ assert.equal(await x.avatarUrlFor(env,'mem'),null,'opted in nobody else');
 await x.setAvatarOptIn(env,'mem',true,now);assert.equal(await x.avatarUrlFor(env,'mem'),null,'no photo, no avatar');
 const sent=[];const cap=async(u,i)=>{sent.push(JSON.parse(i.body));return new Response('{}',{status:200});};
 await d.relayToDiscord(env,{id:'r1',clubId:'c1',authorId:'lead',authorName:'Lena Lead',body:'hi',createdAt:now,media:null,mine:false,canDelete:false},cap);assert.match(sent.at(-1).avatar_url,/photo\?v=v1/);
-await d.relayToDiscord(env,{id:'r2',clubId:'c1',authorId:'other',authorName:'other Person',body:'hi',createdAt:now,media:null,mine:false,canDelete:false},cap);assert.equal(sent.at(-1).avatar_url,undefined);
+await d.relayToDiscord(env,{id:'r2',clubId:'c1',authorId:'other',authorName:'other Person',body:'hi',createdAt:now,media:null,mine:false,canDelete:false},cap);assert.equal(sent.at(-1).avatar_url,x.RALLY_AVATAR,'members who did not opt in show the Rally logo');
 await x.setAvatarOptIn(env,'lead',false);assert.equal(await x.avatarUrlFor(env,'lead'),null);
 // Match results are opt-in: off by default, and turning them on starts from now.
 const mrow0=(id,status,played,tid=null,a='lead',b='mem',games='[[11,8],[6,11],[11,9]]')=>run("INSERT INTO matches(id,club_id,a,b,games,best_of,played_on,status,submitted_by,confirmed_by,created_at,tournament_id) VALUES(?,'c1',?,?,?,3,?,?,'lead','lead','2026-10-13',?)",id,a,b,games,played,status,tid);
@@ -84,14 +84,15 @@ run("UPDATE profiles SET deleted_at='2026-10-14',auth_id=NULL,name='Deleted play
 assert.equal(await x.announceConfirmedMatches(env,ok,now),1);assert.match(calls.at(-1)[1].embeds[0].title,/Deleted player beat Lena Lead/);
 await x.setAnnounce(env,'lead','c1',false);mrow('mx_off','confirmed','2026-10-14');assert.equal(await x.announceConfirmedMatches(env,ok,now),0,'the switch turns it off');await x.setAnnounce(env,'lead','c1',true);
 // Announcement channel: owners pick one; Rally makes its own webhook there.
-const guildChannels=[{id:'111111111111111111',name:'announcements',type:0,position:2},{id:'222222222222222222',name:'voice',type:2,position:1},{id:'333333333333333333',name:'general',type:0,position:0}];
+const guildChannels=[{id:'111111111111111111',name:'announcements',type:0,position:2},{id:'222222222222222222',name:'voice',type:2,position:1},{id:'333333333333333333',name:'general',type:0,position:0},{id:'444444444444444444',name:'results',type:0,position:3}];
 const hookCalls=[],hookHttp=async(url,init)=>{hookCalls.push([url,init?.method??'GET']);
  if(url.endsWith('/guilds/g1/channels'))return new Response(JSON.stringify(guildChannels),{status:200});
  if(url.endsWith('/channels/111111111111111111/webhooks'))return new Response(JSON.stringify({id:'wh_ann',token:'tok_ann'}),{status:200});
+ if(url.endsWith('/channels/444444444444444444/webhooks'))return new Response(JSON.stringify({id:'wh_match',token:'tok_match'}),{status:200});
  if(url.includes('/webhooks/')&&init?.method==='DELETE')return new Response('',{status:200});
  return new Response('{}',{status:200});};
 await assert.rejects(x.listAnnounceChannels(env,'mem','c1',hookHttp),e=>e.status===403);
-assert.deepEqual((await x.listAnnounceChannels(env,'lead','c1',hookHttp)).channels.map(c=>c.name),['general','announcements'],'text channels only, in server order');
+assert.deepEqual((await x.listAnnounceChannels(env,'lead','c1',hookHttp)).channels.map(c=>c.name),['general','announcements','results'],'text channels only, in server order');
 await assert.rejects(x.setAnnounceChannel(env,'mem','c1','111111111111111111',hookHttp),e=>e.status===403);
 await assert.rejects(x.setAnnounceChannel(env,'lead','c1','222222222222222222',hookHttp),e=>e.status===400,'a voice channel is refused');
 await assert.rejects(x.setAnnounceChannel(env,'lead','c1','999999999999999999',hookHttp),e=>e.status===400,'a channel outside the server is refused');
@@ -113,7 +114,26 @@ assert.equal(await x.announceClubAnnouncement(env,{id:'a_back',clubId:'c1',title
 // Choosing the chat channel again removes the announcement webhook.
 await x.setAnnounceChannel(env,'lead','c1','111111111111111111',hookHttp);hookCalls.length=0;
 await x.setAnnounceChannel(env,'lead','c1',null,hookHttp);assert.ok(hookCalls.some(([u,m])=>m==='DELETE'&&u.includes('wh_ann')),'the old webhook is deleted in Discord');assert.equal(one('SELECT announce_channel_id c FROM discord_links WHERE club_id=?','c1').c,null);
+// Match results can have their own channel, separate from announcements.
+await x.setAnnounceChannel(env,'lead','c1','111111111111111111',hookHttp);
+await assert.rejects(x.setMatchChannel(env,'mem','c1','444444444444444444',hookHttp),e=>e.status===403);
+await assert.rejects(x.setMatchChannel(env,'lead','c1','222222222222222222',hookHttp),e=>e.status===400,'a voice channel is refused');
+await x.setMatchChannel(env,'lead','c1','444444444444444444',hookHttp);
+assert.equal((await d.discordStatus(env,'lead','c1')).link.matchChannel.name,'results');assert.equal((await d.discordStatus(env,'lead','c1')).link.announceChannel.name,'announcements','announcements keep their own channel');
+mrow0('mx_sep','confirmed','2026-10-14');
+assert.equal(await x.announceConfirmedMatches(env,spy,now),1);assert.match(urls.at(-1),/webhooks\/wh_match\/tok_match$/,'match results go to the match channel');
+await x.announceClubAnnouncement(env,{id:'a_sep',clubId:'c1',title:'News',body:'B'},spy,now);assert.match(urls.at(-1),/webhooks\/wh_ann\/tok_ann$/,'announcements stay in the announcement channel');
+// If the match webhook is deleted in Discord, results fall back to the announcement channel and the rest stays.
+mrow0('mx_sep2','confirmed','2026-10-14');
+const goneMatch=async(u)=>new Response('',{status:u.includes('wh_match')?404:200});
+assert.equal(await x.announceConfirmedMatches(env,goneMatch,now),0,'the failed post is not counted');
+assert.equal(one('SELECT match_webhook_id w FROM discord_links WHERE club_id=?','c1').w,null);assert.equal(one('SELECT announce_webhook_id w FROM discord_links WHERE club_id=?','c1').w,'wh_ann','announcement channel untouched');
+assert.equal(await x.announceConfirmedMatches(env,spy,now),1,'the result is retried');assert.match(urls.at(-1),/wh_ann/,'and goes to the announcement channel now');
+// Clearing the match channel deletes its webhook.
+await x.setMatchChannel(env,'lead','c1','444444444444444444',hookHttp);hookCalls.length=0;
+await x.setMatchChannel(env,'lead','c1',null,hookHttp);assert.ok(hookCalls.some(([u,m])=>m==='DELETE'&&u.includes('wh_match')),'the old match webhook is deleted in Discord');assert.equal(one('SELECT match_channel_id c FROM discord_links WHERE club_id=?','c1').c,null);
+await x.setMatchChannel(env,'lead','c1','444444444444444444',hookHttp);
 // Unlinking removes both webhooks.
 await x.setAnnounceChannel(env,'lead','c1','111111111111111111',hookHttp);hookCalls.length=0;await d.unlinkClub(env,'lead','c1',hookHttp);
-assert.ok(hookCalls.filter(([,m])=>m==='DELETE').length>=2,'both webhooks are removed on unlink');
+assert.ok(hookCalls.filter(([,m])=>m==='DELETE').length>=3,'chat, announcement and match webhooks are all removed on unlink');
 console.log('discord club tests passed');

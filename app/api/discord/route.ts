@@ -3,7 +3,7 @@ import {getAuthenticatedUser} from '@/lib/auth';
 import {AppError} from '@/lib/rally-errors';
 import {rateLimit} from '@/lib/write-limits';
 import {createLinkCode,discordStatus,unlinkClub} from '@/lib/discord';
-import {avatarOptedIn,connectedDiscord,createConnectCode,disconnectDiscord,listAnnounceChannels,setAnnounce,setAnnounceChannel,setAnnounceMatches,setAvatarOptIn} from '@/lib/discord-club';
+import {avatarOptedIn,connectedDiscord,createConnectCode,disconnectDiscord,listAnnounceChannels,setAnnounce,setAnnounceChannel,setAnnounceMatches,setMatchChannel,setAvatarOptIn} from '@/lib/discord-club';
 export const dynamic='force-dynamic';
 const response=(data:unknown,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'private, no-store','Vary':'Cookie'}});
 async function viewer(){const user=await getAuthenticatedUser();if(!user)throw new AppError(401,'Sign in to manage the Discord link.');const p=await env.DB.prepare('SELECT id FROM profiles WHERE auth_id=? AND deleted_at IS NULL').bind(user.id).first<{id:string}>();if(!p)throw new AppError(403,'Create your player profile first.');return {id:p.id,authId:user.id};}
@@ -24,6 +24,7 @@ export async function POST(request:Request){
   if(body.action==='announce')return response(await setAnnounce(env,me.id,clubId(body.clubId),body.on===true));
   if(body.action==='announce_matches')return response(await setAnnounceMatches(env,me.id,clubId(body.clubId),body.on===true));
   if(body.action==='channels')return response(await listAnnounceChannels(env,me.id,clubId(body.clubId)));
+  if(body.action==='match_channel')return response(await setMatchChannel(env,me.id,clubId(body.clubId),typeof body.channelId==='string'&&body.channelId?body.channelId:null));
   if(body.action==='announce_channel')return response(await setAnnounceChannel(env,me.id,clubId(body.clubId),typeof body.channelId==='string'&&body.channelId?body.channelId:null));
   if(body.action==='connect_code'){if(!env.DISCORD_BOT_TOKEN?.trim())throw new AppError(409,'The Discord bot is not set up for Rally yet.');return response(await createConnectCode(env,me.id));}
   if(body.action==='avatar')return response(await setAvatarOptIn(env,me.id,body.on===true));
