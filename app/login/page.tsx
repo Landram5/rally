@@ -1,7 +1,7 @@
 'use client';
 import {Suspense,useState} from 'react';
 import {CircleDot} from 'lucide-react';
-import {useRouter,useSearchParams} from 'next/navigation';
+import {useSearchParams} from 'next/navigation';
 import Link from 'next/link';
 import {safeNextPath} from '@/lib/auth-rules';
 import PublicHeader from '@/app/public-header';
@@ -11,7 +11,6 @@ type Mode='signin'|'signup'|'reset';
 
 export default function LoginPage(){return <Suspense fallback={<main className="auth-shell"><p role="status">Loading sign in…</p></main>}><LoginForm/></Suspense>;}
 function LoginForm(){
- const router=useRouter();
  const searchParams=useSearchParams();
  const [mode,setMode]=useState<Mode>(searchParams.get('mode')==='signup'?'signup':'signin'),[email,setEmail]=useState(''),[password,setPassword]=useState(''),[displayName,setDisplayName]=useState(''),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[error,setError]=useState('');
  const next=safeNextPath(searchParams.get('next')??'/clubhouse');
@@ -26,7 +25,7 @@ function LoginForm(){
    if(!response.ok)throw new Error(body.error||'Could not continue.');
    if(mode==='reset'){setMessage('If that email has an account, a reset link is on its way.');return}
    if(body.needsConfirmation){setMessage('Check your email to confirm your account, then sign in.');return}
-   router.push(next);router.refresh();
+   window.location.assign(next); // a full load, so the page the person returns to (an invite link, say) sees the new session instead of a cached signed-out copy
   }catch(value){setError(value instanceof Error?value.message:'Could not continue.')}finally{setBusy(false);setCaptchaToken('');setCaptchaAttempt(value=>value+1);}
  }
  return <><PublicHeader/><main className="auth-shell"><section className="auth-card">
