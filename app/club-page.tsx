@@ -11,6 +11,7 @@ import AnnouncementsBoard from './announcements-board';
 import ClubInvite from './club-invite';
 import ClubInviteLink from './club-invite-link';
 import ClubAddress from './club-address';
+import ClubSetupChecklist,{useSetup} from './club-setup-checklist';
 import ClubChat from './club-chat';
 import ClubDiscord from './club-discord';
 import {isUmbcClub,offerUmbcColorway} from './umbc-offer';
@@ -70,6 +71,16 @@ export default function ClubPage({id,initialData,demo=false}:{id:string;initialD
   setNotice(message+(demo?' Sample data only.':''));return true;
  }catch(e){setError(e instanceof Error?e.message:'Could not save changes.');return false}finally{busyRef.current=false;setBusy(false)}}
  const club=data.clubs.find(c=>c.id===id),membership=data.memberships.find(m=>m.club_id===id&&m.player_id===data.me?.id),canChat=membership?.status==='active'&&membership.role!=='guest',requests=data.memberships.filter(m=>m.club_id===id&&m.status==='pending'),events=data.tournaments.filter(t=>t.club_id===id),matches=data.matches.filter(m=>m.club_id===id&&m.status==='confirmed');
+ // New-club setup: shown to the owner until every step is done.
+ const setup=useSetup(id,club,club?.activeMemberCount??0),showSetup=!!club?.canAssignRoles&&club.approvalStatus!=='rejected'&&!setup.progress.complete&&!setup.hidden;
+ const goTo=(target:string)=>window.setTimeout(()=>document.getElementById(target)?.scrollIntoView({behavior:'smooth',block:'start'}),60);
+ const setupStep=(step:'logo'|'about'|'where'|'join'|'address'|'members')=>{
+  if(step==='logo'){setImages(true);return;}
+  if(step==='address'){goTo('manage-address');return;}
+  if(step==='members'){goTo('manage-invite');return;}
+  if(club){setName(club.name);setLocation(club.location);setBio(club.bio??'');setVenue(club.venue??'');setSchedule(club.meeting_schedule??'');setContact(club.contact??'');setJoining(club.joining_info??'');}
+  setEditing(true);goTo('manage-details');
+ };
  const player=(pid:string)=>data.players.find(p=>p.id===pid),base=demo?'/demo':'',back=demo?'/demo?tab=clubs':'/clubs';
  const eventDetail=!demo&&loadedEvent?.event.id===eventId?loadedEvent.event:events.find(t=>t.id===eventId),eventEntries=eventDetail?(!demo&&loadedEvent?.event.id===eventId?loadedEvent.entries:data.entries).filter(e=>e.tournament_id===eventDetail.id).map(e=>e.player_id):[],eventCandidates=eventDetail?(!demo&&loadedEvent?.event.id===eventId?loadedEvent.players:data.players).filter(p=>!eventEntries.includes(p.id)&&(!demo&&loadedEvent?.event.id===eventId?loadedEvent.memberships:data.memberships).some(m=>m.club_id===id&&m.player_id===p.id&&m.status==='active')):[];
  function eventCards(list:typeof events){return list.map(t=>{const entrants=data.entries.filter(e=>e.tournament_id===t.id),registered=entrants.some(e=>e.player_id===data.me?.id),count=t.entry_count??entrants.length,full=count>=t.capacity,closed=registrationClosed(t);return <article className="club-tournament-card" key={t.id}><div><a href={`${base}/tournaments/${t.id}`}><h3>{t.name}</h3></a><p>{dateLabel(t.date)} · {t.format} · {count}/{t.capacity} players</p>{t.starts_at&&<p>Starts <TimeLabel value={t.starts_at}/></p>}{t.registration_closes_at&&<p>Registration closes <TimeLabel value={t.registration_closes_at}/></p>}<span className="badge">{t.status==='registration'?(closed?'Registration closed':full?'Registration full':'Registration open'):t.status==='active'?'In progress':'Completed'}</span>{registered&&<span className="badge">You’re registered</span>}</div><div className="club-buttons">{t.status==='registration'&&!loading&&(registered?<Button variant="outline" disabled={busy} onClick={()=>setEventId(t.id)}>Manage my entry</Button>:closed?<span>Registration deadline passed</span>:full?<span>Player limit reached</span>:membership?.status==='active'&&data.me?<Button disabled={busy} onClick={()=>void act({action:'enter_tournament',id:t.id,revision:t.revision,operationId:crypto.randomUUID(),playerId:data.me!.id},'You are registered.')}>Register</Button>:data.me?<a href="#club-membership" onClick={()=>setSection('about')}>{membership?.status==='pending'?'Club approval needed to register':'Join this club to register'}</a>:<a href={`/login?next=${encodeURIComponent('/clubs/'+id)}`}>Sign in to register</a>)}{club?.canManage&&<Button variant="outline" onClick={()=>setEventId(t.id)}>{t.status==='registration'?'Manage registration':'Manage tournament'}</Button>}</div></article>})}
@@ -95,6 +106,7 @@ export default function ClubPage({id,initialData,demo=false}:{id:string;initialD
  {section==='management'&&club.canManage?<>
  <nav className="club-jump" id="club-management" aria-label="Jump to a management section">{([['requests','Requests'+(requests.length?` (${requests.length})`:'')],['members','Members & roles'],['announcements','Announcements'],['invite','Invite link'],['address','Web address'],['details','Club settings'],['discord','Discord']] as [string,string][]).map(([k,l])=><a key={k} href={`#manage-${k}`} onClick={e=>{e.preventDefault();document.getElementById('manage-'+k)?.scrollIntoView({behavior:'smooth',block:'start'});}}>{l}</a>)}</nav>
  <div className="club-sections">
+{showSetup&&<div className="club-block" id="manage-setup"><ClubSetupChecklist steps={setup.steps} progress={setup.progress} onStep={setupStep} onHide={setup.hide}/></div>}
 <div className="club-block" id="manage-requests">
 <section className="panel club-detail-section club-request-panel"><div className="club-request-heading"><h2>Member requests ({requests.length})</h2><Button variant="outline" disabled={busy||refreshing} onClick={()=>void refreshClub(true)}>{refreshing?'Refreshing…':'Refresh requests'}</Button></div><p className="profile-help">Updates automatically while this page is open.</p>{requests.length?requests.map(m=>{const applicant=player(m.player_id);return <article className="club-request-row" key={m.player_id}><a className="person" href={`${base}/players/${m.player_id}?from=${encodeURIComponent(base+'/clubs/'+id+'?section=management')}`}><Avatar name={applicant?.name??'Player'} photoUrl={applicant?.photo_url}/><span><strong>{applicant?.name??'Player profile unavailable'}</strong><small>Requested to join this club</small></span></a><div className="club-request-actions"><Button disabled={busy||!applicant} aria-label={`Approve ${applicant?.name??'member'}`} onClick={()=>void act({action:'approve_member',clubId:id,playerId:m.player_id},'Member approved.')}>Approve</Button><Button variant="outline" disabled={busy||!applicant} aria-label={`Decline ${applicant?.name??'member'}`} onClick={()=>void act({action:'decline_member',clubId:id,playerId:m.player_id},'Request declined.')}>Decline</Button></div></article>;}):<p>No pending requests.</p>}</section>
 </div>
@@ -118,6 +130,7 @@ export default function ClubPage({id,initialData,demo=false}:{id:string;initialD
 <ClubDiscord clubId={id} demo={demo}/>
 </div>
  </div></>:<>
+ {showSetup&&<aside className="club-setup-banner"><span><b>Finish setting up your club</b> · {setup.progress.done} of {setup.progress.total} done</span><Button size="sm" onClick={()=>openManage(true)}>Continue</Button></aside>}
  <nav className="club-jump" aria-label="Jump to a section">{([['about','About'],['announcements','Announcements'],['sessions','Sessions'],['competition','Competition'],['members','Members']] as [string,string][]).map(([k,l])=><a key={k} href={`#club-${k}`} onClick={e=>{e.preventDefault();document.getElementById('club-'+k)?.scrollIntoView({behavior:'smooth',block:'start'});}}>{l}</a>)}</nav>
  <div className="club-sections">
  <div className="club-block" id="club-about">

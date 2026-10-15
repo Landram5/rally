@@ -152,7 +152,10 @@ export function RallyApp({demo=false}:{demo?:boolean}={}){
   if(modal==='guest'){payload={action:'add_guest',id:requestId.current,clubId:selectedClub,name:formName};message='Guest player added.'}
   if(modal==='match'){if(matchMode==='live'&&!liveComplete){setError('Finish the match before saving the result.');return;}if(games.some(g=>g.some(v=>!v.trim()))){setError('Enter both scores for each game, or remove unused games.');return;}payload={action:'record_match',id:requestId.current,clubId:selectedClub,a,b,games:games.map(g=>g.map(Number)),bestOf:Number(format),date};message='Match saved.'}
   if(modal==='event'){payload={action:'create_tournament',id:requestId.current,clubId:selectedClub,name:formName,date,format:eventFormat,capacity:Number(capacity),teamSize:Number(eventTeamSize)};message='Tournament saved.'}
-  if(await act(payload,message)){if(modal==='match')forgetDraft(requestId.current);setModal('');}
+  if(await act(payload,message)){const created=modal==='club'?String(payload.id):'';if(modal==='match')forgetDraft(requestId.current);setModal('');
+   // A new club opens straight into its setup checklist.
+   // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+   if(created)window.location.assign(`${demo?'/demo':''}/clubs/${encodeURIComponent(created)}?section=management`);}
  }
  function contextQuery(){return new URLSearchParams({tab,club,...(search?{search}:{}),...(tab==='matches'?{status:matchStatus,player:matchPlayer,tournament:matchTournament,from:matchFrom,to:matchTo,mine:myMatches?'1':'0',...(focusedMatch?{match:focusedMatch}:{})}:{})});}
  // Keep a complete document navigation, matching the existing tournament route behavior.
