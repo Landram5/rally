@@ -6,6 +6,7 @@ import "./refine.css";
 import "./styles/chat-messages.css";
 import "./styles/club-manage.css";
 import "./styles/help.css";
+import "./styles/invites.css";
 import "./styles/onboarding.css";
 import "./styles/disclosure.css";
 import "./styles/plain-settings.css";

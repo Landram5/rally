@@ -1,0 +1,21 @@
+/* Auto-join invite links: the join page and the organizer's Invite link panel. */
+.join-page { min-height: 70dvh; display: grid; place-items: center; padding: 32px 16px 64px; }
+.join-card { width: min(100%, 440px); display: grid; justify-items: center; gap: 12px; text-align: center; padding: 32px 24px; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-xl, 20px); }
+.join-card h1 { margin: 0; font-size: clamp(1.6rem, 1.3rem + 1.2vw, 2rem); letter-spacing: -0.02em; }
+.join-card .room-icon { width: 72px; height: 72px; font-size: 1.8rem; }
+.join-card .eyebrow { margin: 4px 0 0; }
+.join-meta { display: inline-flex; align-items: center; gap: 6px; color: var(--text-muted); margin: 0; }
+.join-actions { display: grid; gap: 10px; width: 100%; margin-top: 8px; }
+.join-card > button, .join-card > .primary-action { margin-top: 8px; }
+.join-note { margin: 4px 0 0; font-size: 0.85rem; color: var(--text-muted); }
+.club-invite-link { display: grid; gap: 14px; }
+.club-invite-link > p { margin: 0; color: var(--text-muted); }
+.club-invite-link .invite-create { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
+.club-invite-link .invite-create label, .club-invite-link .invite-next { display: grid; gap: 6px; font-weight: 600; font-size: 0.9rem; min-width: 220px; }
+.club-invite-link .invite-active { display: grid; gap: 16px; }
+.club-invite-link .invite-content { display: grid; grid-template-columns: 132px minmax(0, 1fr); gap: 16px; align-items: start; }
+.club-invite-link .invite-content svg { width: 132px; height: 132px; border: 1px solid var(--border); border-radius: 12px; background: #fff; }
+.club-invite-link .invite-content > div { display: grid; gap: 10px; min-width: 0; }
+.club-invite-link .invite-content input { width: 100%; font-size: 0.85rem; }
+.club-invite-link .invite-meta { margin: 0; font-size: 0.85rem; color: var(--text-muted); }
+@media (max-width: 520px) { .club-invite-link .invite-content { grid-template-columns: 1fr; } .club-invite-link .invite-content svg { width: 160px; height: 160px; } }
