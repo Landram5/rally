@@ -1,0 +1,26 @@
+# Runs on every pull request. A production build that hangs or fails shows up here as a red check
+# (with a 20 minute cap) instead of leaving the Cloudflare deploy silently "pending".
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm exec tsc --noEmit
+      - run: pnpm test:reliability
+      - run: pnpm test:account-deletion
+      - name: Production build
+        timeout-minutes: 20
+        run: pnpm build
