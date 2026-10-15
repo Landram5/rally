@@ -9,6 +9,7 @@ import {cleanupChatMedia} from './lib/chat-media';
 import {ensureDiscordGateway} from './lib/discord-ensure';
 import {announceConfirmedMatches,announceFinishedTournaments} from './lib/discord-club';
 import {sendWeeklyDigests} from './lib/weekly-digest';
+import {alertIfNeeded,recordRun} from './lib/system-health';
 export {ChatRoom} from './lib/chat-room';
 export {DiscordGateway} from './lib/discord-gateway';
 
@@ -28,9 +29,12 @@ const worker={
   return response;
  },
  async scheduled(_event:ScheduledController,env:Cloudflare.Env){
-  const jobs:Promise<unknown>[]=[deliverNotifications(env),expandWeeklySessions(env.DB),expireWaitlistOffers(env.DB),cleanupChatMedia(env),ensureDiscordGateway(env),announceFinishedTournaments(env),announceConfirmedMatches(env),sendWeeklyDigests(env)];
-  if(env.SUPABASE_SECRET_KEY?.trim())jobs.push(retryDeletions(env.DB,createAuthAdmin(env).auth.admin));
-  for(const result of await Promise.allSettled(jobs))if(result.status==='rejected')console.error('Scheduled maintenance unavailable');
+  const jobs:[string,Promise<unknown>][]=[['notifications',deliverNotifications(env)],['weekly sessions',expandWeeklySessions(env.DB)],['waitlist offers',expireWaitlistOffers(env.DB)],['chat media cleanup',cleanupChatMedia(env)],['Discord gateway',ensureDiscordGateway(env)],['Discord tournament posts',announceFinishedTournaments(env)],['Discord match posts',announceConfirmedMatches(env)],['weekly summaries',sendWeeklyDigests(env)]];
+  if(env.SUPABASE_SECRET_KEY?.trim())jobs.push(['account deletions',retryDeletions(env.DB,createAuthAdmin(env).auth.admin)]);
+  const results=await Promise.allSettled(jobs.map(j=>j[1])),failed=jobs.filter((_,i)=>results[i].status==='rejected').map(j=>j[0]);
+  if(failed.length)console.error('Scheduled maintenance unavailable:',failed.join(', '));
+  // Leave a heartbeat for /api/health, and email an administrator (at most every six hours) if something keeps failing.
+  try{await recordRun(env.DB,failed);await alertIfNeeded(env,failed);}catch{console.error('Heartbeat unavailable');}
  },
 };
 
