@@ -69,7 +69,8 @@ export function makeService(database:D1Database){
   const preferences=self?await readPreferences(db,self.id):undefined;
   const sessions=self?await readSessions(db,self.id,scope||undefined):[];
   const announcements=self?await readAnnouncements(db,self.id):[];
-  const notifications=notificationsFor({...result,ownership,preferences,announcements,sessions} as unknown as Parameters<typeof notificationsFor>[0],readIds);
+  const membershipDecisions=self?await all<{id:string;club_id:string;clubName:string;decision:string;decided_at:string}>('SELECT d.id,d.club_id,c.name AS clubName,d.decision,d.decided_at FROM membership_decisions d JOIN clubs c ON c.id=d.club_id WHERE d.player_id=? AND d.decided_at>? ORDER BY d.decided_at DESC LIMIT 20',self.id,new Date(Date.now()-30*86400000).toISOString()):[];
+  const notifications=notificationsFor({...result,ownership,preferences,announcements,sessions,membershipDecisions} as unknown as Parameters<typeof notificationsFor>[0],readIds);
   if(access.compact){const summaries=await cachedSummaries(db,visibleMatches as unknown as Parameters<typeof cachedSummaries>[1],cs.map(c=>c.id),version,self?'authenticated':'public');const visibleMemberships=scope?result.memberships.filter(m=>m.player_id===self?.id||m.status==='pending'):result.memberships;const visiblePeople=new Set(visibleMemberships.map(m=>m.player_id));if(self)visiblePeople.add(self.id);
    return {...result,memberships:visibleMemberships,players:(scope?result.players.filter(p=>visiblePeople.has(p.id)):result.players).map(p=>({id:p.id,name:p.name,is_guest:p.is_guest,is_deleted:p.is_deleted,photo_url:p.photo_url,initial_rating:p.initial_rating,initial_rating_revision:p.initial_rating_revision})),summaries,eventCounts:Object.fromEntries(['all',...cs.map(c=>c.id)].map(id=>[id,id==='all'?ts.length:ts.filter(t=>t.club_id===id).length])),matches:result.matches.slice(0,20),tournaments:result.tournaments.slice(0,20).map(t=>({...t,entry_count:es.filter(e=>e.tournament_id===t.id).length,state:null,seedStats:[],fixturePlans:[]})),entries:result.entries.filter(e=>e.player_id===self?.id||result.teams.some(t=>t.id===e.player_id&&(t.p1===self?.id||t.p2===self?.id))),teams:result.teams.slice(0,200),notifications,dashboards,ownership,preferences,sessions};}
   return {...result,notifications,dashboards,ownership,preferences,sessions};
@@ -178,8 +179,13 @@ export function makeService(database:D1Database){
   }
   if(action==='approve_member'||action==='decline_member'){
    const clubId=id(body.clubId),playerId=id(body.playerId);await admin(clubId,user.id);
-   if(action==='approve_member')await q("UPDATE memberships SET status='active' WHERE club_id=? AND player_id=? AND status='pending'",clubId,playerId).run();
-   else await q("DELETE FROM memberships WHERE club_id=? AND player_id=? AND status='pending'",clubId,playerId).run();return {ok:true};
+   const decided=action==='approve_member'?await q("UPDATE memberships SET status='active' WHERE club_id=? AND player_id=? AND status='pending'",clubId,playerId).run():await q("DELETE FROM memberships WHERE club_id=? AND player_id=? AND status='pending'",clubId,playerId).run();
+   // The person is told (inbox, and phone/email alerts if on) only when a pending request really changed.
+   if(decided.meta.changes)await q('INSERT INTO membership_decisions (id,club_id,player_id,decision,decided_at) VALUES (?,?,?,?,?)',crypto.randomUUID(),clubId,playerId,action==='approve_member'?'approved':'declined',now).run();
+   return {ok:true};
+  }
+  if(action==='cancel_join_request'){
+   const clubId=id(body.clubId);await q("DELETE FROM memberships WHERE club_id=? AND player_id=? AND status='pending'",clubId,user.id).run();return {ok:true};
   }
   if(action==='add_guest'){
    const clubId=id(body.clubId),playerId=id(body.id),name=str(body.name,'Player name',60);await admin(clubId,user.id);

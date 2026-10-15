@@ -3,7 +3,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {readFileSync,writeFileSync,mkdirSync,rmSync,readdirSync} from 'node:fs';
 import ts from 'typescript';
 mkdirSync('.test-runtime',{recursive:true});
-for(const name of ['club-seasons','notification-preferences','summary-cache','feedback-progress','record-ownership','dashboards','clubhouse-summary','rally','activity-pages','match-changes','match-filters','logistics','notifications','profile-photo','account-write-guard','account-deletion','announcements','club-sessions','weekly-sessions','rally-service','doubles','doubles-rating','tournament-service','tournament-scheduling','tournament-engine','match-rules','rally-errors','seeding','public-rally','public-leaderboard']){
+for(const name of readdirSync('lib').filter(f=>f.endsWith('.ts')).map(f=>f.slice(0,-3))){
  const compiled=ts.transpileModule(readFileSync(`lib/${name}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText.replace(/from ['"]\.\/([^'"]+)['"]/g, "from './$1.mjs'");
  writeFileSync(`.test-runtime/${name}.mjs`,compiled);
 }
@@ -482,6 +482,36 @@ assert.equal(sql.prepare("SELECT rating_weight FROM tournaments WHERE id='free-t
 assert.deepEqual(sql.prepare('PRAGMA foreign_key_check').all(),[]);
 console.log('Passed: unaffiliated recording, permissions, confirmation, public history, 33% ratings, no memberships and single-club tournament weighting.');
 
+// Join requests: organizers are asked to review, the person is told the answer, and a request can be cancelled.
+{
+ const asker='asker-auth',other='asker2-auth';
+ await act(asker,{action:'save_profile',name:'Asker'});await act(other,{action:'save_profile',name:'Asker Two'});
+ const askerId=await uid(asker),otherId=await uid(other);
+ await act(asker,{action:'request_join',clubId:'club-one'});await act(other,{action:'request_join',clubId:'club-one'});
+ const reviews=(await service.read('owner-auth')).notifications.filter(n=>n.id.startsWith('join-club-one-'));
+ for(const who of [askerId,otherId])assert.ok(reviews.some(n=>n.id===`join-club-one-${who}`),'the organizer is asked to review each request');
+ assert.ok(reviews.every(n=>n.actionNeeded&&/section=management/.test(n.href)),'it is an action, linking to the Manage view');
+ assert.ok(!(await service.read(asker)).notifications.some(n=>n.id.startsWith('join-')),'the person asking is not asked to review');
+ assert.ok(!(await service.read('member-auth')).notifications.some(n=>n.id.startsWith('join-')),'ordinary members are not asked either');
+ // Approve one, decline the other.
+ await act('owner-auth',{action:'approve_member',clubId:'club-one',playerId:askerId});await act('owner-auth',{action:'decline_member',clubId:'club-one',playerId:otherId});
+ const afterAnswers=(await service.read('owner-auth')).notifications.map(n=>n.id);assert.ok(![askerId,otherId].some(who=>afterAnswers.includes(`join-club-one-${who}`)),'answered requests leave the organizer inbox');
+ const yes=(await service.read(asker)).notifications.find(n=>n.id.startsWith('membership-'));assert.match(yes.title,/You joined/);assert.match(yes.href,/^\/clubs\/club-one/);
+ const no=(await service.read(other)).notifications.find(n=>n.id.startsWith('membership-'));assert.match(no.title,/did not accept your request/);
+ assert.equal(sql.prepare('SELECT count(*) n FROM membership_decisions WHERE club_id=?').get('club-one').n>=2,true);
+ // A second answer to the same (already answered) request does not notify again.
+ const before=sql.prepare('SELECT count(*) n FROM membership_decisions').get().n;await act('owner-auth',{action:'approve_member',clubId:'club-one',playerId:askerId});assert.equal(sql.prepare('SELECT count(*) n FROM membership_decisions').get().n,before,'only a real pending request is recorded');
+ // Cancel: the pending row goes away, nobody is notified, and only the requester can do it.
+ const third='asker3-auth';await act(third,{action:'save_profile',name:'Asker Three'});const thirdId=await uid(third);
+ await act(third,{action:'request_join',clubId:'club-one'});assert.ok((await service.read('owner-auth')).notifications.some(n=>n.id===`join-club-one-${thirdId}`));
+ await act(third,{action:'cancel_join_request',clubId:'club-one'});
+ assert.equal(sql.prepare("SELECT count(*) n FROM memberships WHERE club_id='club-one' AND player_id=?").get(thirdId).n,0,'the request is removed');
+ assert.ok(!(await service.read('owner-auth')).notifications.some(n=>n.id===`join-club-one-${thirdId}`),'and leaves the organizer inbox');
+ assert.equal((await service.read(third)).notifications.filter(n=>n.id.startsWith('membership-')).length,0,'cancelling is not an answer');
+ await act('member-auth',{action:'cancel_join_request',clubId:'club-one'});assert.equal(sql.prepare("SELECT status FROM memberships WHERE club_id='club-one' AND player_id=?").get(member).status,'active','cancel never removes an active member');
+ await act(third,{action:'request_join',clubId:'club-one'});await act(third,{action:'cancel_join_request',clubId:'club-one'});await act(third,{action:'request_join',clubId:'club-one'});assert.equal(sql.prepare("SELECT status FROM memberships WHERE club_id='club-one' AND player_id=?").get(thirdId).status,'pending','a person can ask again after cancelling');
+ console.log('Passed: join requests notify organizers, answers notify the person, cancel works and never touches members.');
+}
 sql.close();console.log('Passed: arbitrary integer capacity, capacity edits, atomic no-account guest registration, guest permissions, statistic-based auto seeds, post-start registration lock.');
 
 {
@@ -493,4 +523,5 @@ sql.close();console.log('Passed: arbitrary integer capacity, capacity edits, ato
  assert.equal(new Set(existing.map(p=>p.rally_id)).size,2);assert.ok(existing.every(p=>/^RLY-[A-F0-9]{12}$/.test(p.rally_id)));
  assert.equal(old.prepare("SELECT rally_id FROM profiles WHERE id='old-deleted'").get().rally_id,null);old.close();
 }
+
 console.log('Passed: existing player migration assigns unique Rally IDs without restoring deleted identities.');
