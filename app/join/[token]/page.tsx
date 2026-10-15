@@ -6,8 +6,14 @@ import {InviteError,previewInvite,type InvitePreview} from '@/lib/club-invites';
 import PublicHeader from '../../public-header';
 import JoinInvite from '../../join-invite';
 export const dynamic='force-dynamic';
-// An invite link is a secret: keep it out of search results and referrers.
-export const metadata:Metadata={title:'Join a club · Rally',robots:{index:false,follow:false},referrer:'no-referrer'};
+// An invite link is a secret: keep it out of search results and referrers. Chats still get a friendly preview card.
+export async function generateMetadata({params}:{params:Promise<{token:string}>}):Promise<Metadata>{
+ const base:Metadata={title:'Join a club · Rally',robots:{index:false,follow:false},referrer:'no-referrer'};
+ try{
+  const p=await previewInvite(env.DB,(await params).token),title=`Join ${p.name} on Rally`,description=`${p.name} (${p.location}) invited you. Tap to join.`,image=`/og/club/${encodeURIComponent(p.clubId)}?invite=1`;
+  return {...base,title,description,openGraph:{type:'website',siteName:'Rally',title,description,images:[{url:image,width:1200,height:630,alt:title}]},twitter:{card:'summary_large_image',title,description,images:[image]}};
+ }catch{return base;}
+}
 export default async function JoinPage({params}:{params:Promise<{token:string}>}){
  const {token}=await params;
  let preview:InvitePreview|null=null,problem='';

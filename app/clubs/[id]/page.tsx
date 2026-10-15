@@ -10,7 +10,7 @@ export async function generateMetadata({params}:{params:Promise<{id:string}>}):P
  const club=env.DB?await env.DB.prepare("SELECT name,location,bio FROM clubs WHERE id=? AND approval_status='approved'").bind(id).first<{name:string;location:string;bio:string|null}>().catch(()=>null):null;
  if(!club)return {title:'Club · Rally',alternates:{canonical:path}};
  const about=club.bio?.replace(/\s+/g,' ').trim(),description=about?about.slice(0,160):`${club.name} in ${club.location}: members, sessions, results and tournaments on Rally.`;
- return shareMetadata({title:`${club.name} · Rally`,description,path,image:'/rally-share-v2.png'});
+ return shareMetadata({title:`${club.name} · Rally`,description,path,image:`/og/club/${encodeURIComponent(id)}`});
 }
 export default async function Page({params}:{params:Promise<{id:string}>}){
  const {id}=await params;
