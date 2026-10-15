@@ -1,0 +1,8 @@
+/* Every expandable section uses the same small chevron instead of the browser's triangle.
+ * Summaries that already show an icon (menus, Manage club) keep only their icon. */
+summary { list-style: none; cursor: pointer; }
+summary::-webkit-details-marker { display: none; }
+summary::marker { content: ""; }
+summary:not(:has(svg))::after { content: ""; display: inline-block; width: 0.42em; height: 0.42em; margin-left: 0.6em; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: translateY(-0.18em) rotate(45deg); opacity: 0.6; transition: transform var(--duration, 0.2s) var(--ease-out, ease); }
+details[open] > summary:not(:has(svg))::after { transform: translateY(0.05em) rotate(-135deg); }
+@media (prefers-reduced-motion: reduce) { summary:not(:has(svg))::after { transition: none; } }
