@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
 import ts from 'typescript';
 mkdirSync('.test-runtime',{recursive:true});
-writeFileSync('.test-runtime/club-review-alert.mjs',ts.transpileModule(readFileSync('lib/club-review-alert.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText);
+for(const name of ['club-review-alert','admin-email'])writeFileSync(`.test-runtime/${name}.mjs`,ts.transpileModule(readFileSync(`lib/${name}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText.replace(/from ['"]\.\/([^'"]+)['"]/g,"from './$1.mjs'"));
 const {alertAdminsOfNewClub}=await import('../.test-runtime/club-review-alert.mjs');
 const calls=[],http=async(url,init)=>{calls.push([url,JSON.parse(init.body),init.headers]);return new Response('{}',{status:200});};
 const club={id:'c1',name:'Harbor TT',location:'Baltimore'},env={RALLY_ADMIN_EMAILS:'a@example.com, b@example.com ,not-an-email',RESEND_API_KEY:'key',NOTIFICATION_FROM:'Rally <no-reply@rallytt.net>'};
