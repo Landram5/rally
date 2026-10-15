@@ -9,6 +9,7 @@ import "./styles/help.css";
 import "./styles/invites.css";
 import "./styles/large-text.css";
 import "./styles/a11y.css";
+import "./styles/admin.css";
 import "./styles/onboarding.css";
 import "./styles/disclosure.css";
 import "./styles/plain-settings.css";
