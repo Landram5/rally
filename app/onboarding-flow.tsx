@@ -2,24 +2,26 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 import {useEffect,useState} from 'react';
 import {useTheme} from 'next-themes';
-import {ArrowLeft,Check,CircleDot} from 'lucide-react';
+import {ArrowLeft,Check,CircleDot,Search} from 'lucide-react';
 import {Button} from '@/components/ui/button';
 import {safeNextPath} from '@/lib/auth-rules';
+import type {JoinClub} from '@/lib/join-clubs';
 import {PALETTES,PALETTE_STORAGE_KEY,isPalette,type PaletteId} from '@/lib/palettes';
 import {defaultPreferences,type NotificationPreferences} from '@/lib/notification-preferences';
 import Avatar from './player-avatar';
 import PhotoCropper from './photo-cropper';
 import {applyPalette,saveUiPreference} from './ui-preferences-client';
+import {isUmbcClub,offerUmbcColorway} from './umbc-offer';
 type Settings={email:string;preferences?:NotificationPreferences|null;profile:{id:string;name:string;bio:string;photo_url?:string|null}|null};
-const STEPS=['name','photo','bio','alerts','look','done'] as const;
+const STEPS=['name','photo','bio','alerts','look','clubs','done'] as const;
 const ALERTS:[keyof NotificationPreferences,string,string][]=[
  ['match_updates','Match results','When a match you played is confirmed or needs your review.'],
  ['tournament_updates','Tournaments','Draws, results and call-ups for events you entered.'],
  ['registration_updates','Registrations and clubs','Waitlist spots and club membership decisions.'],
  ['session_reminders','Reminders','A heads-up before club sessions and tournaments.'],
 ];
-async function send(body:Record<string,unknown>){
- const r=await fetch('/api/account',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+async function send(body:Record<string,unknown>,endpoint='/api/account'){
+ const r=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
  const result=await r.json().catch(()=>({})) as {error?:string};if(!r.ok)throw new Error(result.error||'Could not save. Try again.');return result;
 }
 // First-run setup, one short screen at a time (name, photo, bio, alerts, look). Every step except the name can be skipped.
@@ -28,6 +30,7 @@ export default function OnboardingFlow(){
  const [loading,setLoading]=useState(true),[step,setStep]=useState(0),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const [profileId,setProfileId]=useState(''),[name,setName]=useState(''),[bio,setBio]=useState(''),[savedPhoto,setSavedPhoto]=useState<string|null>(null);
  const [photo,setPhoto]=useState<string|null>(null),[original,setOriginal]=useState<string|undefined>(),[cropFile,setCropFile]=useState<File|null>(null);
+ const [clubQuery,setClubQuery]=useState(''),[clubs,setClubs]=useState<JoinClub[]|null>(null),[clubsError,setClubsError]=useState(''),[joining,setJoining]=useState(''),[retry,setRetry]=useState(0),[requested,setRequested]=useState<{id:string;name:string}[]>([]);
  const [prefs,setPrefs]=useState<NotificationPreferences>(defaultPreferences),[palette,setPalette]=useState<PaletteId>('forest'),[next,setNext]=useState('/clubhouse');
  useEffect(()=>{
   const target=safeNextPath(new URLSearchParams(window.location.search).get('next')??'/clubhouse');setNext(target);
@@ -48,6 +51,28 @@ export default function OnboardingFlow(){
   })();
   return()=>{live=false};
  },[]);
+ // The clubs step: search the approved clubs (debounced); a newer search always wins over an older one.
+ const onClubs=STEPS[step]==='clubs';
+ useEffect(()=>{
+  if(!onClubs)return;
+  let live=true;setClubsError('');
+  const timer=setTimeout(()=>{
+   fetch('/api/rally?view=join-clubs&q='+encodeURIComponent(clubQuery.trim()),{cache:'no-store'})
+    .then(async r=>{const b=await r.json() as {clubs?:JoinClub[];error?:string};if(!r.ok)throw new Error(b.error);if(live)setClubs(b.clubs??[]);})
+    .catch(()=>{if(live){setClubs(null);setClubsError('Could not load clubs. Check your connection and try again.')}});
+  },clubQuery?250:0);
+  return()=>{live=false;clearTimeout(timer)};
+ },[onClubs,clubQuery,retry]);
+ async function requestJoin(club:JoinClub){
+  if(joining)return;setJoining(club.id);setError('');
+  try{
+   await send({action:'request_join',clubId:club.id},'/api/rally');
+   setClubs(list=>list&&list.map(c=>c.id===club.id?{...c,mine:'pending'}:c));
+   setRequested(prev=>prev.some(c=>c.id===club.id)?prev:[...prev,{id:club.id,name:club.name}]);
+   if(isUmbcClub(club.name))offerUmbcColorway();
+  }catch(e){setError(e instanceof Error?e.message:'Could not send the request. Try again.')}
+  finally{setJoining('')}
+ }
  async function finish(destination:string){
   setBusy(true);
   try{await send({action:'save_ui_preferences',onboardingHidden:true})}catch{/* the checklist flag is local too */}
@@ -99,8 +124,16 @@ export default function OnboardingFlow(){
    <div className="onboarding-palettes" role="radiogroup" aria-label="Colour">{PALETTES.map(p=><button key={p.id} type="button" role="radio" aria-checked={palette===p.id} className={palette===p.id?'is-on':''} onClick={()=>{setPalette(p.id);applyPalette(p.id)}}><span className="onboarding-swatch" style={{background:`linear-gradient(135deg, ${p.colors[0]} 50%, ${p.colors[1]} 50%)`}}>{palette===p.id&&<Check size={16}/>}</span><span>{p.label}</span></button>)}</div>
    <div className="onboarding-modes" role="radiogroup" aria-label="Mode">{([['light','Light'],['dark','Dark'],['system','Device']] as const).map(([value,label])=><button key={value} type="button" role="radio" aria-checked={mode===value} className={mode===value?'is-on':''} onClick={()=>{setTheme(value);saveUiPreference({appearance:value})}}>{label}</button>)}</div></section>}
 
-  {last&&<section className="onboarding-step is-done"><div className="onboarding-avatar"><Avatar name={name||'Player'} photoUrl={shownPhoto??undefined} large/></div><h1>You are all set{name.trim()?`, ${name.trim().split(' ')[0]}`:''}</h1><p>Next, find your club so you can join its sessions, chat and results.</p>
-   <div className="onboarding-actions"><Button size="lg" disabled={busy} onClick={()=>void finish('/clubs')}>Find a club</Button><Button size="lg" variant="outline" disabled={busy} onClick={()=>void finish(next)}>Go to my clubhouse</Button></div>
+  {id==='clubs'&&<section className="onboarding-step"><h1>Find your club</h1><p>Ask to join a club and an organizer will approve you. You can always do this later from the Clubs tab.</p>
+   <label className="onboarding-search"><Search size={18} aria-hidden="true"/><input type="search" value={clubQuery} placeholder="Search by club name or town" aria-label="Search clubs" maxLength={60} onChange={e=>setClubQuery(e.target.value)}/></label>
+   {clubsError?<div className="onboarding-empty" role="alert"><p>{clubsError}</p><Button variant="outline" onClick={()=>setRetry(n=>n+1)}>Try again</Button></div>
+    :clubs===null?<p className="onboarding-empty" role="status">Loading clubs…</p>
+    :!clubs.length?<p className="onboarding-empty">{clubQuery.trim()?`No clubs match "${clubQuery.trim()}". Clubs are added by their organizers, so ask yours to put it on Rally.`:'No clubs are on Rally yet. Organizers can create one from the clubhouse.'}</p>
+    :<ul className="onboarding-clubs">{clubs.map(c=><li key={c.id}><span className="room-icon club" aria-hidden="true">{c.name.slice(0,1).toUpperCase()}</span><span className="onboarding-club-main"><b>{c.name}</b><small>{c.location} · {c.members} {c.members===1?'member':'members'}</small></span>
+     {c.mine==='active'?<span className="onboarding-club-state"><Check size={16}/> Member</span>:c.mine==='pending'?<span className="onboarding-club-state"><Check size={16}/> Requested</span>:<Button variant="outline" size="sm" disabled={!!joining} aria-label={`Ask to join ${c.name}`} onClick={()=>void requestJoin(c)}>{joining===c.id?'Sending…':'Join'}</Button>}</li>)}</ul>}</section>}
+
+  {last&&<section className="onboarding-step is-done"><div className="onboarding-avatar"><Avatar name={name||'Player'} photoUrl={shownPhoto??undefined} large/></div><h1>You are all set{name.trim()?`, ${name.trim().split(' ')[0]}`:''}</h1>{requested.length?<p>You asked to join {requested.map(c=>c.name).join(', ')}. An organizer will review each request; you will see the club under Clubs once you are approved.</p>:<p>You can find a club any time from the Clubs tab.</p>}
+   <div className="onboarding-actions"><Button size="lg" disabled={busy} onClick={()=>void finish(next)}>Go to my clubhouse</Button></div>
    <a className="onboarding-install" href="/install">Add Rally to your Home Screen</a></section>}
 
   {!last&&<footer className="onboarding-foot-actions"><Button size="lg" disabled={busy} onClick={()=>void advance()}>{busy?'Saving…':id==='photo'&&!photo?'Continue':'Continue'}</Button>{id!=='name'&&<Button variant="ghost" disabled={busy} onClick={()=>{setError('');setStep(step+1)}}>Skip</Button>}</footer>}
