@@ -5,6 +5,7 @@ import "./globals.css";
 import "./refine.css";
 import "./styles/chat-messages.css";
 import "./styles/club-manage.css";
+import "./styles/onboarding.css";
 import AppearanceProvider from "./appearance-provider";
 import AnnouncementBanner from './announcement-banner';
 import PwaRegistration from "@/app/pwa-registration";
