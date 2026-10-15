@@ -7,6 +7,7 @@ import {ratingHistory,ratingEstimates} from '@/lib/seeding';
 import {matchStakes} from '@/lib/match-stakes';
 import {playerPerformance} from '@/lib/player-performance';
 import {getPublicDirectory} from '@/lib/public-rally';
+import {listJoinableClubs} from '@/lib/join-clubs';
 import {AppError,makeService} from '@/lib/rally-service';
 import {rateLimit} from '@/lib/write-limits';
 import {verifyTurnstile} from '@/lib/turnstile';
@@ -19,6 +20,11 @@ export async function GET(request:Request){try{const query=new URL(request.url).
  if(view==='performance'){const player=query.get('player');if(!player){const directory=await getPublicDirectory(env.DB,'players',query.get('search')??'');return response({players:directory.players.map(p=>({id:p.id,name:p.name}))});}const data=await service().read(null),visible=data.players.some(p=>p.id===player);if(!visible&&!await env.DB.prepare('SELECT 1 FROM profiles WHERE id=? AND deleted_at IS NULL').bind(player).first())return response({error:'Player unavailable.'},404);return response(playerPerformance(visible?(query.get('club')&&query.get('club')!=='all'?data.matches.filter(m=>m.club_id===query.get('club')):data.matches):[],player,undefined,visible?ratingEstimates(data.players):{}));}
  if(view==='seasons'){const profile=user?await env.DB.prepare('SELECT id FROM profiles WHERE auth_id=? AND deleted_at IS NULL').bind(user.id).first<{id:string}>():null;return response(await seasonViews(env.DB,query.get('club')??'',profile?.id??null));}
  if(view==='members'||view==='matches'||view==='tournaments')return response(await readActivityPage(env.DB,user?.id??null,{view,club:query.get('club')??'all',search:query.get('search')??'',role:query.get('role')??'all',status:query.get('status')??'all',page:Number(query.get('page')??1),match:query.get('match')??'',player:query.get('player')??'',tournament:query.get('tournament')??'all',from:query.get('from')??'',to:query.get('to')??'',mine:query.get('mine')==='1',isSiteAdmin:siteAdmin}));
+ if(view==='join-clubs'){
+  if(!user)return response({error:'Sign in to find clubs.'},401);
+  const profile=await env.DB.prepare('SELECT id FROM profiles WHERE auth_id=? AND deleted_at IS NULL').bind(user.id).first<{id:string}>();if(!profile)return response({clubs:[]});
+  return response({clubs:await listJoinableClubs(env.DB,profile.id,query.get('q')??'')});
+ }
  if(!user)return response({error:'Sign in to open the Rally clubhouse.'},401);
  if(view==='match-record'){const profile=await env.DB.prepare('SELECT id FROM profiles WHERE auth_id=? AND deleted_at IS NULL').bind(user.id).first<{id:string}>();if(!profile)return response({error:'Create your player profile first.'},403);return response(await matchRecord(env.DB,profile.id,query.get('match')??''));}
  const data=await service().read(user.id,{isSiteAdmin:siteAdmin,compact:query.get('compact')==='1'&&!view,clubId:query.get('clubScope')??undefined});
