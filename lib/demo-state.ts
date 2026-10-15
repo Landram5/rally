@@ -1,5 +1,6 @@
 import {eventLogistics,optionalText,optionalInstant,registrationClosed} from './logistics';
 import {defaultPreferences} from './notification-preferences';
+import {checkSlug} from './club-slugs';
 import {seasonStandings,type SeasonView} from './club-seasons';
 import {notificationsFor} from './notifications';
 import type {RecordData} from '../app/match-record-sheet';
@@ -80,6 +81,10 @@ export function applyDemoAction(current:Data,p:Record<string,unknown>):Data{
  else if(action==='create_club'){if(!text('name')||!text('location'))throw new Error('Enter a club name and location.');if(d.memberships.some(m=>m.player_id===d.me!.id&&m.role==='owner'))throw new Error('You already own a club.');d.clubs.push({id,name:text('name'),location:text('location'),canManage:true,canAssignRoles:true,approvalStatus:'pending',activeMemberCount:1});d.memberships.push({club_id:id,player_id:d.me!.id,role:'owner',status:'active'});}
  else if(action==='add_guest')addGuest();
  else if(action==='approve_club'||action==='decline_club')d.clubs.find(c=>c.id===clubId)!.approvalStatus=action==='approve_club'?'approved':'rejected';
+ else if(action==='set_club_slug'){const club=d.clubs.find(c=>c.id===clubId)!;club.slug=checkSlug(p.slug);}
+ else if(action==='leave_club'){if(d.memberships.some(m=>m.club_id===clubId&&m.player_id===d.me!.id&&m.role==='owner'))throw Error('Transfer ownership to another member first, then you can leave.');d.memberships=d.memberships.filter(m=>!(m.club_id===clubId&&m.player_id===d.me!.id));}
+ else if(action==='remove_member'){if(playerId===d.me!.id)throw Error('Use Leave club to leave.');const t=d.memberships.find(m=>m.club_id===clubId&&m.player_id===playerId);if(!t||t.role==='owner')throw Error('You can only remove people with a lower club role than yours.');d.memberships=d.memberships.filter(m=>m!==t);}
+ else if(action==='cancel_join_request')d.memberships=d.memberships.filter(m=>!(m.club_id===clubId&&m.player_id===d.me!.id&&m.status==='pending'));
  else if(action==='request_join')d.memberships.push({club_id:clubId,player_id:d.me!.id,role:'member',status:'pending'});
  else if(action==='approve_member'||action==='decline_member')d.memberships.find(m=>m.club_id===clubId&&m.player_id===playerId)!.status=action==='approve_member'?'active':'declined';
  else if(action==='request_guest_claim'){

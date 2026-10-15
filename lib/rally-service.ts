@@ -8,6 +8,7 @@ import {readPreferences,savePreferences} from './notification-preferences';
 import {seasonAction} from './club-seasons';
 import {optionalText} from './logistics';
 import {notificationsFor} from './notifications';
+import {assignDefaultSlug,setClubSlug} from './club-slugs';
 import {readAnnouncements} from './announcements';
 import {validateProfilePhoto,profilePhotoUrl} from './profile-photo';
 import {suggestSeeds,tournamentWeight,ratingEstimates} from './seeding';
@@ -37,14 +38,14 @@ export function makeService(database:D1Database){
  return {
  async read(authId:string|null,access:Access={}){
   const self=authId?await me(authId):null,scope=access.clubId??'',version=access.compact?await summaryVersion(db):0;
-  const [allProfiles,allClubs,allMatches,allTournaments,allEntries]=await Promise.all([all<{id:string;name:string;is_guest:number;is_deleted:number;bio:string;rally_id:string|null;photo_version:string|null;initial_rating:number|null;initial_rating_revision:number}>('SELECT p.id,p.name,p.bio,p.rally_id,p.initial_rating,p.initial_rating_revision,(p.auth_id IS NULL AND p.deleted_at IS NULL) AS is_guest,p.deleted_at IS NOT NULL AS is_deleted,ph.updated_at AS photo_version FROM profiles p LEFT JOIN profile_photos ph ON ph.player_id=p.id WHERE (?=\'\' OR p.id IN (SELECT player_id FROM memberships WHERE club_id=?) OR p.id IN (SELECT player_id FROM entries WHERE tournament_id IN (SELECT id FROM tournaments WHERE club_id=?)) OR p.id IN (SELECT player_id FROM tournament_waitlist WHERE tournament_id IN (SELECT id FROM tournaments WHERE club_id=?))) ORDER BY p.name',scope,scope,scope,scope),all<{id:string;name:string;location:string;bio:string;venue:string;meeting_schedule:string;contact:string;joining_info:string;owner_id:string;approval_status:string;photo_version:string|null;banner_version:string|null}>("SELECT c.id,c.name,c.location,c.bio,c.venue,c.meeting_schedule,c.contact,c.joining_info,c.owner_id,c.approval_status,(SELECT updated_at FROM club_media WHERE club_id=c.id AND kind='photo') AS photo_version,(SELECT updated_at FROM club_media WHERE club_id=c.id AND kind='banner') AS banner_version FROM clubs c WHERE (?='' OR c.id=?) ORDER BY c.name",scope,scope),all<SavedMatch>('SELECT m.*,t.rating_weight AS tournament_weight,pa.initial_rating AS a_initial_rating,pb.initial_rating AS b_initial_rating FROM matches m LEFT JOIN profiles pa ON pa.id=m.a LEFT JOIN profiles pb ON pb.id=m.b LEFT JOIN tournaments t ON t.id=m.tournament_id WHERE t.deleted_at IS NULL AND (?=\'\' OR m.club_id=?) ORDER BY m.played_on DESC,m.created_at DESC',scope,scope),all<{waitlist?:{player_id:string;position:number}[];id:string;club_id:string;state_json:string|null;[key:string]:unknown}>('SELECT * FROM tournaments WHERE deleted_at IS NULL AND (?=\'\' OR club_id=?) ORDER BY date',scope,scope),all<{tournament_id:string;player_id:string;checked_in_at:string|null}>('SELECT tournament_id,player_id,checked_in_at FROM entries WHERE (?=\'\' OR tournament_id IN (SELECT id FROM tournaments WHERE club_id=?)) ORDER BY created_at,id',scope,scope)]);
+  const [allProfiles,allClubs,allMatches,allTournaments,allEntries]=await Promise.all([all<{id:string;name:string;is_guest:number;is_deleted:number;bio:string;rally_id:string|null;photo_version:string|null;initial_rating:number|null;initial_rating_revision:number}>('SELECT p.id,p.name,p.bio,p.rally_id,p.initial_rating,p.initial_rating_revision,(p.auth_id IS NULL AND p.deleted_at IS NULL) AS is_guest,p.deleted_at IS NOT NULL AS is_deleted,ph.updated_at AS photo_version FROM profiles p LEFT JOIN profile_photos ph ON ph.player_id=p.id WHERE (?=\'\' OR p.id IN (SELECT player_id FROM memberships WHERE club_id=?) OR p.id IN (SELECT player_id FROM entries WHERE tournament_id IN (SELECT id FROM tournaments WHERE club_id=?)) OR p.id IN (SELECT player_id FROM tournament_waitlist WHERE tournament_id IN (SELECT id FROM tournaments WHERE club_id=?))) ORDER BY p.name',scope,scope,scope,scope),all<{id:string;name:string;location:string;bio:string;venue:string;meeting_schedule:string;contact:string;joining_info:string;owner_id:string;approval_status:string;slug:string|null;photo_version:string|null;banner_version:string|null}>("SELECT c.id,c.name,c.location,c.bio,c.venue,c.meeting_schedule,c.contact,c.joining_info,c.owner_id,c.approval_status,(SELECT slug FROM club_slugs WHERE club_id=c.id AND is_current=1) AS slug,(SELECT updated_at FROM club_media WHERE club_id=c.id AND kind='photo') AS photo_version,(SELECT updated_at FROM club_media WHERE club_id=c.id AND kind='banner') AS banner_version FROM clubs c WHERE (?='' OR c.id=?) ORDER BY c.name",scope,scope),all<SavedMatch>('SELECT m.*,t.rating_weight AS tournament_weight,pa.initial_rating AS a_initial_rating,pb.initial_rating AS b_initial_rating FROM matches m LEFT JOIN profiles pa ON pa.id=m.a LEFT JOIN profiles pb ON pb.id=m.b LEFT JOIN tournaments t ON t.id=m.tournament_id WHERE t.deleted_at IS NULL AND (?=\'\' OR m.club_id=?) ORDER BY m.played_on DESC,m.created_at DESC',scope,scope),all<{waitlist?:{player_id:string;position:number}[];id:string;club_id:string;state_json:string|null;[key:string]:unknown}>('SELECT * FROM tournaments WHERE deleted_at IS NULL AND (?=\'\' OR club_id=?) ORDER BY date',scope,scope),all<{tournament_id:string;player_id:string;checked_in_at:string|null}>('SELECT tournament_id,player_id,checked_in_at FROM entries WHERE (?=\'\' OR tournament_id IN (SELECT id FROM tournaments WHERE club_id=?)) ORDER BY created_at,id',scope,scope)]);
   const memberships=await all<Membership>('SELECT club_id,player_id,role,status FROM memberships WHERE (?=\'\' OR club_id=?)',scope,scope);
   // Doubles tournaments register teams. A team appears in `entries` under its own id, so counts and name lookups work like singles.
   const teams=(await all<{id:string;tournament_id:string;p1:string;p2:string;n1:string;n2:string;created_at:string;checked_in_at:string|null}>('SELECT d.id,d.tournament_id,d.p1,d.p2,d.created_at,d.checked_in_at,a.name n1,b.name n2 FROM doubles_teams d JOIN profiles a ON a.id=d.p1 JOIN profiles b ON b.id=d.p2 WHERE (?=\'\' OR d.tournament_id IN (SELECT id FROM tournaments WHERE club_id=?)) ORDER BY d.created_at,d.id',scope,scope)).map(t=>({id:t.id,tournament_id:t.tournament_id,p1:t.p1,p2:t.p2,name:`${t.n1} & ${t.n2}`,created_at:t.created_at,checked_in_at:t.checked_in_at}));
   // Doubles events seed teams by the average doubles rating of their two players.
   const doublesRatings=teams.length?(await readDoublesRatings(db)).ratings:null,doublesSeeds=(tid:string)=>teams.filter(x=>x.tournament_id===tid).map(x=>{const a=doublesRatings?.get(x.p1),b=doublesRatings?.get(x.p2);return {id:x.id,rating:((a?.rating??400)+(b?.rating??400))/2,played:Math.min(a?.played??0,b?.played??0),wins:Math.min(a?.wins??0,b?.wins??0)};}).sort((p,q)=>q.rating-p.rating);
   for(const t of teams)allEntries.push({id:t.id,tournament_id:t.tournament_id,player_id:t.id,created_at:t.created_at,checked_in_at:t.checked_in_at} as (typeof allEntries)[number]);
-  const visibleClubIds=new Set(allClubs.filter(c=>c.approval_status==='approved'||access.isSiteAdmin||(self&&memberships.some(m=>m.club_id===c.id&&m.player_id===self.id))).map(c=>c.id));
+  const visibleClubIds=new Set(allClubs.filter(c=>c.approval_status==='approved'||(c.approval_status==='pending'&&!!scope&&c.id===scope)||access.isSiteAdmin||(self&&memberships.some(m=>m.club_id===c.id&&m.player_id===self.id))).map(c=>c.id));
   const cs=allClubs.filter(c=>c.id!=='unaffiliated'&&visibleClubIds.has(c.id)),ms=allMatches.filter(m=>visibleClubIds.has(m.club_id)),ts=allTournaments.filter(t=>visibleClubIds.has(t.club_id));
   const tournamentIds=new Set(ts.map(t=>t.id as string)),es=allEntries.filter(e=>tournamentIds.has(e.tournament_id));
   const visiblePlayerIds=new Set(memberships.filter(m=>m.status==='active'&&visibleClubIds.has(m.club_id)).map(m=>m.player_id));if(self)visiblePlayerIds.add(self.id);
@@ -69,7 +70,8 @@ export function makeService(database:D1Database){
   const preferences=self?await readPreferences(db,self.id):undefined;
   const sessions=self?await readSessions(db,self.id,scope||undefined):[];
   const announcements=self?await readAnnouncements(db,self.id):[];
-  const notifications=notificationsFor({...result,ownership,preferences,announcements,sessions} as unknown as Parameters<typeof notificationsFor>[0],readIds);
+  const membershipDecisions=self?await all<{id:string;club_id:string;clubName:string;decision:string;decided_at:string}>('SELECT d.id,d.club_id,c.name AS clubName,d.decision,d.decided_at FROM membership_decisions d JOIN clubs c ON c.id=d.club_id WHERE d.player_id=? AND d.decided_at>? ORDER BY d.decided_at DESC LIMIT 20',self.id,new Date(Date.now()-30*86400000).toISOString()):[];
+  const notifications=notificationsFor({...result,ownership,preferences,announcements,sessions,membershipDecisions} as unknown as Parameters<typeof notificationsFor>[0],readIds);
   if(access.compact){const summaries=await cachedSummaries(db,visibleMatches as unknown as Parameters<typeof cachedSummaries>[1],cs.map(c=>c.id),version,self?'authenticated':'public');const visibleMemberships=scope?result.memberships.filter(m=>m.player_id===self?.id||m.status==='pending'):result.memberships;const visiblePeople=new Set(visibleMemberships.map(m=>m.player_id));if(self)visiblePeople.add(self.id);
    return {...result,memberships:visibleMemberships,players:(scope?result.players.filter(p=>visiblePeople.has(p.id)):result.players).map(p=>({id:p.id,name:p.name,is_guest:p.is_guest,is_deleted:p.is_deleted,photo_url:p.photo_url,initial_rating:p.initial_rating,initial_rating_revision:p.initial_rating_revision})),summaries,eventCounts:Object.fromEntries(['all',...cs.map(c=>c.id)].map(id=>[id,id==='all'?ts.length:ts.filter(t=>t.club_id===id).length])),matches:result.matches.slice(0,20),tournaments:result.tournaments.slice(0,20).map(t=>({...t,entry_count:es.filter(e=>e.tournament_id===t.id).length,state:null,seedStats:[],fixturePlans:[]})),entries:result.entries.filter(e=>e.player_id===self?.id||result.teams.some(t=>t.id===e.player_id&&(t.p1===self?.id||t.p2===self?.id))),teams:result.teams.slice(0,200),notifications,dashboards,ownership,preferences,sessions};}
   return {...result,notifications,dashboards,ownership,preferences,sessions};
@@ -100,10 +102,10 @@ export function makeService(database:D1Database){
    if(!Number.isInteger(rating)||Number(rating)<200||Number(rating)>4000)fail(400,'Use a whole-number initial estimate from 200 to 4000.');
    const prior=await q('SELECT actor_id,payload FROM rating_estimate_history WHERE id=?',operationId).first<{actor_id:string;payload:string}>();if(prior){if(prior.actor_id!==user.id||prior.payload!==payload)fail(409,'This action ID was already used.');return {ok:true};}
    if(!access.isSiteAdmin)await admin(clubId,user.id);
-   const target=await q("SELECT p.initial_rating,p.initial_rating_revision FROM profiles p JOIN memberships m ON m.player_id=p.id JOIN clubs c ON c.id=m.club_id WHERE p.id=? AND p.deleted_at IS NULL AND m.club_id=? AND m.status='active' AND c.approval_status='approved'",playerId,clubId).first<{initial_rating:number|null;initial_rating_revision:number}>();if(!target)fail(404,'Choose an active player in an approved club.');
+   const target=await q("SELECT p.initial_rating,p.initial_rating_revision FROM profiles p JOIN memberships m ON m.player_id=p.id JOIN clubs c ON c.id=m.club_id WHERE p.id=? AND p.deleted_at IS NULL AND m.club_id=? AND m.status='active' AND c.approval_status IN ('approved','pending')",playerId,clubId).first<{initial_rating:number|null;initial_rating_revision:number}>();if(!target)fail(404,'Choose an active player in an approved club.');
    if(target!.initial_rating!==null&&!access.isSiteAdmin)fail(403,'Only a Rally site administrator can correct an existing initial estimate.');
    if(body.revision!==target!.initial_rating_revision)fail(409,'The initial estimate changed. Refresh and try again.');
-   const results=await db.batch([q("UPDATE profiles SET initial_rating=?,initial_rating_revision=initial_rating_revision+1,initial_rating_operation=? WHERE id=? AND deleted_at IS NULL AND initial_rating_revision=? AND (?=1 OR initial_rating IS NULL) AND NOT EXISTS(SELECT 1 FROM rating_estimate_history WHERE id=?) AND EXISTS(SELECT 1 FROM memberships m JOIN clubs c ON c.id=m.club_id WHERE m.player_id=profiles.id AND m.club_id=? AND m.status='active' AND c.approval_status='approved') AND (?=1 OR EXISTS(SELECT 1 FROM memberships m WHERE m.club_id=? AND m.player_id=? AND m.status='active' AND m.role IN ('owner','admin','board')))",rating,operationId,playerId,body.revision,access.isSiteAdmin?1:0,operationId,clubId,access.isSiteAdmin?1:0,clubId,user.id),q('INSERT INTO rating_estimate_history(id,player_id,club_id,actor_id,before_rating,after_rating,note,revision,created_at,payload) SELECT ?,?,?,?,?,?,?,initial_rating_revision,?,? FROM profiles WHERE id=? AND initial_rating_operation=? ON CONFLICT(id) DO NOTHING',operationId,playerId,clubId,user.id,target!.initial_rating,rating,note,now,payload,playerId,operationId)]);
+   const results=await db.batch([q("UPDATE profiles SET initial_rating=?,initial_rating_revision=initial_rating_revision+1,initial_rating_operation=? WHERE id=? AND deleted_at IS NULL AND initial_rating_revision=? AND (?=1 OR initial_rating IS NULL) AND NOT EXISTS(SELECT 1 FROM rating_estimate_history WHERE id=?) AND EXISTS(SELECT 1 FROM memberships m JOIN clubs c ON c.id=m.club_id WHERE m.player_id=profiles.id AND m.club_id=? AND m.status='active' AND c.approval_status IN ('approved','pending')) AND (?=1 OR EXISTS(SELECT 1 FROM memberships m WHERE m.club_id=? AND m.player_id=? AND m.status='active' AND m.role IN ('owner','admin','board')))",rating,operationId,playerId,body.revision,access.isSiteAdmin?1:0,operationId,clubId,access.isSiteAdmin?1:0,clubId,user.id),q('INSERT INTO rating_estimate_history(id,player_id,club_id,actor_id,before_rating,after_rating,note,revision,created_at,payload) SELECT ?,?,?,?,?,?,?,initial_rating_revision,?,? FROM profiles WHERE id=? AND initial_rating_operation=? ON CONFLICT(id) DO NOTHING',operationId,playerId,clubId,user.id,target!.initial_rating,rating,note,now,payload,playerId,operationId)]);
    if(results[0].meta.changes!==1){const applied=await q('SELECT actor_id,payload FROM rating_estimate_history WHERE id=?',operationId).first<{actor_id:string;payload:string}>();if(applied?.actor_id!==user.id||applied?.payload!==payload)fail(409,'The player, estimate, or your access changed. Refresh and try again.');}return {ok:true};
   }
   if(action==='mark_notification_read'||action==='mark_notifications_read'){
@@ -112,6 +114,9 @@ export function makeService(database:D1Database){
    if(action==='mark_notification_read'&&!selected.length)fail(404,'Notification not found.');
    if(selected.length)await db.batch(selected.map(n=>q('INSERT INTO notification_reads (player_id,notification_id,read_at) VALUES (?,?,?) ON CONFLICT(player_id,notification_id) DO NOTHING',user.id,n.id,now)));
    return {ok:true};
+  }
+  if(action==='set_club_slug'){
+   const clubId=id(body.clubId);await admin(clubId,user.id);return setClubSlug(db,clubId,body.slug,now);
   }
   if(action==='update_club'){
    const clubId=id(body.clubId),name=str(body.name,'Club name',80),location=str(body.location,'Location',100);
@@ -150,6 +155,21 @@ export function makeService(database:D1Database){
    if(!access.isSiteAdmin)fail(403,'Only a Rally site administrator can review feedback.');
    return updateFeedback(db,body);
   }
+  // People can leave a club. The owner cannot (transfer ownership first), and history stays: results and tournament entries are kept.
+  if(action==='leave_club'){
+   const clubId=id(body.clubId),m=await member(clubId,user.id);
+   if(m?.role==='owner')fail(403,'Transfer ownership to another member first (Account settings, Club ownership), then you can leave.');
+   await db.batch([q("DELETE FROM memberships WHERE club_id=? AND player_id=? AND status='active' AND role!='owner'",clubId,user.id),q('DELETE FROM open_play WHERE club_id=? AND player_id=?',clubId,user.id)]);return {ok:true};
+  }
+  // Organizers remove people they outrank: the owner anyone, administrators board members and members, board members members.
+  if(action==='remove_member'){
+   const clubId=id(body.clubId),playerId=id(body.playerId),actor=await admin(clubId,user.id);
+   const rank:Record<string,number>={member:0,guest:0,board:1,admin:2,owner:3};
+   if(playerId===user.id)fail(400,'Use Leave club to leave.');
+   const target=await q("SELECT role FROM memberships WHERE club_id=? AND player_id=? AND status='active'",clubId,playerId).first<{role:string}>();if(!target)fail(404,'That person is not a member of this club.');
+   if((rank[actor!.role]??0)<=(rank[target!.role]??0))fail(403,'You can only remove people with a lower club role than yours.');
+   await db.batch([q("DELETE FROM memberships WHERE club_id=? AND player_id=? AND status='active'",clubId,playerId),q('DELETE FROM open_play WHERE club_id=? AND player_id=?',clubId,playerId)]);return {ok:true};
+  }
   if(action==='set_member_role'){
    const clubId=id(body.clubId),playerId=id(body.playerId),role=body.role;
    if(typeof role!=='string'||!['member','admin','board'].includes(role))fail(400,'Choose Member, Administrator, or Board member.');
@@ -169,17 +189,23 @@ export function makeService(database:D1Database){
    const owned=await q('SELECT id FROM clubs WHERE owner_id=? LIMIT 1',user.id).first<{id:string}>();
    if(owned&&owned.id!==clubId)fail(403,'Each account can create one club. You can still administer clubs that invite you.');
    const existing=await q('SELECT owner_id FROM clubs WHERE id=?',clubId).first<{owner_id:string}>();if(existing){if(existing.owner_id!==user.id)fail(409,'That club ID is already in use.');return {ok:true,id:clubId};}
-   await db.batch([q("INSERT INTO clubs (id,name,location,owner_id,approval_status,created_at) VALUES (?,?,?,?,?,?)",clubId,name,location,user.id,'pending',now),q('INSERT INTO memberships (id,club_id,player_id,role,status,created_at) VALUES (?,?,?,?,?,?)',crypto.randomUUID(),clubId,user.id,'owner','active',now)]);return {ok:true,id:clubId,status:'pending'};
+   await db.batch([q("INSERT INTO clubs (id,name,location,owner_id,approval_status,created_at) VALUES (?,?,?,?,?,?)",clubId,name,location,user.id,'pending',now),q('INSERT INTO memberships (id,club_id,player_id,role,status,created_at) VALUES (?,?,?,?,?,?)',crypto.randomUUID(),clubId,user.id,'owner','active',now)]);
+   await assignDefaultSlug(db,clubId,name,location,now).catch(()=>null);return {ok:true,id:clubId,status:'pending'};
   }
   if(action==='request_join'){
    if(body.clubId==='unaffiliated')fail(400,'Unaffiliated play does not require club membership.');
-   const clubId=id(body.clubId),club=await q('SELECT approval_status FROM clubs WHERE id=?',clubId).first<{approval_status:string}>();if(!club)fail(404,'Club not found.');if(club!.approval_status!=='approved')fail(403,'This club is not open for membership yet.');
+   const clubId=id(body.clubId),club=await q('SELECT approval_status FROM clubs WHERE id=?',clubId).first<{approval_status:string}>();if(!club)fail(404,'Club not found.');if(club!.approval_status==='rejected')fail(403,'This club is not open for membership.');
    await q('INSERT INTO memberships (id,club_id,player_id,role,status,created_at) VALUES (?,?,?,?,?,?) ON CONFLICT(club_id,player_id) DO NOTHING',crypto.randomUUID(),clubId,user.id,'member','pending',now).run();return {ok:true};
   }
   if(action==='approve_member'||action==='decline_member'){
    const clubId=id(body.clubId),playerId=id(body.playerId);await admin(clubId,user.id);
-   if(action==='approve_member')await q("UPDATE memberships SET status='active' WHERE club_id=? AND player_id=? AND status='pending'",clubId,playerId).run();
-   else await q("DELETE FROM memberships WHERE club_id=? AND player_id=? AND status='pending'",clubId,playerId).run();return {ok:true};
+   const decided=action==='approve_member'?await q("UPDATE memberships SET status='active' WHERE club_id=? AND player_id=? AND status='pending'",clubId,playerId).run():await q("DELETE FROM memberships WHERE club_id=? AND player_id=? AND status='pending'",clubId,playerId).run();
+   // The person is told (inbox, and phone/email alerts if on) only when a pending request really changed.
+   if(decided.meta.changes)await q('INSERT INTO membership_decisions (id,club_id,player_id,decision,decided_at) VALUES (?,?,?,?,?)',crypto.randomUUID(),clubId,playerId,action==='approve_member'?'approved':'declined',now).run();
+   return {ok:true};
+  }
+  if(action==='cancel_join_request'){
+   const clubId=id(body.clubId);await q("DELETE FROM memberships WHERE club_id=? AND player_id=? AND status='pending'",clubId,user.id).run();return {ok:true};
   }
   if(action==='add_guest'){
    const clubId=id(body.clubId),playerId=id(body.id),name=str(body.name,'Player name',60);await admin(clubId,user.id);

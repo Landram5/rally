@@ -1,0 +1,7 @@
+/* Accessibility fixes found by an automated audit (axe-core) of the live site. */
+/* Bios and notes that sit on a light card use normal text colours (they were pale text meant for a dark banner). */
+.player-bio { color: var(--text-muted); }
+.player-bio a { color: var(--text-brand); }
+.player-bio-toggle { color: var(--text-muted); }
+/* The selected doubles tab was white on a light brand colour in some colorways. It now matches the other selected tabs. */
+.doubles-views button.active, .doubles-views button[aria-selected="true"] { background: var(--bg-surface); color: var(--text-strong); box-shadow: inset 0 0 0 1px var(--border-strong); }

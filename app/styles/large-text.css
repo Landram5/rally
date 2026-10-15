@@ -1,0 +1,24 @@
+/* Optional "Larger text and buttons" (Account settings > Appearance). Nothing here applies unless <html data-text="large"> is set,
+ * so the default look is unchanged. */
+html[data-text="large"] { font-size: 112.5%; }
+html[data-text="large"] body { font-size: 1rem; line-height: 1.55; }
+
+/* Easier to tap: every control is at least 48px tall, and text inside is a readable size. */
+html[data-text="large"] [data-slot="button"], html[data-text="large"] button:not([role="switch"]):not(.person):not(.standings-expand):not([aria-haspopup="dialog"]) { min-height: 48px; }
+html[data-text="large"] [data-slot="button"] { font-size: 1rem; padding-inline: 20px; }
+html[data-text="large"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="hidden"]), html[data-text="large"] textarea, html[data-text="large"] select, html[data-text="large"] [data-slot="select-trigger"] { min-height: 52px; font-size: 1rem; }
+html[data-text="large"] [role="tab"], html[data-text="large"] summary, html[data-text="large"] .club-jump a { min-height: 48px; font-size: 1rem; }
+html[data-text="large"] summary { display: flex; align-items: center; }
+html[data-text="large"] input[type="checkbox"]:not(.notification-choice input) { width: 24px; height: 24px; }
+
+/* Small print is no longer tiny. */
+html[data-text="large"] small, html[data-text="large"] .footnote, html[data-text="large"] .profile-help, html[data-text="large"] .badge,
+html[data-text="large"] .eyebrow, html[data-text="large"] .msg-thread-main small, html[data-text="large"] .standing-primary-stats, html[data-text="large"] .page-count { font-size: 0.95rem; }
+html[data-text="large"] .notification-choice small, html[data-text="large"] .setup-text small { font-size: 0.95rem; }
+
+/* Phone bottom bar: bigger labels and icons, with room for them. */
+@media (max-width: 700px) {
+  html[data-text="large"] .main-nav [role="tab"], html[data-text="large"] .persistent-mobile-navigation .main-nav a { font-size: 0.66rem; min-height: 56px; padding-inline: 0; }
+  html[data-text="large"] .main-nav svg { width: 22px; height: 22px; }
+  html[data-text="large"] body:has(.app-shell) { padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px)); }
+}

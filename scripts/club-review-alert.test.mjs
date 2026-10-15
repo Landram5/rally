@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
+import ts from 'typescript';
+mkdirSync('.test-runtime',{recursive:true});
+for(const name of ['club-review-alert','admin-email'])writeFileSync(`.test-runtime/${name}.mjs`,ts.transpileModule(readFileSync(`lib/${name}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText.replace(/from ['"]\.\/([^'"]+)['"]/g,"from './$1.mjs'"));
+const {alertAdminsOfNewClub}=await import('../.test-runtime/club-review-alert.mjs');
+const calls=[],http=async(url,init)=>{calls.push([url,JSON.parse(init.body),init.headers]);return new Response('{}',{status:200});};
+const club={id:'c1',name:'Harbor TT',location:'Baltimore'},env={RALLY_ADMIN_EMAILS:'a@example.com, b@example.com ,not-an-email',RESEND_API_KEY:'key',NOTIFICATION_FROM:'Rally <no-reply@rallytt.net>'};
+assert.equal(await alertAdminsOfNewClub(env,club,http),2,'each valid administrator is emailed');
+assert.deepEqual(calls.map(c=>c[1].to[0]),['a@example.com','b@example.com'],'invalid addresses are skipped');
+assert.match(calls[0][1].subject,/New club to verify: Harbor TT/);assert.match(calls[0][1].text,/clubhouse\?tab=clubs/);assert.match(calls[0][1].text,/stays out of public lists/);
+assert.notEqual(calls[0][2]['Idempotency-Key'],calls[1][2]['Idempotency-Key'],'one idempotency key per recipient');assert.equal(calls[0][2]['Idempotency-Key'],'club-review-c1-a@example.com');
+assert.equal(await alertAdminsOfNewClub({...env,RESEND_API_KEY:''},club,http),0,'does nothing without an email provider');assert.equal(await alertAdminsOfNewClub({...env,RALLY_ADMIN_EMAILS:''},club,http),0,'or without administrators');assert.equal(calls.length,2);
+assert.equal(await alertAdminsOfNewClub(env,club,async()=>{throw new Error('offline')}),0,'a failing provider never breaks club creation');
+assert.equal(await alertAdminsOfNewClub(env,club,async()=>new Response('no',{status:500})),0,'and a refusal is not counted as sent');
+console.log('club review alert tests passed');

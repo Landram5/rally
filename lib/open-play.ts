@@ -4,7 +4,7 @@ import {loadRatingMatches} from './match-changes';
 import {calculateRatings} from './seeding';
 export const OPEN_PLAY_DEFAULT_MINUTES=120,OPEN_PLAY_MIN_MINUTES=15,OPEN_PLAY_MAX_MINUTES=360,OPEN_PLAY_NOTE_MAX=120;
 export type OpenPlayEntry={id:string;clubId:string;playerId:string;name:string;photoUrl:string|null;note:string;startedAt:string;expiresAt:string;rating:number|null;isMe:boolean};
-const member=async(db:D1Database,clubId:string,playerId:string)=>!!await db.prepare("SELECT 1 FROM memberships m JOIN clubs c ON c.id=m.club_id JOIN profiles p ON p.id=m.player_id WHERE m.club_id=? AND m.player_id=? AND m.status='active' AND c.approval_status='approved' AND p.deleted_at IS NULL").bind(clubId,playerId).first();
+const member=async(db:D1Database,clubId:string,playerId:string)=>!!await db.prepare("SELECT 1 FROM memberships m JOIN clubs c ON c.id=m.club_id JOIN profiles p ON p.id=m.player_id WHERE m.club_id=? AND m.player_id=? AND m.status='active' AND c.approval_status IN ('approved','pending') AND p.deleted_at IS NULL").bind(clubId,playerId).first();
 // Only active members of the club see who is looking for a game; expired and ended rows never show.
 export async function readOpenPlay(db:D1Database,viewerId:string,clubId:string,now=new Date().toISOString()):Promise<OpenPlayEntry[]>{
  if(!clubId||!await member(db,clubId,viewerId))return [];

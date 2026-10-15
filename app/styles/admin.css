@@ -1,0 +1,16 @@
+/* /admin: one page of everything waiting on a site administrator. */
+.admin-page { max-width: 820px; margin-inline: auto; padding: 40px 16px 80px; display: grid; gap: 28px; }
+.admin-page h1 { margin: 0; }
+.admin-page h2 { margin: 0 0 8px; font-size: 1.15rem; }
+.admin-page section { display: grid; gap: 6px; padding-top: 20px; border-top: 1px solid var(--border-subtle); }
+.admin-lede { margin: 0; color: var(--text-muted); font-size: 1.05rem; }
+.admin-list { list-style: none; margin: 0; padding: 0; display: grid; }
+.admin-list li { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px 16px; padding: 12px 0; border-top: 1px solid var(--border-subtle); }
+.admin-list li:first-child { border-top: 0; }
+.admin-list li > span:first-child { display: grid; gap: 2px; }
+.admin-list small { color: var(--text-muted); }
+.admin-links { display: flex; gap: 16px; }
+.admin-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin: 0; }
+.admin-stats div { padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--bg-surface); }
+.admin-stats dt { font-size: 0.85rem; color: var(--text-muted); }
+.admin-stats dd { margin: 4px 0 0; font-size: 1.6rem; font-weight: 650; }

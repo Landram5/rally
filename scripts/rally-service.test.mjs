@@ -3,7 +3,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {readFileSync,writeFileSync,mkdirSync,rmSync,readdirSync} from 'node:fs';
 import ts from 'typescript';
 mkdirSync('.test-runtime',{recursive:true});
-for(const name of ['club-seasons','notification-preferences','summary-cache','feedback-progress','record-ownership','dashboards','clubhouse-summary','rally','activity-pages','match-changes','match-filters','logistics','notifications','profile-photo','account-write-guard','account-deletion','announcements','club-sessions','weekly-sessions','rally-service','doubles','doubles-rating','tournament-service','tournament-scheduling','tournament-engine','match-rules','rally-errors','seeding','public-rally','public-leaderboard']){
+for(const name of readdirSync('lib').filter(f=>f.endsWith('.ts')).map(f=>f.slice(0,-3))){
  const compiled=ts.transpileModule(readFileSync(`lib/${name}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText.replace(/from ['"]\.\/([^'"]+)['"]/g, "from './$1.mjs'");
  writeFileSync(`.test-runtime/${name}.mjs`,compiled);
 }
@@ -50,7 +50,14 @@ await act('owner-auth',{action:'create_club',id:'club-one',name:'Club One',locat
 assert.equal((await service.read('owner-auth')).clubs[0].approvalStatus,'pending');
 assert.equal((await service.read('member-auth')).clubs.length,0,'pending club must be hidden from other accounts');
 assert.equal((await getPublicPlayer(db,owner)).clubs.length,0,'pending club must be hidden from public profiles');
-await assert.rejects(act('member-auth',{action:'request_join',clubId:'club-one'}),e=>e.status===403);
+// A new club works before it is verified: people can ask to join it by its link, but it stays out of every list.
+assert.equal((await service.read(null,{clubId:'club-one',compact:true})).clubs.length,1,'its own link opens the unlisted club');
+assert.equal((await service.read(null)).clubs.length,0,'but it is not in any club list');
+assert.equal((await service.read(null,{clubId:'club-one',compact:true})).clubs[0].approvalStatus,'pending');
+await act('member-auth',{action:'request_join',clubId:'club-one'});
+assert.equal((await service.read('member-auth')).clubs.length,1,'a requester can see the club they asked to join');
+await act('member-auth',{action:'cancel_join_request',clubId:'club-one'});
+assert.equal((await service.read('member-auth')).clubs.length,0,'and it is hidden again after cancelling');
 await act('owner-auth',{action:'create_tournament',id:'pending-event',clubId:'club-one',name:'Pending Event',date:'2026-10-01',format:'Round robin',capacity:4});
 assert.equal(await getPublicTournament(db,'pending-event'),null,'pending club tournament must not be public');
 assert.equal((await getPublicDirectory(db,'tournaments')).tournaments.length,0,'pending tournaments excluded from public home');
@@ -449,7 +456,7 @@ for(const summary of Object.values(scoped.summaries)){
  for(const opponents of Object.values(summary.opponents))assert.equal(Object.getPrototypeOf(opponents),Object.prototype);
 }
 await act('page-private-auth',{action:'save_profile',name:'Private organizer'});await act('page-private-auth',{action:'create_club',id:'page-private-club',name:'Private club',location:'Baltimore'});await act('page-private-auth',{action:'create_tournament',id:'page-private-event',clubId:'page-private-club',name:'Private event',date:'2099-10-10',format:'Round robin',capacity:4});
-assert.equal((await readActivityPage(db,null,{view:'members',club:'page-private-club'})).total,0);assert.equal((await readActivityPage(db,'member-auth',{view:'members',club:'page-private-club'})).total,0);assert.equal((await readActivityPage(db,'page-private-auth',{view:'members',club:'page-private-club'})).total,1);assert.equal((await readActivityPage(db,null,{view:'tournaments',club:'page-private-club'})).total,0);assert.equal((await readActivityPage(db,'page-private-auth',{view:'tournaments',club:'page-private-club'})).total,1);assert.equal((await service.read(null,{clubId:'page-private-club',compact:true})).clubs.length,0);
+assert.equal((await readActivityPage(db,null,{view:'members',club:'page-private-club'})).total,0);assert.equal((await readActivityPage(db,'member-auth',{view:'members',club:'page-private-club'})).total,0);assert.equal((await readActivityPage(db,'page-private-auth',{view:'members',club:'page-private-club'})).total,1);assert.equal((await readActivityPage(db,null,{view:'tournaments',club:'page-private-club'})).total,0);assert.equal((await readActivityPage(db,'page-private-auth',{view:'tournaments',club:'page-private-club'})).total,1);assert.equal((await service.read(null,{clubId:'page-private-club',compact:true})).clubs.length,1,'an unverified club opens by its own link (so people can ask to join), while its activity lists stay private');assert.equal((await service.read(null,{clubId:'other-club-that-is-not-linked',compact:true})).clubs.length,0);
 console.log('Passed server-side member/event/result pagination, literal search, anonymous visibility, focused results, scoped club reads and full-history compact summaries.');
 
 // No membership is needed to record, find, verify, or rate an unaffiliated game.
@@ -482,6 +489,82 @@ assert.equal(sql.prepare("SELECT rating_weight FROM tournaments WHERE id='free-t
 assert.deepEqual(sql.prepare('PRAGMA foreign_key_check').all(),[]);
 console.log('Passed: unaffiliated recording, permissions, confirmation, public history, 33% ratings, no memberships and single-club tournament weighting.');
 
+// Join requests: organizers are asked to review, the person is told the answer, and a request can be cancelled.
+{
+ const asker='asker-auth',other='asker2-auth';
+ await act(asker,{action:'save_profile',name:'Asker'});await act(other,{action:'save_profile',name:'Asker Two'});
+ const askerId=await uid(asker),otherId=await uid(other);
+ await act(asker,{action:'request_join',clubId:'club-one'});await act(other,{action:'request_join',clubId:'club-one'});
+ const reviews=(await service.read('owner-auth')).notifications.filter(n=>n.id.startsWith('join-club-one-'));
+ for(const who of [askerId,otherId])assert.ok(reviews.some(n=>n.id===`join-club-one-${who}`),'the organizer is asked to review each request');
+ assert.ok(reviews.every(n=>n.actionNeeded&&/section=management/.test(n.href)),'it is an action, linking to the Manage view');
+ assert.ok(!(await service.read(asker)).notifications.some(n=>n.id.startsWith('join-')),'the person asking is not asked to review');
+ assert.ok(!(await service.read('member-auth')).notifications.some(n=>n.id.startsWith('join-')),'ordinary members are not asked either');
+ // Approve one, decline the other.
+ await act('owner-auth',{action:'approve_member',clubId:'club-one',playerId:askerId});await act('owner-auth',{action:'decline_member',clubId:'club-one',playerId:otherId});
+ const afterAnswers=(await service.read('owner-auth')).notifications.map(n=>n.id);assert.ok(![askerId,otherId].some(who=>afterAnswers.includes(`join-club-one-${who}`)),'answered requests leave the organizer inbox');
+ const yes=(await service.read(asker)).notifications.find(n=>n.id.startsWith('membership-'));assert.match(yes.title,/You joined/);assert.match(yes.href,/^\/clubs\/club-one/);
+ const no=(await service.read(other)).notifications.find(n=>n.id.startsWith('membership-'));assert.match(no.title,/did not accept your request/);
+ assert.equal(sql.prepare('SELECT count(*) n FROM membership_decisions WHERE club_id=?').get('club-one').n>=2,true);
+ // A second answer to the same (already answered) request does not notify again.
+ const before=sql.prepare('SELECT count(*) n FROM membership_decisions').get().n;await act('owner-auth',{action:'approve_member',clubId:'club-one',playerId:askerId});assert.equal(sql.prepare('SELECT count(*) n FROM membership_decisions').get().n,before,'only a real pending request is recorded');
+ // Cancel: the pending row goes away, nobody is notified, and only the requester can do it.
+ const third='asker3-auth';await act(third,{action:'save_profile',name:'Asker Three'});const thirdId=await uid(third);
+ await act(third,{action:'request_join',clubId:'club-one'});assert.ok((await service.read('owner-auth')).notifications.some(n=>n.id===`join-club-one-${thirdId}`));
+ await act(third,{action:'cancel_join_request',clubId:'club-one'});
+ assert.equal(sql.prepare("SELECT count(*) n FROM memberships WHERE club_id='club-one' AND player_id=?").get(thirdId).n,0,'the request is removed');
+ assert.ok(!(await service.read('owner-auth')).notifications.some(n=>n.id===`join-club-one-${thirdId}`),'and leaves the organizer inbox');
+ assert.equal((await service.read(third)).notifications.filter(n=>n.id.startsWith('membership-')).length,0,'cancelling is not an answer');
+ await act('member-auth',{action:'cancel_join_request',clubId:'club-one'});assert.equal(sql.prepare("SELECT status FROM memberships WHERE club_id='club-one' AND player_id=?").get(member).status,'active','cancel never removes an active member');
+ await act(third,{action:'request_join',clubId:'club-one'});await act(third,{action:'cancel_join_request',clubId:'club-one'});await act(third,{action:'request_join',clubId:'club-one'});assert.equal(sql.prepare("SELECT status FROM memberships WHERE club_id='club-one' AND player_id=?").get(thirdId).status,'pending','a person can ask again after cancelling');
+ console.log('Passed: join requests notify organizers, answers notify the person, cancel works and never touches members.');
+}
+// Short club addresses: a new club gets one from its name, organizers can change it, nobody can take another club's.
+{
+ const slugOf=async(auth,club)=>(await service.read(auth)).clubs.find(c=>c.id===club)?.slug;
+ assert.equal(await slugOf('owner-auth','club-one'),'club-one','created clubs get an address from their name');
+ await assert.rejects(act('member-auth',{action:'set_club_slug',clubId:'club-one',slug:'members-cannot'}),e=>e.status===403,'only organizers choose the address');
+ await assert.rejects(act('outsider-auth',{action:'set_club_slug',clubId:'club-one',slug:'outsiders-cannot'}),e=>e.status===403);
+ assert.deepEqual({...await act('owner-auth',{action:'set_club_slug',clubId:'club-one',slug:'Harbor-TT'})},{slug:'harbor-tt'});assert.equal(await slugOf('owner-auth','club-one'),'harbor-tt');
+ await assert.rejects(act('outsider-auth',{action:'set_club_slug',clubId:'club-two',slug:'harbor-tt'}),e=>e.status===409,'another club cannot take it');
+ await assert.rejects(act('outsider-auth',{action:'set_club_slug',clubId:'club-two',slug:'club-one'}),e=>e.status===409,'or an address a club used before');
+ await assert.rejects(act('owner-auth',{action:'set_club_slug',clubId:'club-one',slug:'login'}),e=>e.status===400,'reserved words are refused');
+ console.log('Passed: short club addresses are assigned, organizer-only, unique and keep old addresses.');
+}
+// Leaving and removing: people can leave, organizers remove only people they outrank, history stays.
+{
+ const names=['lv1','lv2','lv3','bd','ad'],auth=n=>n+'-auth',ids={};
+ for(const n of names){await act(auth(n),{action:'save_profile',name:n});ids[n]=await uid(auth(n));await act(auth(n),{action:'request_join',clubId:'club-one'});await act('owner-auth',{action:'approve_member',clubId:'club-one',playerId:ids[n]});}
+ await act('owner-auth',{action:'set_member_role',clubId:'club-one',playerId:ids.bd,role:'board'});await act('owner-auth',{action:'set_member_role',clubId:'club-one',playerId:ids.ad,role:'admin'});
+ const row=n=>sql.prepare("SELECT role,status FROM memberships WHERE club_id='club-one' AND player_id=?").get(ids[n]);
+ // Leave.
+ await assert.rejects(act('owner-auth',{action:'leave_club',clubId:'club-one'}),e=>e.status===403&&/Transfer ownership/.test(e.message),'the owner must hand over the club first');
+ assert.equal(sql.prepare("SELECT role FROM memberships WHERE club_id='club-one' AND player_id=?").get(owner).role,'owner','and stays owner');
+ await act(auth('lv1'),{action:'leave_club',clubId:'club-one'});assert.equal(row('lv1'),undefined,'a member can leave');
+ await act(auth('lv1'),{action:'leave_club',clubId:'club-one'});await act('outsider-auth',{action:'leave_club',clubId:'club-one'});
+ await act(auth('lv1'),{action:'request_join',clubId:'club-one'});assert.equal(row('lv1').status,'pending','and can ask to join again');await act(auth('lv1'),{action:'cancel_join_request',clubId:'club-one'});
+ // Remove: rank rules.
+ await assert.rejects(act(auth('lv2'),{action:'remove_member',clubId:'club-one',playerId:ids.lv3}),e=>e.status===403,'a plain member cannot remove anyone');
+ await assert.rejects(act('outsider-auth',{action:'remove_member',clubId:'club-one',playerId:ids.lv3}),e=>e.status===403,'nor can an outsider');
+ await assert.rejects(act(auth('bd'),{action:'remove_member',clubId:'club-one',playerId:ids.ad}),e=>e.status===403,'board cannot remove an administrator');
+ await assert.rejects(act(auth('bd'),{action:'remove_member',clubId:'club-one',playerId:owner}),e=>e.status===403,'nobody removes the owner');
+ await assert.rejects(act(auth('ad'),{action:'remove_member',clubId:'club-one',playerId:owner}),e=>e.status===403);
+ await assert.rejects(act(auth('bd'),{action:'remove_member',clubId:'club-one',playerId:ids.bd}),e=>e.status===400,'removing yourself is leaving');
+ await assert.rejects(act(auth('ad'),{action:'remove_member',clubId:'club-one',playerId:ids.ad}),e=>e.status===400);
+ await assert.rejects(act(auth('ad'),{action:'remove_member',clubId:'club-one',playerId:ids.lv1}),e=>e.status===404,'only members can be removed');
+ await act(auth('bd'),{action:'remove_member',clubId:'club-one',playerId:ids.lv2});assert.equal(row('lv2'),undefined,'board can remove a member');
+ await act(auth('ad'),{action:'remove_member',clubId:'club-one',playerId:ids.bd});assert.equal(row('bd'),undefined,'an administrator can remove board members');
+ await assert.rejects(act(auth('ad'),{action:'remove_member',clubId:'club-one',playerId:ids.ad}),e=>e.status===400);
+ await act('owner-auth',{action:'remove_member',clubId:'club-one',playerId:ids.ad});assert.equal(row('ad'),undefined,'the owner can remove an administrator');
+ assert.equal(sql.prepare("SELECT count(*) n FROM profiles WHERE id=?").get(ids.lv2).n,1,'the person and their history stay');
+ // Removed people lose access and can ask again.
+ assert.equal((await service.read(auth('lv2'))).memberships.some(m=>m.club_id==='club-one'&&m.player_id===ids.lv2&&m.status==='active'),false);
+ await act(auth('lv2'),{action:'request_join',clubId:'club-one'});assert.equal(row('lv2').status,'pending');await act(auth('lv2'),{action:'cancel_join_request',clubId:'club-one'});
+ // Open play entries go with the membership.
+ sql.prepare("INSERT INTO open_play(id,club_id,player_id,note,started_at,expires_at) VALUES('op1','club-one',?,'','2026-10-15T00:00:00.000Z','2099-01-01T00:00:00.000Z')").run(ids.lv3);
+ await act('owner-auth',{action:'remove_member',clubId:'club-one',playerId:ids.lv3});assert.equal(sql.prepare("SELECT count(*) n FROM open_play WHERE player_id=?").get(ids.lv3).n,0,'checked-in entries are cleared');
+ console.log('Passed: leave club, remove member by rank, history kept, owner protected.');
+}
 sql.close();console.log('Passed: arbitrary integer capacity, capacity edits, atomic no-account guest registration, guest permissions, statistic-based auto seeds, post-start registration lock.');
 
 {
@@ -493,4 +576,5 @@ sql.close();console.log('Passed: arbitrary integer capacity, capacity edits, ato
  assert.equal(new Set(existing.map(p=>p.rally_id)).size,2);assert.ok(existing.every(p=>/^RLY-[A-F0-9]{12}$/.test(p.rally_id)));
  assert.equal(old.prepare("SELECT rally_id FROM profiles WHERE id='old-deleted'").get().rally_id,null);old.close();
 }
+
 console.log('Passed: existing player migration assigns unique Rally IDs without restoring deleted identities.');

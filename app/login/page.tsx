@@ -13,7 +13,7 @@ export default function LoginPage(){return <Suspense fallback={<main className="
 function LoginForm(){
  const router=useRouter();
  const searchParams=useSearchParams();
- const [mode,setMode]=useState<Mode>('signin'),[email,setEmail]=useState(''),[password,setPassword]=useState(''),[displayName,setDisplayName]=useState(''),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[error,setError]=useState('');
+ const [mode,setMode]=useState<Mode>(searchParams.get('mode')==='signup'?'signup':'signin'),[email,setEmail]=useState(''),[password,setPassword]=useState(''),[displayName,setDisplayName]=useState(''),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[error,setError]=useState('');
  const next=safeNextPath(searchParams.get('next')??'/clubhouse');
  const [captchaToken,setCaptchaToken]=useState(''),[captchaAttempt,setCaptchaAttempt]=useState(0);
  const visibleError=error||searchParams.get('error')||'';

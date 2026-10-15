@@ -3,8 +3,8 @@ import {useEffect} from 'react';
 import {usePathname} from 'next/navigation';
 import {useTheme} from 'next-themes';
 import {PALETTE_STORAGE_KEY,isPalette} from '@/lib/palettes';
-import {saveUiPreference} from './ui-preferences-client';
-type Remote={playerId:string|null;ui:{palette:string;appearance:string;onboardingHidden:boolean}|null};
+import {applyTextSize,saveUiPreference} from './ui-preferences-client';
+type Remote={playerId:string|null;ui:{palette:string;appearance:string;onboardingHidden:boolean;textSize?:string}|null};
 const syncedKey='rally-prefs-synced';
 const applyPalette=(id:string)=>{try{localStorage.setItem(PALETTE_STORAGE_KEY,id)}catch{}if(id==='forest')delete document.documentElement.dataset.palette;else document.documentElement.dataset.palette=id};
 // Once per browser session, signed-in players get their saved colour, mode and dismissed hints on this device.
@@ -23,6 +23,7 @@ export default function PreferenceSync(){
    if(remote.ui){
     if(isPalette(remote.ui.palette))applyPalette(remote.ui.palette);
     setTheme(remote.ui.appearance);
+    applyTextSize(remote.ui.textSize==='large'?'large':'standard',false);
     if(remote.ui.onboardingHidden){try{localStorage.setItem(hintKey,'hidden')}catch{}window.dispatchEvent(new Event('rally-onboarding'))}
     return;
    }

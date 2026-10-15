@@ -13,12 +13,14 @@ const profileCount=sql.prepare('SELECT count(*) n FROM profiles').get().n;
 assert.equal(await readUiPreferences(db,'me'),null,'nothing saved yet');
 // Partial saves keep the other fields.
 let saved=await saveUiPreferences(db,'me',{palette:'ocean'});assert.deepEqual(saved,{...defaultUiPreferences,palette:'ocean'});
-saved=await saveUiPreferences(db,'me',{appearance:'dark'});assert.deepEqual(saved,{palette:'ocean',appearance:'dark',onboardingHidden:false},'saving the mode keeps the colour');
-saved=await saveUiPreferences(db,'me',{onboardingHidden:true});assert.deepEqual(saved,{palette:'ocean',appearance:'dark',onboardingHidden:true});
+saved=await saveUiPreferences(db,'me',{appearance:'dark'});assert.deepEqual(saved,{palette:'ocean',appearance:'dark',onboardingHidden:false,textSize:'standard'},'saving the mode keeps the colour');
+saved=await saveUiPreferences(db,'me',{onboardingHidden:true});assert.deepEqual(saved,{palette:'ocean',appearance:'dark',onboardingHidden:true,textSize:'standard'},'text size is standard until chosen');
+saved=await saveUiPreferences(db,'me',{textSize:'large'});assert.deepEqual(saved,{palette:'ocean',appearance:'dark',onboardingHidden:true,textSize:'large'},'larger text saves without touching the rest');
+saved=await saveUiPreferences(db,'me',{palette:'plum'});assert.equal(saved.textSize,'large','changing the colour keeps larger text');saved=await saveUiPreferences(db,'me',{palette:'ocean'});
 assert.deepEqual(await readUiPreferences(db,'me'),saved,'saved values read back');
 assert.equal(await readUiPreferences(db,'other'),null,'another player is unaffected');
 // Validation.
-for(const bad of [{palette:'neon'},{palette:5},{appearance:'sepia'},{onboardingHidden:'yes'},{palette:"forest'; DROP TABLE profiles;--"}])await assert.rejects(saveUiPreferences(db,'me',bad),e=>e.status===400,JSON.stringify(bad));
+for(const bad of [{palette:'neon'},{palette:5},{appearance:'sepia'},{onboardingHidden:'yes'},{textSize:'huge'},{textSize:2},{palette:"forest'; DROP TABLE profiles;--"}])await assert.rejects(saveUiPreferences(db,'me',bad),e=>e.status===400,JSON.stringify(bad));
 assert.deepEqual(await readUiPreferences(db,'me'),saved,'rejected input changes nothing');
 assert.equal(sql.prepare('SELECT count(*) n FROM profiles').get().n,profileCount,'injection attempt did nothing');
 // Removed with the profile.
