@@ -1,0 +1,11 @@
+/* Notification settings: grouped switches with a title and a one-line explanation. */
+.notification-settings .notification-group { display: grid; }
+.notification-settings .notification-choice span { display: grid; gap: 2px; }
+.notification-settings .notification-choice small { font-weight: 400; color: var(--text-muted); font-size: 0.82rem; }
+.notification-settings h3 { margin: 20px 0 4px; font-size: 0.95rem; }
+.notification-settings .notification-more { margin-top: 4px; }
+.notification-settings .notification-more > summary { padding: 12px 0; font-weight: 600; font-size: 0.9rem; }
+/* Messages: settings menu next to the new-message pencil. */
+.msg-options > div { min-width: 230px; }
+.msg-options > div button { display: flex; align-items: center; gap: 10px; }
+.msg-options > summary { min-width: 40px; min-height: 40px; opacity: 1; }

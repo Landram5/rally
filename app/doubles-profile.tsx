@@ -23,7 +23,7 @@ export default function DoublesProfileCard({playerId,self=false,demo}:{playerId:
  if(!shown)return null;
  if(!shown.played)return self?<p className="doubles-empty">No confirmed doubles matches yet. Your doubles rating appears after your first confirmed result.</p>:null;
  return <section className="panel doubles-profile" aria-label="Doubles rating"><div className="profile-section-heading"><h3>Doubles rating</h3><p>Separate from the singles rating</p></div>
-  <div className="rating-summary"><strong>{Math.round(shown.rating??0)}</strong><span>{shown.established?`Established · ${shown.played} matches`:`Provisional · ${shown.played}/${ESTABLISHED_MATCHES} matches`}</span><span>{shown.wins}–{shown.played-shown.wins} · {shown.partners.length} {shown.partners.length===1?'partner':'partners'}</span></div>
+  <div className="rating-summary"><strong>{Math.round(shown.rating??0)}</strong><span>{shown.established?`Established · ${shown.played} matches`:`New · ${shown.played} of ${ESTABLISHED_MATCHES} matches`}</span><span>{shown.wins}–{shown.played-shown.wins} · {shown.partners.length} {shown.partners.length===1?'partner':'partners'}</span></div>
   <Trend history={shown.history}/>
   {shown.partners.length>0&&<><h4>Partners</h4><ul className="doubles-partners">{shown.partners.map(p=><li key={p.id}><span>{p.name}</span><span>{p.wins}–{p.played-p.wins}</span></li>)}</ul></>}
  </section>;
