@@ -12,11 +12,16 @@ const COLOR=0xc6e04a;
 export const newConnectCode=()=>{const a=crypto.getRandomValues(new Uint8Array(6)),chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';return [...a].map(b=>chars[b%chars.length]).join('');};
 type Link={webhook_id:string;webhook_token:string};
 type Embed={title:string;description?:string;url?:string;timestamp?:string};
-async function post(env:DiscordEnv,clubId:string,embed:Embed,http:Http,onlyIfAnnounce=true){
- const link=await env.DB.prepare(`SELECT webhook_id,webhook_token FROM discord_links WHERE club_id=?${onlyIfAnnounce?' AND announce=1':''}`).bind(clubId).first<Link>();if(!link)return false;
+type PostRow=Link&{announce_webhook_id:string|null;announce_webhook_token:string|null;announce_matches:number};
+// Announcements go to the club's announcement channel when the owner chose one, otherwise to the chat channel. Match results are opt-in.
+async function post(env:DiscordEnv,clubId:string,embed:Embed,http:Http,kind:'match'|'news'='news'){
+ const row=await env.DB.prepare('SELECT webhook_id,webhook_token,announce_webhook_id,announce_webhook_token,announce_matches FROM discord_links WHERE club_id=? AND announce=1').bind(clubId).first<PostRow>();if(!row)return false;
+ if(kind==='match'&&!row.announce_matches)return false;
+ const own=!!(row.announce_webhook_id&&row.announce_webhook_token),link={webhook_id:own?row.announce_webhook_id!:row.webhook_id,webhook_token:own?row.announce_webhook_token!:row.webhook_token};
  try{
   const res=await http(`${API}/webhooks/${link.webhook_id}/${link.webhook_token}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:'Rally',embeds:[{...embed,title:embed.title.slice(0,250),description:embed.description?.slice(0,1500),color:COLOR}],allowed_mentions:{parse:[]}})});
-  if(res.status===404||res.status===401)await env.DB.prepare('DELETE FROM discord_links WHERE club_id=?').bind(clubId).run();
+  // The announcement webhook was deleted: fall back to the chat channel. The chat webhook was deleted: unlink.
+  if(res.status===404||res.status===401)await env.DB.prepare(own?"UPDATE discord_links SET announce_channel_id=NULL,announce_channel_name='',announce_webhook_id=NULL,announce_webhook_token=NULL WHERE club_id=?":'DELETE FROM discord_links WHERE club_id=?').bind(clubId).run();
   return res.ok;
  }catch{console.error('Discord announcement unavailable');return false;}
 }
@@ -24,7 +29,7 @@ async function post(env:DiscordEnv,clubId:string,embed:Embed,http:Http,onlyIfAnn
 async function postOnce(env:DiscordEnv,kind:string,refId:string,clubId:string,embed:Embed,http:Http,now:string){
  const mark=await env.DB.prepare('INSERT OR IGNORE INTO discord_posted(kind,ref_id,club_id,posted_at) VALUES(?,?,?,?)').bind(kind,refId,clubId,now).run();
  if(!mark.meta?.changes)return false;
- const ok=await post(env,clubId,embed,http);
+ const ok=await post(env,clubId,embed,http,kind==='match'?'match':'news');
  // Nothing was sent (no link, or Discord said no): forget it so a later attempt can still post.
  if(!ok)await env.DB.prepare('DELETE FROM discord_posted WHERE kind=? AND ref_id=? AND club_id=?').bind(kind,refId,clubId).run();
  return ok;
@@ -48,7 +53,7 @@ export async function announceFinishedTournaments(env:DiscordEnv,http:Http=fetch
 export async function announceConfirmedMatches(env:DiscordEnv,http:Http=fetch,now=new Date().toISOString()){
  if(!env.DISCORD_BOT_TOKEN?.trim())return 0;
  const since=new Date(Date.parse(now)-3*86400000).toISOString().slice(0,10);
- const rows=(await env.DB.prepare(`SELECT m.id,m.club_id,m.games,pa.name an,pa.deleted_at ad,pb.name bn,pb.deleted_at bd FROM matches m JOIN discord_links l ON l.club_id=m.club_id AND l.announce=1 JOIN profiles pa ON pa.id=m.a JOIN profiles pb ON pb.id=m.b
+ const rows=(await env.DB.prepare(`SELECT m.id,m.club_id,m.games,pa.name an,pa.deleted_at ad,pb.name bn,pb.deleted_at bd FROM matches m JOIN discord_links l ON l.club_id=m.club_id AND l.announce=1 AND l.announce_matches=1 JOIN profiles pa ON pa.id=m.a JOIN profiles pb ON pb.id=m.b
   WHERE m.status='confirmed' AND m.tournament_id IS NULL AND m.played_on>=substr(l.created_at,1,10) AND m.played_on>=? AND NOT EXISTS(SELECT 1 FROM discord_posted d WHERE d.kind='match' AND d.ref_id=m.id AND d.club_id=m.club_id) ORDER BY m.played_on,m.created_at LIMIT 10`).bind(since).all<{id:string;club_id:string;games:string;an:string;ad:string|null;bn:string;bd:string|null}>()).results;
  let sent=0;
  for(const m of rows){
@@ -58,6 +63,44 @@ export async function announceConfirmedMatches(env:DiscordEnv,http:Http=fetch,no
   if(await postOnce(env,'match',m.id,m.club_id,{title:`🏓 ${w} beat ${l} ${score}`,description:games.map(g=>aWon?`${g[0]}–${g[1]}`:`${g[1]}–${g[0]}`).join(', '),url:`${SITE}/matches/${m.id}`,timestamp:now},http,now))sent++;
  }
  return sent;
+}
+type Guild={id:string;name:string;type:number;position?:number};
+const needAdmin=async(env:DiscordEnv,viewer:string,clubId:string)=>{const {admin}=await chatAccess(env.DB,viewer,clubId);if(!admin)throw new AppError(403,'Only club organizers can manage the Discord link.');};
+async function textChannels(env:DiscordEnv,guildId:string,http:Http){
+ const res=await http(`${API}/guilds/${guildId}/channels`,{headers:{Authorization:`Bot ${env.DISCORD_BOT_TOKEN}`}}).catch(()=>null);
+ if(!res||!res.ok)throw new AppError(502,'Rally could not read the channels of this Discord server. Check that the Rally bot is still in the server.');
+ return ((await res.json()) as Guild[]).filter(c=>c.type===0||c.type===5).sort((a,b)=>(a.position??0)-(b.position??0)).map(c=>({id:c.id,name:c.name}));
+}
+export async function dropAnnounceWebhook(row:{announce_webhook_id?:string|null;announce_webhook_token?:string|null}|null,http:Http=fetch){
+ if(!row?.announce_webhook_id||!row.announce_webhook_token)return;try{await http(`${API}/webhooks/${row.announce_webhook_id}/${row.announce_webhook_token}`,{method:'DELETE'});}catch{/* the webhook may already be gone */}
+}
+// The channels an organizer can pick for announcements (text channels of the linked server).
+export async function listAnnounceChannels(env:DiscordEnv,viewer:string,clubId:string,http:Http=fetch){
+ await needAdmin(env,viewer,clubId);
+ const link=await env.DB.prepare('SELECT guild_id FROM discord_links WHERE club_id=?').bind(clubId).first<{guild_id:string}>();if(!link)throw new AppError(409,'This club is not linked to Discord.');
+ return {channels:await textChannels(env,link.guild_id,http)};
+}
+// Pick the channel announcements go to (null = the chat channel). Rally makes its own webhook there, so the bot needs Manage Webhooks in that channel.
+export async function setAnnounceChannel(env:DiscordEnv,viewer:string,clubId:string,channelId:string|null,http:Http=fetch){
+ await needAdmin(env,viewer,clubId);
+ const link=await env.DB.prepare('SELECT guild_id,channel_id,announce_webhook_id,announce_webhook_token FROM discord_links WHERE club_id=?').bind(clubId).first<{guild_id:string;channel_id:string;announce_webhook_id:string|null;announce_webhook_token:string|null}>();if(!link)throw new AppError(409,'This club is not linked to Discord.');
+ if(!channelId||channelId===link.channel_id){
+  await env.DB.prepare("UPDATE discord_links SET announce_channel_id=NULL,announce_channel_name='',announce_webhook_id=NULL,announce_webhook_token=NULL WHERE club_id=?").bind(clubId).run();await dropAnnounceWebhook(link,http);return {ok:true};
+ }
+ if(!/^\d{5,25}$/.test(channelId))throw new AppError(400,'Choose a channel.');
+ const channel=(await textChannels(env,link.guild_id,http)).find(c=>c.id===channelId);if(!channel)throw new AppError(400,'That channel is not in the linked Discord server.');
+ const wh=await http(`${API}/channels/${channel.id}/webhooks`,{method:'POST',headers:{Authorization:`Bot ${env.DISCORD_BOT_TOKEN}`,'Content-Type':'application/json'},body:JSON.stringify({name:'Rally'})}).catch(()=>null);
+ if(!wh||!wh.ok)throw new AppError(409,`Rally could not create a webhook in #${channel.name}. Give the Rally bot the Manage Webhooks and Send Messages permissions in that channel, then try again.`);
+ const hook=await wh.json() as {id:string;token:string};
+ await env.DB.prepare('UPDATE discord_links SET announce_channel_id=?,announce_channel_name=?,announce_webhook_id=?,announce_webhook_token=? WHERE club_id=?').bind(channel.id,channel.name,hook.id,hook.token,clubId).run();
+ await dropAnnounceWebhook(link,http);return {ok:true,channelName:channel.name};
+}
+// Match results are opt-in. Turning them on starts from now: results already confirmed are marked as posted, not sent.
+export async function setAnnounceMatches(env:DiscordEnv,viewer:string,clubId:string,on:boolean,now=new Date().toISOString()){
+ await needAdmin(env,viewer,clubId);
+ await env.DB.prepare('UPDATE discord_links SET announce_matches=? WHERE club_id=?').bind(on?1:0,clubId).run();
+ if(on)await env.DB.prepare("INSERT OR IGNORE INTO discord_posted(kind,ref_id,club_id,posted_at) SELECT 'match',id,club_id,? FROM matches WHERE club_id=? AND status='confirmed' AND tournament_id IS NULL").bind(now,clubId).run();
+ return {ok:true};
 }
 export async function setAnnounce(env:DiscordEnv,viewer:string,clubId:string,on:boolean){
  const {admin}=await chatAccess(env.DB,viewer,clubId);if(!admin)throw new AppError(403,'Only club organizers can manage the Discord link.');

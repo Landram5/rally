@@ -294,3 +294,9 @@
 }
 .messages .msg-convo:has(> .msg-empty) { justify-content: center; align-items: center; }
 .messages .msg-empty { margin: 0; text-align: center; border: 0; background: none; }
+
+/* Discord settings: announcements group on the club Manage page. */
+.discord-settings { border: 0; padding: 0; margin: 16px 0; display: grid; gap: 4px; }
+.discord-settings legend { font-weight: 600; padding: 0; margin-bottom: 4px; }
+.discord-channel { display: grid; gap: 6px; margin-top: 8px; max-width: 420px; font-weight: 550; }
+.discord-note { margin: 4px 0 0; font-size: .8rem; color: var(--text-muted); }
