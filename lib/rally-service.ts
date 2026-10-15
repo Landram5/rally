@@ -155,6 +155,21 @@ export function makeService(database:D1Database){
    if(!access.isSiteAdmin)fail(403,'Only a Rally site administrator can review feedback.');
    return updateFeedback(db,body);
   }
+  // People can leave a club. The owner cannot (transfer ownership first), and history stays: results and tournament entries are kept.
+  if(action==='leave_club'){
+   const clubId=id(body.clubId),m=await member(clubId,user.id);
+   if(m?.role==='owner')fail(403,'Transfer ownership to another member first (Account settings, Club ownership), then you can leave.');
+   await db.batch([q("DELETE FROM memberships WHERE club_id=? AND player_id=? AND status='active' AND role!='owner'",clubId,user.id),q('DELETE FROM open_play WHERE club_id=? AND player_id=?',clubId,user.id)]);return {ok:true};
+  }
+  // Organizers remove people they outrank: the owner anyone, administrators board members and members, board members members.
+  if(action==='remove_member'){
+   const clubId=id(body.clubId),playerId=id(body.playerId),actor=await admin(clubId,user.id);
+   const rank:Record<string,number>={member:0,guest:0,board:1,admin:2,owner:3};
+   if(playerId===user.id)fail(400,'Use Leave club to leave.');
+   const target=await q("SELECT role FROM memberships WHERE club_id=? AND player_id=? AND status='active'",clubId,playerId).first<{role:string}>();if(!target)fail(404,'That person is not a member of this club.');
+   if((rank[actor!.role]??0)<=(rank[target!.role]??0))fail(403,'You can only remove people with a lower club role than yours.');
+   await db.batch([q("DELETE FROM memberships WHERE club_id=? AND player_id=? AND status='active'",clubId,playerId),q('DELETE FROM open_play WHERE club_id=? AND player_id=?',clubId,playerId)]);return {ok:true};
+  }
   if(action==='set_member_role'){
    const clubId=id(body.clubId),playerId=id(body.playerId),role=body.role;
    if(typeof role!=='string'||!['member','admin','board'].includes(role))fail(400,'Choose Member, Administrator, or Board member.');

@@ -531,6 +531,40 @@ console.log('Passed: unaffiliated recording, permissions, confirmation, public h
  await assert.rejects(act('owner-auth',{action:'set_club_slug',clubId:'club-one',slug:'login'}),e=>e.status===400,'reserved words are refused');
  console.log('Passed: short club addresses are assigned, organizer-only, unique and keep old addresses.');
 }
+// Leaving and removing: people can leave, organizers remove only people they outrank, history stays.
+{
+ const names=['lv1','lv2','lv3','bd','ad'],auth=n=>n+'-auth',ids={};
+ for(const n of names){await act(auth(n),{action:'save_profile',name:n});ids[n]=await uid(auth(n));await act(auth(n),{action:'request_join',clubId:'club-one'});await act('owner-auth',{action:'approve_member',clubId:'club-one',playerId:ids[n]});}
+ await act('owner-auth',{action:'set_member_role',clubId:'club-one',playerId:ids.bd,role:'board'});await act('owner-auth',{action:'set_member_role',clubId:'club-one',playerId:ids.ad,role:'admin'});
+ const row=n=>sql.prepare("SELECT role,status FROM memberships WHERE club_id='club-one' AND player_id=?").get(ids[n]);
+ // Leave.
+ await assert.rejects(act('owner-auth',{action:'leave_club',clubId:'club-one'}),e=>e.status===403&&/Transfer ownership/.test(e.message),'the owner must hand over the club first');
+ assert.equal(sql.prepare("SELECT role FROM memberships WHERE club_id='club-one' AND player_id=?").get(owner).role,'owner','and stays owner');
+ await act(auth('lv1'),{action:'leave_club',clubId:'club-one'});assert.equal(row('lv1'),undefined,'a member can leave');
+ await act(auth('lv1'),{action:'leave_club',clubId:'club-one'});await act('outsider-auth',{action:'leave_club',clubId:'club-one'});
+ await act(auth('lv1'),{action:'request_join',clubId:'club-one'});assert.equal(row('lv1').status,'pending','and can ask to join again');await act(auth('lv1'),{action:'cancel_join_request',clubId:'club-one'});
+ // Remove: rank rules.
+ await assert.rejects(act(auth('lv2'),{action:'remove_member',clubId:'club-one',playerId:ids.lv3}),e=>e.status===403,'a plain member cannot remove anyone');
+ await assert.rejects(act('outsider-auth',{action:'remove_member',clubId:'club-one',playerId:ids.lv3}),e=>e.status===403,'nor can an outsider');
+ await assert.rejects(act(auth('bd'),{action:'remove_member',clubId:'club-one',playerId:ids.ad}),e=>e.status===403,'board cannot remove an administrator');
+ await assert.rejects(act(auth('bd'),{action:'remove_member',clubId:'club-one',playerId:owner}),e=>e.status===403,'nobody removes the owner');
+ await assert.rejects(act(auth('ad'),{action:'remove_member',clubId:'club-one',playerId:owner}),e=>e.status===403);
+ await assert.rejects(act(auth('bd'),{action:'remove_member',clubId:'club-one',playerId:ids.bd}),e=>e.status===400,'removing yourself is leaving');
+ await assert.rejects(act(auth('ad'),{action:'remove_member',clubId:'club-one',playerId:ids.ad}),e=>e.status===400);
+ await assert.rejects(act(auth('ad'),{action:'remove_member',clubId:'club-one',playerId:ids.lv1}),e=>e.status===404,'only members can be removed');
+ await act(auth('bd'),{action:'remove_member',clubId:'club-one',playerId:ids.lv2});assert.equal(row('lv2'),undefined,'board can remove a member');
+ await act(auth('ad'),{action:'remove_member',clubId:'club-one',playerId:ids.bd});assert.equal(row('bd'),undefined,'an administrator can remove board members');
+ await assert.rejects(act(auth('ad'),{action:'remove_member',clubId:'club-one',playerId:ids.ad}),e=>e.status===400);
+ await act('owner-auth',{action:'remove_member',clubId:'club-one',playerId:ids.ad});assert.equal(row('ad'),undefined,'the owner can remove an administrator');
+ assert.equal(sql.prepare("SELECT count(*) n FROM profiles WHERE id=?").get(ids.lv2).n,1,'the person and their history stay');
+ // Removed people lose access and can ask again.
+ assert.equal((await service.read(auth('lv2'))).memberships.some(m=>m.club_id==='club-one'&&m.player_id===ids.lv2&&m.status==='active'),false);
+ await act(auth('lv2'),{action:'request_join',clubId:'club-one'});assert.equal(row('lv2').status,'pending');await act(auth('lv2'),{action:'cancel_join_request',clubId:'club-one'});
+ // Open play entries go with the membership.
+ sql.prepare("INSERT INTO open_play(id,club_id,player_id,note,started_at,expires_at) VALUES('op1','club-one',?,'','2026-10-15T00:00:00.000Z','2099-01-01T00:00:00.000Z')").run(ids.lv3);
+ await act('owner-auth',{action:'remove_member',clubId:'club-one',playerId:ids.lv3});assert.equal(sql.prepare("SELECT count(*) n FROM open_play WHERE player_id=?").get(ids.lv3).n,0,'checked-in entries are cleared');
+ console.log('Passed: leave club, remove member by rank, history kept, owner protected.');
+}
 sql.close();console.log('Passed: arbitrary integer capacity, capacity edits, atomic no-account guest registration, guest permissions, statistic-based auto seeds, post-start registration lock.');
 
 {
