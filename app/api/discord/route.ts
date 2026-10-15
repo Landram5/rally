@@ -3,7 +3,7 @@ import {getAuthenticatedUser} from '@/lib/auth';
 import {AppError} from '@/lib/rally-errors';
 import {rateLimit} from '@/lib/write-limits';
 import {createLinkCode,discordStatus,unlinkClub} from '@/lib/discord';
-import {avatarOptedIn,connectedDiscord,createConnectCode,disconnectDiscord,setAnnounce,setAvatarOptIn} from '@/lib/discord-club';
+import {avatarOptedIn,connectedDiscord,createConnectCode,disconnectDiscord,listAnnounceChannels,setAnnounce,setAnnounceChannel,setAnnounceMatches,setAvatarOptIn} from '@/lib/discord-club';
 export const dynamic='force-dynamic';
 const response=(data:unknown,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'private, no-store','Vary':'Cookie'}});
 async function viewer(){const user=await getAuthenticatedUser();if(!user)throw new AppError(401,'Sign in to manage the Discord link.');const p=await env.DB.prepare('SELECT id FROM profiles WHERE auth_id=? AND deleted_at IS NULL').bind(user.id).first<{id:string}>();if(!p)throw new AppError(403,'Create your player profile first.');return {id:p.id,authId:user.id};}
@@ -17,11 +17,14 @@ export async function POST(request:Request){
  try{
   if(request.headers.get('origin')!==new URL(request.url).origin)throw new AppError(403,'Request origin not allowed.');
   if(!request.headers.get('content-type')?.startsWith('application/json'))throw new AppError(415,'JSON required.');
-  const body=await request.json().catch(()=>({})) as {action?:string;clubId?:unknown;on?:unknown};
+  const body=await request.json().catch(()=>({})) as {action?:string;clubId?:unknown;on?:unknown;channelId?:unknown};
   const me=await viewer(),limited=await rateLimit(env.USER_WRITE_LIMITER,me.authId);if(limited)return limited;
   if(body.action==='code')return response(await createLinkCode(env,me.id,clubId(body.clubId)));
   if(body.action==='unlink')return response(await unlinkClub(env,me.id,clubId(body.clubId)));
   if(body.action==='announce')return response(await setAnnounce(env,me.id,clubId(body.clubId),body.on===true));
+  if(body.action==='announce_matches')return response(await setAnnounceMatches(env,me.id,clubId(body.clubId),body.on===true));
+  if(body.action==='channels')return response(await listAnnounceChannels(env,me.id,clubId(body.clubId)));
+  if(body.action==='announce_channel')return response(await setAnnounceChannel(env,me.id,clubId(body.clubId),typeof body.channelId==='string'&&body.channelId?body.channelId:null));
   if(body.action==='connect_code'){if(!env.DISCORD_BOT_TOKEN?.trim())throw new AppError(409,'The Discord bot is not set up for Rally yet.');return response(await createConnectCode(env,me.id));}
   if(body.action==='avatar')return response(await setAvatarOptIn(env,me.id,body.on===true));
   if(body.action==='disconnect')return response(await disconnectDiscord(env,me.id));

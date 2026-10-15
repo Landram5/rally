@@ -48,3 +48,8 @@ The bot invite link Rally shows asks for: View Channel, Send Messages, Read Mess
 - **Account linking:** Rally Account > Discord gives a 6 character code (15 minutes); `/club connect` in Discord redeems it. A connected person who is an active club member shows with their Rally name in the bridged chat. No OAuth, no Discord email or other data is stored, only the user ID.
 - Needs migration `drizzle/0035_discord_expansion.sql` before the code is deployed.
 - **Photo avatars (opt-in, migration 0036):** Account > Discord has a checkbox. When on, a member's club chat messages posted to Discord carry their profile photo as the avatar (the public `/api/players/<id>/photo?v=<version>` URL). Off by default. Discord keeps a copy, so earlier messages keep it after opting out. Disclosed in the privacy policy.
+
+## Announcement channel and match results (migration 0037)
+- Announcements (club announcements, new sessions, finished tournaments) go to the chat channel by default. An organizer can pick another text channel of the linked server in Manage > Discord ("Post announcements in"). Rally creates its own webhook in that channel (the bot needs Manage Webhooks and Send Messages there). Chat messages always stay in the chat channel. If the announcement webhook is deleted in Discord, announcements fall back to the chat channel.
+- **Match results are opt-in** ("Also post every confirmed match result", off by default). Switching it on starts from now: results already confirmed are marked as posted, not sent. They use the announcement channel when one is chosen.
+- Unlinking removes both webhooks.
