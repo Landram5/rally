@@ -47,9 +47,10 @@ assert.equal(one("SELECT count(*) n FROM digest_sent WHERE week='2026-10-19'").n
 assert.equal(await d.sendWeeklyDigests(env,{...deps,now:new Date('2026-10-26T13:10:00Z')}),1,'and the next Monday it goes out again');
 // A failing provider gives the week back so the next run retries.
 run("DELETE FROM digest_sent");sentMail.length=0;
-assert.equal(await d.sendWeeklyDigests(env,{...deps,fetch:async()=>new Response('no',{status:500})}),0);assert.equal(one("SELECT count(*) n FROM digest_sent WHERE player_id='a'").n,0,'a refused email is retried');
-assert.equal(await d.sendWeeklyDigests(env,{...deps,fetch:async()=>{throw new Error('offline')}}),0);assert.equal(one("SELECT count(*) n FROM digest_sent WHERE player_id='a'").n,0,'so is a network failure');
-assert.equal(await d.sendWeeklyDigests(env,deps),1,'and it sends once the provider is back');
+await assert.rejects(d.sendWeeklyDigests(env,{...deps,fetch:async()=>new Response('no',{status:500})}),/could not be sent/,'a run where every send failed is reported to the heartbeat');assert.equal(one("SELECT count(*) n FROM digest_sent WHERE player_id='a'").n,0,'a refused email is retried');
+await assert.rejects(d.sendWeeklyDigests(env,{...deps,fetch:async()=>{throw new Error('offline')}}),/could not be sent/);assert.equal(one("SELECT count(*) n FROM digest_sent WHERE player_id='a'").n,0,'so is a network failure');
+await assert.rejects(d.sendWeeklyDigests(env,{...deps,fetch:async()=>new Response('bad address',{status:422})}),/could not be sent/);assert.equal(one("SELECT count(*) n FROM digest_sent WHERE player_id='a'").n,1,'a rejection that will not change is not retried all Monday');
+run("DELETE FROM digest_sent");assert.equal(await d.sendWeeklyDigests(env,deps),1,'and it sends once the provider is back');
 // Deleting an account removes its record.
 run("DELETE FROM profiles WHERE id='a'");assert.equal(one("SELECT count(*) n FROM digest_sent WHERE player_id='a'").n,0);
 console.log('weekly digest tests passed');

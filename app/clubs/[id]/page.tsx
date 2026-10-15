@@ -8,7 +8,7 @@ export const dynamic='force-dynamic';
 export async function generateMetadata({params}:{params:Promise<{id:string}>}):Promise<Metadata>{
  const {id}=await params,path=`/clubs/${encodeURIComponent(id)}`;
  const club=env.DB?await env.DB.prepare("SELECT name,location,bio FROM clubs WHERE id=? AND approval_status='approved'").bind(id).first<{name:string;location:string;bio:string|null}>().catch(()=>null):null;
- if(!club)return {title:'Club · Rally',alternates:{canonical:path}};
+ if(!club)return {title:'Club · Rally',alternates:{canonical:path},robots:{index:false,follow:false}};
  const about=club.bio?.replace(/\s+/g,' ').trim(),description=about?about.slice(0,160):`${club.name} in ${club.location}: members, sessions, results and tournaments on Rally.`;
  return shareMetadata({title:`${club.name} · Rally`,description,path,image:`/og/club/${encodeURIComponent(id)}`});
 }
