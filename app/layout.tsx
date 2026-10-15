@@ -8,6 +8,7 @@ import "./styles/club-manage.css";
 import "./styles/onboarding.css";
 import "./styles/disclosure.css";
 import "./styles/plain-settings.css";
+import "./styles/matches.css";
 import AppearanceProvider from "./appearance-provider";
 import AnnouncementBanner from './announcement-banner';
 import PwaRegistration from "@/app/pwa-registration";
