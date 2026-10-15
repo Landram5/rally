@@ -30,7 +30,7 @@ export async function sendWeeklyDigests(env:Cloudflare.Env,deps:Deps={}){
  const email=deps.email??(async(auth:string)=>{const {data,error}=await createAuthAdmin(env).auth.admin.getUserById(auth);return !error&&data.user?.email_confirmed_at?data.user.email??null:null;});
  const people=(await db.prepare(`SELECT p.id,p.auth_id FROM notification_preferences n JOIN profiles p ON p.id=n.player_id WHERE n.weekly_digest=1 AND p.deleted_at IS NULL AND p.auth_id IS NOT NULL
   AND NOT EXISTS(SELECT 1 FROM digest_sent d WHERE d.player_id=p.id AND d.week=?) ORDER BY p.id LIMIT ?`).bind(week,PER_RUN).all<{id:string;auth_id:string}>()).results;
- let sent=0;
+ let sent=0,failed=0;
  for(const person of people){
   // Claim the week first so two overlapping runs never send twice; give the claim back if the email did not go out.
   const claim=await db.prepare('INSERT OR IGNORE INTO digest_sent(player_id,week,sent_at) VALUES(?,?,?)').bind(person.id,week,now.toISOString()).run();if(!claim.meta.changes)continue;
@@ -39,9 +39,10 @@ export async function sendWeeklyDigests(env:Cloudflare.Env,deps:Deps={}){
    const digest=buildDigest(await read(person.auth_id),now),address=digest?await email(person.auth_id):null;
    if(!digest||!address){ok=true;continue;} // nothing to say (or no confirmed address): the week stays claimed so it is not retried every five minutes
    const res=await http('https://api.resend.com/emails',{method:'POST',headers:{Authorization:`Bearer ${env.RESEND_API_KEY}`,'Content-Type':'application/json','Idempotency-Key':`digest-${person.id}-${week}`},body:JSON.stringify({from:env.NOTIFICATION_FROM,to:[address],subject:digest.subject,text:digest.text}),signal:AbortSignal.timeout(15000)});
-   ok=res.ok;if(ok)sent++;
-  }catch{console.error('Weekly summary unavailable');}
+   ok=res.ok;if(ok)sent++;else{failed++;if(res.status>=400&&res.status<500&&res.status!==408&&res.status!==429)ok=true;} // a rejection that will not change (bad address) stays claimed: do not retry it all Monday
+  }catch{failed++;console.error('Weekly summary unavailable');}
   finally{if(!ok)await db.prepare('DELETE FROM digest_sent WHERE player_id=? AND week=?').bind(person.id,week).run();}
  }
+ if(failed&&!sent)throw new Error('Weekly summaries could not be sent'); // so the heartbeat and failure alert notice
  return sent;
 }

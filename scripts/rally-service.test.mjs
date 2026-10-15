@@ -59,7 +59,7 @@ assert.equal((await service.read('member-auth')).clubs.length,1,'a requester can
 await act('member-auth',{action:'cancel_join_request',clubId:'club-one'});
 assert.equal((await service.read('member-auth')).clubs.length,0,'and it is hidden again after cancelling');
 await act('owner-auth',{action:'create_tournament',id:'pending-event',clubId:'club-one',name:'Pending Event',date:'2026-10-01',format:'Round robin',capacity:4});
-assert.equal(await getPublicTournament(db,'pending-event'),null,'pending club tournament must not be public');
+assert.equal((await getPublicTournament(db,'pending-event'))?.name,'Pending Event','a pending club tournament opens by its link (members, reminders, Discord) but is not listed');
 assert.equal((await getPublicDirectory(db,'tournaments')).tournaments.length,0,'pending tournaments excluded from public home');
 assert.equal((await getPublicDirectory(db,'players')).players.length,0,'pending club members and unattached accounts excluded');
 await assert.rejects(act('member-auth',{action:'approve_club',clubId:'club-one'}),e=>e.status===403);
@@ -495,14 +495,15 @@ console.log('Passed: unaffiliated recording, permissions, confirmation, public h
  await act(asker,{action:'save_profile',name:'Asker'});await act(other,{action:'save_profile',name:'Asker Two'});
  const askerId=await uid(asker),otherId=await uid(other);
  await act(asker,{action:'request_join',clubId:'club-one'});await act(other,{action:'request_join',clubId:'club-one'});
- const reviews=(await service.read('owner-auth')).notifications.filter(n=>n.id.startsWith('join-club-one-'));
- for(const who of [askerId,otherId])assert.ok(reviews.some(n=>n.id===`join-club-one-${who}`),'the organizer is asked to review each request');
+ const joinId=who=>'join-'+sql.prepare("SELECT id FROM memberships WHERE club_id='club-one' AND player_id=?").get(who)?.id,ids=new Map([askerId,otherId].map(w=>[w,joinId(w)]));
+ const reviews=(await service.read('owner-auth')).notifications.filter(n=>n.id.startsWith('join-'));
+ for(const who of [askerId,otherId])assert.ok(reviews.some(n=>n.id===ids.get(who)),'the organizer is asked to review each request');
  assert.ok(reviews.every(n=>n.actionNeeded&&/section=management/.test(n.href)),'it is an action, linking to the Manage view');
  assert.ok(!(await service.read(asker)).notifications.some(n=>n.id.startsWith('join-')),'the person asking is not asked to review');
  assert.ok(!(await service.read('member-auth')).notifications.some(n=>n.id.startsWith('join-')),'ordinary members are not asked either');
  // Approve one, decline the other.
  await act('owner-auth',{action:'approve_member',clubId:'club-one',playerId:askerId});await act('owner-auth',{action:'decline_member',clubId:'club-one',playerId:otherId});
- const afterAnswers=(await service.read('owner-auth')).notifications.map(n=>n.id);assert.ok(![askerId,otherId].some(who=>afterAnswers.includes(`join-club-one-${who}`)),'answered requests leave the organizer inbox');
+ const afterAnswers=(await service.read('owner-auth')).notifications.map(n=>n.id);assert.ok(![askerId,otherId].some(who=>afterAnswers.includes(ids.get(who))),'answered requests leave the organizer inbox');
  const yes=(await service.read(asker)).notifications.find(n=>n.id.startsWith('membership-'));assert.match(yes.title,/You joined/);assert.match(yes.href,/^\/clubs\/club-one/);
  const no=(await service.read(other)).notifications.find(n=>n.id.startsWith('membership-'));assert.match(no.title,/did not accept your request/);
  assert.equal(sql.prepare('SELECT count(*) n FROM membership_decisions WHERE club_id=?').get('club-one').n>=2,true);
@@ -510,13 +511,14 @@ console.log('Passed: unaffiliated recording, permissions, confirmation, public h
  const before=sql.prepare('SELECT count(*) n FROM membership_decisions').get().n;await act('owner-auth',{action:'approve_member',clubId:'club-one',playerId:askerId});assert.equal(sql.prepare('SELECT count(*) n FROM membership_decisions').get().n,before,'only a real pending request is recorded');
  // Cancel: the pending row goes away, nobody is notified, and only the requester can do it.
  const third='asker3-auth';await act(third,{action:'save_profile',name:'Asker Three'});const thirdId=await uid(third);
- await act(third,{action:'request_join',clubId:'club-one'});assert.ok((await service.read('owner-auth')).notifications.some(n=>n.id===`join-club-one-${thirdId}`));
+ await act(third,{action:'request_join',clubId:'club-one'});const thirdAlert=joinId(thirdId);assert.ok((await service.read('owner-auth')).notifications.some(n=>n.id===thirdAlert));
  await act(third,{action:'cancel_join_request',clubId:'club-one'});
  assert.equal(sql.prepare("SELECT count(*) n FROM memberships WHERE club_id='club-one' AND player_id=?").get(thirdId).n,0,'the request is removed');
- assert.ok(!(await service.read('owner-auth')).notifications.some(n=>n.id===`join-club-one-${thirdId}`),'and leaves the organizer inbox');
+ assert.ok(!(await service.read('owner-auth')).notifications.some(n=>n.id===thirdAlert),'and leaves the organizer inbox');
  assert.equal((await service.read(third)).notifications.filter(n=>n.id.startsWith('membership-')).length,0,'cancelling is not an answer');
  await act('member-auth',{action:'cancel_join_request',clubId:'club-one'});assert.equal(sql.prepare("SELECT status FROM memberships WHERE club_id='club-one' AND player_id=?").get(member).status,'active','cancel never removes an active member');
  await act(third,{action:'request_join',clubId:'club-one'});await act(third,{action:'cancel_join_request',clubId:'club-one'});await act(third,{action:'request_join',clubId:'club-one'});assert.equal(sql.prepare("SELECT status FROM memberships WHERE club_id='club-one' AND player_id=?").get(thirdId).status,'pending','a person can ask again after cancelling');
+ assert.notEqual(joinId(thirdId),thirdAlert,'a repeat request is a new alert, not one already read');assert.ok((await service.read('owner-auth')).notifications.some(n=>n.id===joinId(thirdId)));
  console.log('Passed: join requests notify organizers, answers notify the person, cancel works and never touches members.');
 }
 // Short club addresses: a new club gets one from its name, organizers can change it, nobody can take another club's.
