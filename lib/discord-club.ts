@@ -44,6 +44,21 @@ export async function announceFinishedTournaments(env:DiscordEnv,http:Http=fetch
  let sent=0;for(const t of rows)if(await postOnce(env,'tournament',t.id,t.club_id,{title:'🏆 '+t.name+' is complete',description:`${t.format}. See the results on Rally.`,url:`${SITE}/tournaments/${t.id}`,timestamp:now},http,now))sent++;
  return sent;
 }
+// Scheduled: confirmed club results (not tournament bracket matches, which have their own post) played since the club linked Discord, within the last 3 days.
+export async function announceConfirmedMatches(env:DiscordEnv,http:Http=fetch,now=new Date().toISOString()){
+ if(!env.DISCORD_BOT_TOKEN?.trim())return 0;
+ const since=new Date(Date.parse(now)-3*86400000).toISOString().slice(0,10);
+ const rows=(await env.DB.prepare(`SELECT m.id,m.club_id,m.games,pa.name an,pa.deleted_at ad,pb.name bn,pb.deleted_at bd FROM matches m JOIN discord_links l ON l.club_id=m.club_id AND l.announce=1 JOIN profiles pa ON pa.id=m.a JOIN profiles pb ON pb.id=m.b
+  WHERE m.status='confirmed' AND m.tournament_id IS NULL AND m.played_on>=substr(l.created_at,1,10) AND m.played_on>=? AND NOT EXISTS(SELECT 1 FROM discord_posted d WHERE d.kind='match' AND d.ref_id=m.id AND d.club_id=m.club_id) ORDER BY m.played_on,m.created_at LIMIT 10`).bind(since).all<{id:string;club_id:string;games:string;an:string;ad:string|null;bn:string;bd:string|null}>()).results;
+ let sent=0;
+ for(const m of rows){
+  let games:[number,number][]=[];try{games=JSON.parse(m.games);}catch{/* an unreadable score is posted without game scores */}
+  const aw=games.filter(g=>g[0]>g[1]).length,bw=games.length-aw,aWon=aw>bw,winner=aWon?m.an:m.bn,loser=aWon?m.bn:m.an,name=(n:string,deleted:string|null)=>deleted?'Deleted player':n;
+  const w=name(winner,aWon?m.ad:m.bd),l=name(loser,aWon?m.bd:m.ad),score=`${Math.max(aw,bw)}–${Math.min(aw,bw)}`;
+  if(await postOnce(env,'match',m.id,m.club_id,{title:`🏓 ${w} beat ${l} ${score}`,description:games.map(g=>aWon?`${g[0]}–${g[1]}`:`${g[1]}–${g[0]}`).join(', '),url:`${SITE}/matches/${m.id}`,timestamp:now},http,now))sent++;
+ }
+ return sent;
+}
 export async function setAnnounce(env:DiscordEnv,viewer:string,clubId:string,on:boolean){
  const {admin}=await chatAccess(env.DB,viewer,clubId);if(!admin)throw new AppError(403,'Only club organizers can manage the Discord link.');
  await env.DB.prepare('UPDATE discord_links SET announce=? WHERE club_id=?').bind(on?1:0,clubId).run();return {ok:true};

@@ -43,7 +43,7 @@ The bot invite link Rally shows asks for: View Channel, Send Messages, Read Mess
 - Rally to Discord relays are best effort: if Discord rate limits or is down, that message is not retried.
 
 ## Expansion (migration 0035)
-- **Announcements:** a linked club's channel gets a post when an organizer publishes a club announcement, when a session is created, and when a tournament finishes (the scheduled job checks; only tournaments finished after linking). Organizers can switch this off in Manage > Discord. Each post is remembered in `discord_posted`, so nothing posts twice.
+- **Announcements:** a linked club's channel gets a post when an organizer publishes a club announcement, when a session is created, when a tournament finishes, and when a club match result is confirmed (the scheduled job checks; only things from after linking, and match results from the last 3 days; tournament bracket matches are covered by the tournament post). Organizers can switch this off in Manage > Discord. Each post is remembered in `discord_posted`, so nothing posts twice.
 - **/club commands** (register again with `scripts/discord-register-commands.mjs`): `/club leaderboard` and `/club next` work in a linked channel and answer for that club; `/club player <name>` works anywhere; `/club connect <code>` links a Discord account.
 - **Account linking:** Rally Account > Discord gives a 6 character code (15 minutes); `/club connect` in Discord redeems it. A connected person who is an active club member shows with their Rally name in the bridged chat. No OAuth, no Discord email or other data is stored, only the user ID.
 - Needs migration `drizzle/0035_discord_expansion.sql` before the code is deployed.

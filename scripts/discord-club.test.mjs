@@ -65,4 +65,14 @@ const sent=[];const cap=async(u,i)=>{sent.push(JSON.parse(i.body));return new Re
 await d.relayToDiscord(env,{id:'r1',clubId:'c1',authorId:'lead',authorName:'Lena Lead',body:'hi',createdAt:now,media:null,mine:false,canDelete:false},cap);assert.match(sent.at(-1).avatar_url,/photo\?v=v1/);
 await d.relayToDiscord(env,{id:'r2',clubId:'c1',authorId:'other',authorName:'other Person',body:'hi',createdAt:now,media:null,mine:false,canDelete:false},cap);assert.equal(sent.at(-1).avatar_url,undefined);
 await x.setAvatarOptIn(env,'lead',false);assert.equal(await x.avatarUrlFor(env,'lead'),null);
+// Confirmed club results are posted once; pending, tournament, old and pre-link results are not.
+const mrow=(id,status,played,tid=null,a='lead',b='mem',games='[[11,8],[6,11],[11,9]]')=>run("INSERT INTO matches(id,club_id,a,b,games,best_of,played_on,status,submitted_by,confirmed_by,created_at,tournament_id) VALUES(?,'c1',?,?,?,3,?,?,'lead','lead','2026-10-13',?)",id,a,b,games,played,status,tid);
+mrow('mx_ok','confirmed','2026-10-13');mrow('mx_pending','pending','2026-10-13');mrow('mx_tourn','confirmed','2026-10-13','t_live');mrow('mx_old','confirmed','2026-10-08');mrow('mx_prelink','confirmed','2026-10-09');
+const before=calls.length;assert.equal(await x.announceConfirmedMatches(env,ok,now),1);const post=calls[before][1].embeds[0];assert.match(post.title,/Lena Lead beat mem Person 2.1/);assert.match(post.description,/11.8, 6.11, 11.9/);assert.match(post.url,/\/matches\/mx_ok$/);
+assert.equal(await x.announceConfirmedMatches(env,ok,now),0,'never twice');
+mrow('mx_loss','confirmed','2026-10-14',null,'lead','mem','[[5,11],[8,11]]');
+assert.equal(await x.announceConfirmedMatches(env,ok,now),1);assert.match(calls.at(-1)[1].embeds[0].title,/mem Person beat Lena Lead 2.0/,'the winner is named first');
+run("UPDATE profiles SET deleted_at='2026-10-14',auth_id=NULL,name='Deleted player' WHERE id='mem'");mrow('mx_del','confirmed','2026-10-14',null,'mem','lead','[[11,1],[11,2]]');
+assert.equal(await x.announceConfirmedMatches(env,ok,now),1);assert.match(calls.at(-1)[1].embeds[0].title,/Deleted player beat Lena Lead/);
+await x.setAnnounce(env,'lead','c1',false);mrow('mx_off','confirmed','2026-10-14');assert.equal(await x.announceConfirmedMatches(env,ok,now),0,'the switch turns it off');await x.setAnnounce(env,'lead','c1',true);
 console.log('discord club tests passed');
