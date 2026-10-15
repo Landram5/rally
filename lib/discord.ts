@@ -3,7 +3,7 @@ import {chatAccess} from './chat';
 import type {ChatMessage} from './chat';
 import {publishChat} from './chat-room';
 import {pushChatMessage} from './chat-push';
-import {handleClubCommand,rallyNameFor,avatarUrlFor,dropAnnounceWebhook} from './discord-club';
+import {handleClubCommand,rallyNameFor,avatarUrlFor,dropAnnounceWebhook,RALLY_AVATAR} from './discord-club';
 // Discord bridge. A club's chat is linked to one Discord channel:
 //  - Rally -> Discord: each new club chat message is posted through a channel webhook under the sender's name.
 //  - Discord -> Rally: the gateway connection (lib/discord-gateway.ts) hands each message from the channel to ingestDiscordMessage.
@@ -37,8 +37,8 @@ export const newCode=()=>{const a=crypto.getRandomValues(new Uint8Array(6)),char
 // ---- Rally side: link management for organizers ----
 export async function discordStatus(env:DiscordEnv,viewer:string,clubId:string){
  const {admin}=await chatAccess(env.DB,viewer,clubId);if(!admin)throw new AppError(403,'Only club organizers can manage the Discord link.');
- const link=await env.DB.prepare('SELECT channel_name,guild_id,created_at,announce,announce_matches,announce_channel_id,announce_channel_name FROM discord_links WHERE club_id=?').bind(clubId).first<{channel_name:string;guild_id:string;created_at:string;announce:number;announce_matches:number;announce_channel_id:string|null;announce_channel_name:string}>();
- return {configured:discordConfigured(env),inviteUrl:inviteUrl(env.DISCORD_APP_ID),link:link?{channelName:link.channel_name,linkedAt:link.created_at,announce:!!link.announce,announceMatches:!!link.announce_matches,announceChannel:link.announce_channel_id?{id:link.announce_channel_id,name:link.announce_channel_name}:null}:null};
+ const link=await env.DB.prepare('SELECT channel_name,guild_id,created_at,announce,announce_matches,announce_channel_id,announce_channel_name,match_channel_id,match_channel_name FROM discord_links WHERE club_id=?').bind(clubId).first<{channel_name:string;guild_id:string;created_at:string;announce:number;announce_matches:number;announce_channel_id:string|null;announce_channel_name:string;match_channel_id:string|null;match_channel_name:string}>();
+ return {configured:discordConfigured(env),inviteUrl:inviteUrl(env.DISCORD_APP_ID),link:link?{channelName:link.channel_name,linkedAt:link.created_at,announce:!!link.announce,announceMatches:!!link.announce_matches,announceChannel:link.announce_channel_id?{id:link.announce_channel_id,name:link.announce_channel_name}:null,matchChannel:link.match_channel_id?{id:link.match_channel_id,name:link.match_channel_name}:null}:null};
 }
 export async function createLinkCode(env:DiscordEnv,viewer:string,clubId:string,now=new Date()){
  const {admin}=await chatAccess(env.DB,viewer,clubId);if(!admin)throw new AppError(403,'Only club organizers can manage the Discord link.');
@@ -53,7 +53,7 @@ async function dropWebhook(link:{webhook_id:string;webhook_token:string}|null,ht
 }
 export async function unlinkClub(env:DiscordEnv,viewer:string,clubId:string,http:Http=fetch){
  const {admin}=await chatAccess(env.DB,viewer,clubId);if(!admin)throw new AppError(403,'Only club organizers can manage the Discord link.');
- const link=await env.DB.prepare('SELECT webhook_id,webhook_token,announce_webhook_id,announce_webhook_token FROM discord_links WHERE club_id=?').bind(clubId).first<{webhook_id:string;webhook_token:string;announce_webhook_id:string|null;announce_webhook_token:string|null}>();
+ const link=await env.DB.prepare('SELECT webhook_id,webhook_token,announce_webhook_id,announce_webhook_token,match_webhook_id,match_webhook_token FROM discord_links WHERE club_id=?').bind(clubId).first<{webhook_id:string;webhook_token:string;announce_webhook_id:string|null;announce_webhook_token:string|null;match_webhook_id:string|null;match_webhook_token:string|null}>();
  await env.DB.prepare('DELETE FROM discord_links WHERE club_id=?').bind(clubId).run();await dropWebhook(link,http);await dropAnnounceWebhook(link,http);return {ok:true};
 }
 // ---- Discord side: slash commands ----
@@ -68,7 +68,7 @@ export async function handleInteraction(env:DiscordEnv,i:Interaction,http:Http=f
  if(!guild||!channel)return say('Use this command in a server channel.');
  let perms=BigInt(0);try{perms=BigInt(i.member?.permissions??'0');}catch{/* treated as no permissions */}
  if(!((perms&(ADMINISTRATOR|MANAGE_GUILD))>BigInt(0)))return say('Only people with the Manage Server permission can link Rally to this channel.');
- const existing=await env.DB.prepare('SELECT club_id,webhook_id,webhook_token,channel_id,announce_webhook_id,announce_webhook_token FROM discord_links WHERE channel_id=?').bind(channel).first<{club_id:string;webhook_id:string;webhook_token:string;channel_id:string;announce_webhook_id:string|null;announce_webhook_token:string|null}>();
+ const existing=await env.DB.prepare('SELECT club_id,webhook_id,webhook_token,channel_id,announce_webhook_id,announce_webhook_token,match_webhook_id,match_webhook_token FROM discord_links WHERE channel_id=?').bind(channel).first<{club_id:string;webhook_id:string;webhook_token:string;channel_id:string;announce_webhook_id:string|null;announce_webhook_token:string|null;match_webhook_id:string|null;match_webhook_token:string|null}>();
  if(sub?.name==='status'){
   if(!existing)return say('This channel is not linked to a Rally club. In Rally, open your club, choose Manage, and generate a link code, then run /rally link here.');
   const club=await env.DB.prepare('SELECT name FROM clubs WHERE id=?').bind(existing.club_id).first<{name:string}>();return say(`This channel is linked to the Rally club ${club?.name??'(unknown)'}. Messages go both ways.`);
@@ -86,7 +86,7 @@ export async function handleInteraction(env:DiscordEnv,i:Interaction,http:Http=f
  const wh=await http(`${DISCORD_API}/channels/${channel}/webhooks`,{method:'POST',headers:{Authorization:`Bot ${env.DISCORD_BOT_TOKEN}`,'Content-Type':'application/json'},body:JSON.stringify({name:'Rally'})}).catch(()=>null);
  if(!wh||!wh.ok)return say('Rally could not create a webhook here. Give the Rally bot the Manage Webhooks and Send Messages permissions in this channel, then try again.');
  const hook=await wh.json() as {id:string;token:string};
- const previous=await env.DB.prepare('SELECT webhook_id,webhook_token,announce_webhook_id,announce_webhook_token FROM discord_links WHERE club_id=?').bind(row.club_id).first<{webhook_id:string;webhook_token:string;announce_webhook_id:string|null;announce_webhook_token:string|null}>();
+ const previous=await env.DB.prepare('SELECT webhook_id,webhook_token,announce_webhook_id,announce_webhook_token,match_webhook_id,match_webhook_token FROM discord_links WHERE club_id=?').bind(row.club_id).first<{webhook_id:string;webhook_token:string;announce_webhook_id:string|null;announce_webhook_token:string|null;match_webhook_id:string|null;match_webhook_token:string|null}>();
  await env.DB.batch([
   env.DB.prepare('DELETE FROM discord_links WHERE club_id=? OR channel_id=?').bind(row.club_id,channel),
   env.DB.prepare('INSERT INTO discord_links(club_id,guild_id,channel_id,channel_name,webhook_id,webhook_token,created_at) VALUES(?,?,?,?,?,?,?)').bind(row.club_id,guild,channel,i.channel?.name??'',hook.id,hook.token,now.toISOString()),
@@ -104,7 +104,7 @@ export async function relayToDiscord(env:DiscordEnv,message:ChatMessage,http:Htt
  const content=[message.body,note].filter(Boolean).join('\n').slice(0,MAX);if(!content)return false;
  const avatar=await avatarUrlFor(env,message.authorId);
  try{
-  const res=await http(`${DISCORD_API}/webhooks/${link.webhook_id}/${link.webhook_token}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:webhookName(message.authorName),content,allowed_mentions:{parse:[]},...(avatar?{avatar_url:avatar}:{})})});
+  const res=await http(`${DISCORD_API}/webhooks/${link.webhook_id}/${link.webhook_token}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:webhookName(message.authorName),content,allowed_mentions:{parse:[]},avatar_url:avatar??RALLY_AVATAR})});
   // The webhook was deleted in Discord: stop relaying until it is linked again.
   if(res.status===404||res.status===401)await env.DB.prepare('DELETE FROM discord_links WHERE club_id=?').bind(message.clubId).run();
   return res.ok;

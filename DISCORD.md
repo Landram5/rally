@@ -53,3 +53,6 @@ The bot invite link Rally shows asks for: View Channel, Send Messages, Read Mess
 - Announcements (club announcements, new sessions, finished tournaments) go to the chat channel by default. An organizer can pick another text channel of the linked server in Manage > Discord ("Post announcements in"). Rally creates its own webhook in that channel (the bot needs Manage Webhooks and Send Messages there). Chat messages always stay in the chat channel. If the announcement webhook is deleted in Discord, announcements fall back to the chat channel.
 - **Match results are opt-in** ("Also post every confirmed match result", off by default). Switching it on starts from now: results already confirmed are marked as posted, not sent. They use the announcement channel when one is chosen.
 - Unlinking removes both webhooks.
+
+## Separate channel for match results (migration 0038)
+Match results can go to their own channel ("Post match results in" in Manage > Discord), separate from announcements. Order: match channel, else the announcement channel, else the chat channel. If a chosen channel's webhook is deleted in Discord, posts fall back to the next place and the setting is cleared. Unlinking removes the chat, announcement and match webhooks.

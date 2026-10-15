@@ -4,7 +4,7 @@ import {useCallback,useEffect,useState} from 'react';
 import {toast} from 'sonner';
 import {Button} from '@/components/ui/button';
 import CleanSelect from './clean-select';
-type Status={configured:boolean;inviteUrl:string|null;link:{channelName:string;linkedAt:string;announce:boolean;announceMatches:boolean;announceChannel:{id:string;name:string}|null}|null};
+type Status={configured:boolean;inviteUrl:string|null;link:{channelName:string;linkedAt:string;announce:boolean;announceMatches:boolean;announceChannel:{id:string;name:string}|null;matchChannel:{id:string;name:string}|null}|null};
 type Channel={id:string;name:string};
 type Code={code:string;expiresAt:string};
 async function call(init?:RequestInit,query=''){
@@ -41,6 +41,11 @@ export default function ClubDiscord({clubId,demo=false}:{clubId:string;demo?:boo
   try{await call({method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'announce_channel',clubId,channelId:channelId==='chat'?'':channelId})});await load();toast.success(channelId!=='chat'?'Announcements will go to that channel.':'Announcements will go to the chat channel.');}
   catch(e){toast.error(e instanceof Error?e.message:'Could not change the channel.');await load();}
  }
+ async function setMatchChannel(channelId:string){
+  if(demo)return;
+  try{await call({method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'match_channel',clubId,channelId:channelId==='same'?'':channelId})});await load();toast.success(channelId!=='same'?'Match results will go to that channel.':'Match results will go to the announcements channel.');}
+  catch(e){toast.error(e instanceof Error?e.message:'Could not change the channel.');await load();}
+ }
  async function unlink(){
   if(!window.confirm('Unlink Discord? Messages will stop going between this club chat and the channel.'))return;
   setBusy(true);
@@ -55,6 +60,7 @@ export default function ClubDiscord({clubId,demo=false}:{clubId:string;demo?:boo
     <label className="discord-announce"><input type="checkbox" checked={status.link.announce} onChange={e=>void setAnnounce(e.target.checked)}/> Post club announcements, new sessions and finished tournaments</label>
     <label className="discord-announce"><input type="checkbox" checked={status.link.announceMatches} disabled={!status.link.announce} onChange={e=>void setMatches(e.target.checked)}/> Also post every confirmed match result</label>
     <label className="discord-channel">Post announcements in<CleanSelect value={status.link.announceChannel?.id??'chat'} disabled={!status.link.announce} onChange={e=>void setChannel(e.target.value)}><option value="chat">Same channel as the chat (#{status.link.channelName||'channel'})</option>{status.link.announceChannel&&!channels?.some(c=>c.id===status.link!.announceChannel!.id)&&<option value={status.link.announceChannel.id}>#{status.link.announceChannel.name}</option>}{(channels??[]).filter(c=>c.name!==status.link!.channelName).map(c=><option key={c.id} value={c.id}>#{c.name}</option>)}</CleanSelect></label>
+    <label className="discord-channel">Post match results in<CleanSelect value={status.link.matchChannel?.id??'same'} disabled={!status.link.announce||!status.link.announceMatches} onChange={e=>void setMatchChannel(e.target.value)}><option value="same">Same channel as announcements</option>{status.link.matchChannel&&!channels?.some(c=>c.id===status.link!.matchChannel!.id)&&<option value={status.link.matchChannel.id}>#{status.link.matchChannel.name}</option>}{(channels??[]).map(c=><option key={c.id} value={c.id}>#{c.name}</option>)}</CleanSelect></label>
     <p className="discord-note">{channelsError||'Rally needs the Manage Webhooks and Send Messages permissions in the channel you pick.'}</p></fieldset><p>Members can also use <code>/club leaderboard</code>, <code>/club next</code> and <code>/club player</code> there.</p><Button variant="outline" disabled={busy} onClick={()=>void unlink()}>Unlink Discord</Button></>
    :<><p>Bridge your club chat with a Discord channel so members on either side can talk to each other.</p>
     {code?<ol className="discord-steps"><li>Add the Rally bot to your Discord server.{status.inviteUrl&&<div className="discord-invite"><Button asChild><a href={status.inviteUrl} target="_blank" rel="noreferrer">Invite the bot</a></Button></div>}</li><li>In the channel you want to link, a server admin runs <code>/rally link</code> and enters this code: <b className="discord-code">{code.code}</b></li><li>The code works for 15 minutes. This page updates when you refresh.</li></ol>
