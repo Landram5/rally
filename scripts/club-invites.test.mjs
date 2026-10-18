@@ -60,4 +60,6 @@ run("UPDATE clubs SET approval_status='rejected' WHERE id='c2'");await fail(inv.
 run("DELETE FROM memberships WHERE club_id='c2'");run("DELETE FROM clubs WHERE id='c2'");assert.equal(one("SELECT count(*) n FROM club_invites WHERE club_id='c2'").n,0);
 // Tokens do not repeat.
 assert.equal(new Set(Array.from({length:500},()=>inv.newToken())).size,500);
+// The join and registration pages send accounts without a profile to set one up first.
+assert.equal(await inv.hasPlayerProfile(db,'joiner-auth'),true);assert.equal(await inv.hasPlayerProfile(db,'ghost-auth'),false,'a deleted profile does not count');assert.equal(await inv.hasPlayerProfile(db,'nobody-auth'),false);
 console.log('club invite tests passed');
