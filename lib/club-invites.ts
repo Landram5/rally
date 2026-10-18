@@ -60,3 +60,5 @@ export async function acceptInvite(db:D1Database,player:string,token:string,now=
  await db.prepare('UPDATE club_invites SET uses=uses+1 WHERE token=?').bind(token).run();
  return {clubId:r.club_id,joined:true};
 }
+// Signed-in accounts get a player profile when they finish setup; invite and registration links send people without one there first.
+export const hasPlayerProfile=async(db:D1Database,authId:string)=>!!await db.prepare('SELECT 1 x FROM profiles WHERE auth_id=? AND deleted_at IS NULL').bind(authId).first();
