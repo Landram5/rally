@@ -1,0 +1,28 @@
+import assert from 'node:assert/strict';
+import {DatabaseSync} from 'node:sqlite';
+import {mkdirSync,readFileSync,writeFileSync,readdirSync} from 'node:fs';
+import ts from 'typescript';
+mkdirSync('.test-runtime',{recursive:true});
+for(const name of ['native-push','rally-errors'])writeFileSync(`.test-runtime/${name}.mjs`,ts.transpileModule(readFileSync(`lib/${name}.ts`,'utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText.replace(/from ['"]\.\/([^'"]+)['"]/g,"from './$1.mjs'"));
+const {saveNativeDevice,removeNativeDevice,validateDevice}=await import('../.test-runtime/native-push.mjs');
+const sql=new DatabaseSync(':memory:');sql.exec('PRAGMA foreign_keys=ON');for(const f of readdirSync('drizzle').filter(f=>f.endsWith('.sql')).sort())sql.exec(readFileSync('drizzle/'+f,'utf8'));
+function stmt(q,args=[]){return {bind(...a){return stmt(q,a)},async run(){return {meta:sql.prepare(q).run(...args)}}};}
+const db={prepare:stmt};
+sql.prepare('INSERT INTO profiles(id,auth_id,name,created_at) VALUES(?,?,?,?)').run('one','auth-one','One','2026-10-21');
+sql.prepare('INSERT INTO profiles(id,auth_id,name,created_at) VALUES(?,?,?,?)').run('two','auth-two','Two','2026-10-21');
+sql.prepare('INSERT INTO profiles(id,auth_id,name,created_at) VALUES(?,?,?,?)').run('guest',null,'Guest','2026-10-21');
+const tok=n=>n.toString(16).padStart(64,'0'),count=p=>sql.prepare('SELECT count(*) c FROM native_push_devices WHERE player_id=?').get(p).c;
+const reject=async(fn,status)=>{try{await fn();}catch(e){assert.equal(e.status,status);return;}assert.fail('expected rejection');};
+for(const bad of [null,{},{token:'xyz',environment:'sandbox'},{token:tok(1),environment:'dev'},{token:tok(1)}])assert.throws(()=>validateDevice(bad));
+assert.equal(validateDevice({token:tok(10).toUpperCase(),environment:'production'}).token,tok(10),'tokens are stored lowercase');
+await saveNativeDevice(db,'one',{token:tok(1),environment:'sandbox'});await saveNativeDevice(db,'one',{token:tok(1),environment:'sandbox'});assert.equal(count('one'),1,'saving twice keeps one row');
+for(let i=2;i<=5;i++)await saveNativeDevice(db,'one',{token:tok(i),environment:'sandbox'});
+await reject(()=>saveNativeDevice(db,'one',{token:tok(6),environment:'sandbox'}),409);assert.equal(count('one'),5,'sixth device is refused');
+await saveNativeDevice(db,'one',{token:tok(5),environment:'production'});assert.equal(sql.prepare('SELECT environment FROM native_push_devices WHERE token=?').get(tok(5)).environment,'production','re-registering the same device is allowed at the limit');
+await saveNativeDevice(db,'two',{token:tok(1),environment:'sandbox'});assert.equal(count('one'),4);assert.equal(count('two'),1,'a token moves to the account that registers it');
+await removeNativeDevice(db,'one',{token:tok(1)});assert.equal(count('two'),1,'cannot remove another account\'s device');
+await removeNativeDevice(db,'two',{token:tok(1)});assert.equal(count('two'),0);
+await reject(()=>saveNativeDevice(db,'guest',{token:tok(7),environment:'sandbox'}),409);
+sql.prepare("UPDATE profiles SET deleted_at='2026-10-21',auth_id=NULL,name='Deleted player' WHERE id='one'").run();assert.equal(count('one'),0,'deleting a profile clears its devices');
+await reject(()=>saveNativeDevice(db,'one',{token:tok(8),environment:'sandbox'}),409);
+console.log('Native push passed: validation, five-device limit, token reassignment, own-device removal, guest and deleted-profile blocks and deletion cleanup.');

@@ -56,11 +56,18 @@ One draft per account; the newest save wins.
 - `LiveMatchDraft`: `{version:1, owner:<profileId>, id, clubId, a, b, bestOf:1|3|5|7, date, updatedAt, swapped:boolean, state:{points:[n,n], games:[[n,n]...], complete:boolean, history:[snapshot...]}}`, where each history `snapshot` is `{points, games, complete}`. Scores are integers 0 to 999; the server rejects drafts that are not valid score states.
 - The scoring rules (deuce, game and match completion, undo) are implemented in `lib/live-score.ts`; the app must apply the same rules locally.
 
+### Register for push: `POST /api/push/native`, `DELETE /api/push/native`
+(on branch `claude/native-push-devices`, stacked on this one; needs migration 0045)
+- `POST {token, environment:"sandbox"|"production"}` registers this device's APNs token; `DELETE {token}` removes it. Response `{ok:true}`.
+- `token` is the hex device token (64 to 200 characters, stored lowercase). Use `sandbox` for Xcode and TestFlight debug builds, `production` for App Store builds.
+- At most 5 devices per account; a sixth returns 409. A token registered by a different account moves to that account. Deleting an account removes its devices.
+- Sending notifications through APNs is not built yet; this only stores tokens.
+
 ## Not done yet (next steps)
 
 1. Contract for the remaining actions (tournaments, sessions, messages, chat, profile) and the response shapes marked unconfirmed above.
 2. `submit_feedback` needs a Turnstile token; native has no equivalent yet.
-3. Device-token table and APNs delivery (existing push is Web Push only).
+3. APNs delivery (sending). Device-token storage is on `claude/native-push-devices`. Needs an Apple APNs key, which Adam must create and add as a Worker secret; never paste it in chat.
 4. Live-match feed for spectators, widgets and Apple Watch (today `/api/live-draft` syncs one private draft per player).
 5. Sign in with Apple (branch `codex/apple-signin` is not merged).
 
