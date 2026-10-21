@@ -6,7 +6,7 @@ import {cachedSummaries,summaryVersion} from './summary-cache';
 import {readFeedback,updateFeedback} from './feedback-progress';
 import {readPreferences,savePreferences} from './notification-preferences';
 import {seasonAction} from './club-seasons';
-import {optionalText} from './logistics';
+import {optionalText,optionalInstant} from './logistics';
 import {notificationsFor} from './notifications';
 import {assignDefaultSlug,setClubSlug} from './club-slugs';
 import {readAnnouncements} from './announcements';
@@ -242,7 +242,7 @@ export function makeService(database:D1Database){
   if(action==='create_tournament'){
    const clubId=id(body.clubId),eventId=id(body.id),name=str(body.name,'Tournament name',80),eventDate=date(body.date),format=str(body.format,'Format',30),capacity=body.capacity,teamSize=body.teamSize===undefined?1:body.teamSize;await admin(clubId,user.id);if(teamSize!==1&&teamSize!==2)fail(400,'Choose singles or doubles.');
    if(!['Round robin','Single elimination','Double elimination','Round robin groups','Swiss'].includes(format)||!Number.isSafeInteger(capacity)||(capacity as number)<2)fail(400,'Choose a valid format and a whole-number player limit of at least 2.');
-   await q('INSERT INTO tournaments (id,name,club_id,date,format,capacity,created_at,created_by,team_size) VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING',eventId,name,clubId,eventDate,format,capacity,now,user.id,teamSize).run();return {ok:true};
+   await q('INSERT INTO tournaments (id,name,club_id,date,format,capacity,created_at,created_by,team_size,starts_at) VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING',eventId,name,clubId,eventDate,format,capacity,now,user.id,teamSize,optionalInstant(body.startsAt,'start time')).run();return {ok:true};
   }
   if(['record_doubles_match','confirm_doubles_match','void_doubles_match'].includes(action))return doublesAction(db,user,body);
  if(['request_guest_claim','preview_guest_merge','review_guest_claim','request_match_review','resolve_match_review','correct_match'].includes(action))return ownershipAction(db,user,body);

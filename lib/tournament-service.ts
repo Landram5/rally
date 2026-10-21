@@ -72,7 +72,8 @@ export async function tournamentAction(db:D1Database,user:{id:string},body:Recor
  }else if(action==='set_event_logistics'){
 
   if(!isAdmin)bad(403,'Only an organizer can edit event logistics.');if(event.status==='completed')bad(409,'This event is completed.');const values=eventLogistics(body);const claimMinutes=body.claimMinutes===undefined?event.claim_window_minutes:Number(body.claimMinutes);if(!Number.isInteger(claimMinutes)||claimMinutes<5||claimMinutes>1440)bad(400,'Choose a claim window of 5–1,440 minutes.');extra.push(q(`UPDATE tournaments SET claim_window_minutes=? WHERE id=? AND ${guard}`,claimMinutes,eventId,eventId,operationId));
-  extra.push(q(`UPDATE tournaments SET registration_closes_at=?,starts_at=?,check_in_open=? WHERE id=? AND ${guard}`,values.registration_closes_at,values.starts_at,values.check_in_open,eventId,eventId,operationId));
+  const day=body.date===undefined?null:String(body.date);if(day!==null&&(!/^\d{4}-\d{2}-\d{2}$/.test(day)||!Number.isFinite(Date.parse(day))||new Date(day).toISOString().slice(0,10)!==day))bad(400,'Choose a valid date.');
+  extra.push(q(`UPDATE tournaments SET registration_closes_at=?,starts_at=?,check_in_open=?,date=COALESCE(?,date) WHERE id=? AND ${guard}`,values.registration_closes_at,values.starts_at,values.check_in_open,values.starts_at?day:null,eventId,eventId,operationId));
  }else if(action==='set_check_in'){
   const playerId=validId(body.playerId);if(!isAdmin&&playerId!==user.id)bad(403,'Only an organizer can check in another player.');if(event.status==='completed'||!event.check_in_open)bad(409,'Check-in is closed.');if(!participants.includes(playerId))bad(400,'Register before checking in.');if(typeof body.checkedIn!=='boolean')bad(400,'Choose a check-in status.');
   extra.push(q(`UPDATE entries SET checked_in_at=? WHERE tournament_id=? AND player_id=? AND ${guard}`,body.checkedIn?new Date().toISOString():null,eventId,playerId,eventId,operationId));

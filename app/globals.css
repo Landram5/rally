@@ -499,3 +499,4 @@ body.venue-mode .support-footer,body.venue-mode .persistent-mobile-navigation,bo
 .league-group{margin-bottom:16px}.league-group h3,.league-section h3{margin:16px 0 8px;font-size:1.05rem}.league-section{margin-top:12px}
 
 .venue-groups{display:grid;grid-template-columns:repeat(auto-fit,minmax(18em,1fr));gap:clamp(12px,1.6vw,28px)}.venue-groups h3{margin:0 0 .4em;color:var(--cta);font-size:1em}
+.date-time-field{display:flex;gap:.5rem;flex-wrap:wrap}
