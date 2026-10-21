@@ -19,9 +19,46 @@ Status: first step. Only authentication is changed for native clients; no respon
 - `POST /api/rally` is one endpoint with a JSON body `{action, ...fields}`. Known actions are the `body.action` values handled in `lib/rally-service.ts`, `lib/tournament-service.ts` and the other services (for example `record_match`, `confirm_match`, `create_tournament`, `score_fixture`, `enter_tournament`, `rsvp_session`).
 - Errors are `{error: string}` with a status code.
 
+## v1 contract (read from the code; shapes marked "unconfirmed" still need one real response to check)
+
+General: JSON in and out. Errors are `{error: string}` with 400 (bad input), 401 (not signed in), 403 (not allowed, or origin), 409 (conflict or reused ID), 413 (too large), 415 (not JSON), 429 (rate limited: 60 writes/min per account), 503 (temporary). Bodies: `/api/rally` max 256 KB, live draft max 2 MB. All IDs the client creates must match `[A-Za-z0-9_-]{1,80}`. Dates are `YYYY-MM-DD`; timestamps are ISO 8601.
+
+### Who am I: `GET /api/auth/session`
+`{user: {displayName: string, profileId: string|null} | null}`. `profileId` is null until the player profile exists (create it with `save_profile`).
+
+### Clubhouse: `GET /api/rally?compact=1` (optional `clubScope=<clubId>`)
+401 if signed out. Top-level keys (compact mode): `me` (`{id, name, profileComplete}` or null), `signedIn`, `account` (`{email, displayName, emailVerified}`), `isSiteAdmin`, `players`, `deletedPlayers`, `clubs`, `memberships` (`{id, club_id, player_id, role, status}`), `matches` (newest 20), `tournaments` (newest 20), `entries`, `teams`, `summaries`, `eventCounts`, `notifications`, `dashboards`, `ownership`, `preferences`, `sessions`, `feedback`.
+- Player: `{id, name, is_guest, is_deleted, photo_url, initial_rating, initial_rating_revision}`. `is_guest` and `is_deleted` are 0/1 integers, not booleans.
+- Club fields come from `id, name, location, bio, venue, meeting_schedule, contact, joining_info, slug` plus image URLs (unconfirmed which are returned).
+- Match rows follow `SavedMatch` in `lib/rally-service.ts`: `{id, club_id, a, b, games, best_of, played_on, status, submitted_by, confirmed_by, tournament_id}`. `status` is `pending`, `confirmed` or `voided`. Whether `games` arrives as a JSON string or an array is unconfirmed; the database stores it as a string like `[[11,6],[11,9]]`, so decode both ways.
+- Tournaments, dashboards, notifications and sessions: unconfirmed; map them when each screen is built.
+- Other views: `GET /api/rally?view=performance|rating|stakes|event|seasons|members|matches|tournaments|join-clubs|match-record` (see `app/api/rally/route.ts`).
+
+### Record a match: `POST /api/rally`
+Request: `{action:"record_match", id, clubId, a, b, date, bestOf, games:[[number,number],...]}`
+- `id` is created by the app and makes the call safe to retry: the same `id` with identical data returns success again, with different data returns 409 "Submission ID already used."
+- `a`, `b` are player IDs. `clubId` can be `"unaffiliated"` for two registered players with no club.
+- `date` cannot be in the future. `games` must be a valid finished match for `bestOf` (play to 11, win by two); otherwise 400 with a readable message.
+- Players can only submit their own matches (club admins can submit any). Both players must be active club members.
+Response: `{ok:true, id, status:"pending"|"confirmed"}`. Club owners, admins and board members' results are confirmed immediately; everyone else's are `pending`.
+
+### Confirm or void: `POST /api/rally`
+`{action:"confirm_match", id}` or `{action:"void_match", id}`, response `{ok:true}`.
+- Confirm: only the opponent (not the submitter) or a club admin, and only while `pending`.
+- Void: a club admin, or the submitter while the match is still `pending`.
+- Tournament matches (those with a `tournament_id`) return 409; they are managed through tournament actions.
+
+### Live match draft: `/api/live-draft`
+One draft per account; the newest save wins.
+- `GET` returns `{draft: LiveMatchDraft | null}`.
+- `PUT` with a `LiveMatchDraft` body returns `{stored: boolean}`.
+- `DELETE` with `{id}` returns `{ok:true}` and only removes the draft with that `id`.
+- `LiveMatchDraft`: `{version:1, owner:<profileId>, id, clubId, a, b, bestOf:1|3|5|7, date, updatedAt, swapped:boolean, state:{points:[n,n], games:[[n,n]...], complete:boolean, history:[snapshot...]}}`, where each history `snapshot` is `{points, games, complete}`. Scores are integers 0 to 999; the server rejects drafts that are not valid score states.
+- The scoring rules (deuce, game and match completion, undo) are implemented in `lib/live-score.ts`; the app must apply the same rules locally.
+
 ## Not done yet (next steps)
 
-1. Written request/response types per action, so Swift models can be generated. Today the shapes exist only in the TypeScript.
+1. Contract for the remaining actions (tournaments, sessions, messages, chat, profile) and the response shapes marked unconfirmed above.
 2. `submit_feedback` needs a Turnstile token; native has no equivalent yet.
 3. Device-token table and APNs delivery (existing push is Web Push only).
 4. Live-match feed for spectators, widgets and Apple Watch (today `/api/live-draft` syncs one private draft per player).
