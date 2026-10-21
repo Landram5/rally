@@ -6,6 +6,7 @@ import {deliverNotifications} from './lib/notification-delivery';
 import {expireWaitlistOffers} from './lib/tournament-scheduling';
 import {expandWeeklySessions} from './lib/weekly-sessions';
 import {cleanupChatMedia} from './lib/chat-media';
+import {cleanupLiveMatches} from './lib/live-matches';
 import {ensureDiscordGateway} from './lib/discord-ensure';
 import {announceConfirmedMatches,announceFinishedTournaments} from './lib/discord-club';
 import {sendWeeklyDigests} from './lib/weekly-digest';
@@ -29,7 +30,7 @@ const worker={
   return response;
  },
  async scheduled(_event:ScheduledController,env:Cloudflare.Env){
-  const jobs:[string,Promise<unknown>][]=[['notifications',deliverNotifications(env)],['weekly sessions',expandWeeklySessions(env.DB)],['waitlist offers',expireWaitlistOffers(env.DB)],['chat media cleanup',cleanupChatMedia(env)],['Discord gateway',ensureDiscordGateway(env)],['Discord tournament posts',announceFinishedTournaments(env)],['Discord match posts',announceConfirmedMatches(env)],['weekly summaries',sendWeeklyDigests(env)]];
+  const jobs:[string,Promise<unknown>][]=[['notifications',deliverNotifications(env)],['weekly sessions',expandWeeklySessions(env.DB)],['waitlist offers',expireWaitlistOffers(env.DB)],['chat media cleanup',cleanupChatMedia(env)],['live matches',cleanupLiveMatches(env.DB)],['Discord gateway',ensureDiscordGateway(env)],['Discord tournament posts',announceFinishedTournaments(env)],['Discord match posts',announceConfirmedMatches(env)],['weekly summaries',sendWeeklyDigests(env)]];
   if(env.SUPABASE_SECRET_KEY?.trim())jobs.push(['account deletions',retryDeletions(env.DB,createAuthAdmin(env).auth.admin)]);
   const results=await Promise.allSettled(jobs.map(j=>j[1])),failed=jobs.filter((_,i)=>results[i].status==='rejected').map(j=>j[0]);
   if(failed.length)console.error('Scheduled maintenance unavailable:',failed.join(', '));

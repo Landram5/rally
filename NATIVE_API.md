@@ -63,12 +63,23 @@ One draft per account; the newest save wins.
 - At most 5 devices per account; a sixth returns 409. A token registered by a different account moves to that account. Deleting an account removes its devices.
 - Sending notifications through APNs is not built yet; this only stores tokens.
 
+### Live matches (spectating): on branch `claude/live-match-feed`, stacked on the push branch; needs migration 0046
+A scorer opts in per match by saving their draft with `shared: true` (optional boolean on `LiveMatchDraft`; absent or false means not shared). Only club members can watch, and the score is unofficial: the result is still recorded and confirmed as usual.
+- **Who can share:** an active club member who plays in the match or is a club owner/admin/board member, with both players active members of that club. Unaffiliated matches are never shared. One shared match per scorer; starting another replaces it.
+- `GET /api/live-matches` returns `{matches:[LiveMatchEvent]}` for matches shared in your clubs, newest first, ignoring any with no update for 4 hours.
+- WebSocket `/api/chat/ws?live=<clubId>` (same auth and membership check as club chat; reconnect every 15 minutes) pushes events:
+  - `{type:"live_match", id, clubId, scorerId, a, b, bestOf, swapped, state:{points:[n,n], games:[[n,n]...], complete}, updatedAt}` on every shared save. `updatedAt` is the server time of the save. There is no undo history; `a`/`b` are player IDs, and `swapped` means the scorer has the players on opposite sides of the table.
+  - `{type:"live_end", id, clubId}` when sharing stops, the draft is deleted or replaced, or the match is recorded and its draft deleted.
+- A shared match ends when its draft is deleted (`DELETE /api/live-draft`), sharing is switched off, or it goes 4 hours without an update (cleaned up by the 5-minute job). Deleting a player removes matches they play in.
+- Widgets cannot hold a connection, so they poll `GET /api/live-matches`. Real-time lock-screen updates need Live Activities, which depend on APNs sending (not built).
+- The website has no toggle or spectator screen for this yet; only the API exists.
+
 ## Not done yet (next steps)
 
 1. Contract for the remaining actions (tournaments, sessions, messages, chat, profile) and the response shapes marked unconfirmed above.
 2. `submit_feedback` needs a Turnstile token; native has no equivalent yet.
 3. APNs delivery (sending). Device-token storage is on `claude/native-push-devices`. Needs an Apple APNs key, which Adam must create and add as a Worker secret; never paste it in chat.
-4. Live-match feed for spectators, widgets and Apple Watch (today `/api/live-draft` syncs one private draft per player).
+4. Website toggle and spectator screen for live matches, live tournament matches, and Live Activities.
 5. Sign in with Apple (branch `codex/apple-signin` is not merged).
 
 ## Verification status
