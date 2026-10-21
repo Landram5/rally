@@ -19,3 +19,11 @@ export function sameOrigin(request:Request){
  const origin=request.headers.get('origin');
  return !!origin&&origin===new URL(request.url).origin;
 }
+
+// Native apps authenticate with an Authorization header, which browsers never attach on their own cross-site,
+// so a Bearer request needs no same-origin check. Cookie requests still do.
+export function bearerToken(headers:Headers){
+ const match=/^Bearer\s+(\S+)$/i.exec(headers.get('authorization')??'');
+ return match?match[1]:null;
+}
+export function allowedOrigin(request:Request){return !!bearerToken(request.headers)||sameOrigin(request)}

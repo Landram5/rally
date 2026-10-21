@@ -1,6 +1,8 @@
 import {createServerClient, type CookieOptions} from '@supabase/ssr';
 import {env} from 'cloudflare:workers';
-import {cookies} from 'next/headers';
+import {createClient} from '@supabase/supabase-js';
+import {cookies,headers} from 'next/headers';
+import {bearerToken} from './auth-rules';
 import {deletionPending} from './account-deletion';
 
 export type RallyUser={id:string;email:string;displayName:string;emailVerified:boolean};
@@ -20,8 +22,10 @@ export async function createAuthClient(){
 }
 
 export async function getAuthenticatedUser():Promise<RallyUser|null>{
- const client=await createAuthClient();
- const {data,error}=await client.auth.getUser();
+ // A Bearer header (native app) is the only identity for that request; a bad token never falls back to cookies.
+ const token=bearerToken(await headers());
+ const client=token?createClient(authConfig().url,authConfig().key,{auth:{persistSession:false,autoRefreshToken:false}}):await createAuthClient();
+ const {data,error}=await client.auth.getUser(token??undefined);
  if(error||!data.user)return null;
  if(await deletionPending(env.DB,data.user.id))return null;
  const email=data.user.email?.trim();

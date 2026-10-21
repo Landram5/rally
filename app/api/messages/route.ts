@@ -1,3 +1,4 @@
+import {allowedOrigin} from '@/lib/auth-rules';
 import {env,waitUntil} from 'cloudflare:workers';
 import {getAuthenticatedUser} from '@/lib/auth';
 import {AppError} from '@/lib/rally-errors';
@@ -26,7 +27,7 @@ export async function GET(request:Request){
 }
 export async function POST(request:Request){
  try{
-  if(request.headers.get('origin')!==new URL(request.url).origin)throw new AppError(403,'Request origin not allowed.');
+  if(!allowedOrigin(request))throw new AppError(403,'Request origin not allowed.');
   if(!request.headers.get('content-type')?.startsWith('application/json'))throw new AppError(415,'JSON required.');
   const text=await request.text();if(text.length>20_000)throw new AppError(413,'That request is too large.');
   let body:Record<string,unknown>;try{body=JSON.parse(text) as Record<string,unknown>}catch{throw new AppError(400,'Invalid request.')}

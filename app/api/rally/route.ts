@@ -1,6 +1,7 @@
 import {env,waitUntil} from 'cloudflare:workers';
 import {alertAdminsOfNewClub} from '@/lib/club-review-alert';
 import {getAuthenticatedUser} from '@/lib/auth';
+import {allowedOrigin} from '@/lib/auth-rules';
 import {readActivityPage} from '@/lib/activity-pages';
 import {seasonViews} from '@/lib/club-seasons';
 import {matchRecord} from '@/lib/record-ownership';
@@ -35,7 +36,7 @@ export async function GET(request:Request){try{const query=new URL(request.url).
  return response({...data,account:{email:user.email,displayName:user.displayName,emailVerified:user.emailVerified},isSiteAdmin:siteAdmin});
  }catch(e){return error(e)}}
 export async function POST(request:Request){try{
- const origin=request.headers.get('origin');if(!origin||origin!==new URL(request.url).origin)return response({error:'Request origin not allowed.'},403);
+ if(!allowedOrigin(request))return response({error:'Request origin not allowed.'},403);
  if(!request.headers.get('content-type')?.startsWith('application/json'))return response({error:'JSON required.'},415);
  const user=await getAuthenticatedUser();if(!user)return response({error:'Sign in to save changes.'},401);
  const limited=await rateLimit(env.USER_WRITE_LIMITER,user.id);if(limited)return limited;

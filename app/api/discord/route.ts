@@ -1,3 +1,4 @@
+import {allowedOrigin} from '@/lib/auth-rules';
 import {env} from 'cloudflare:workers';
 import {getAuthenticatedUser} from '@/lib/auth';
 import {AppError} from '@/lib/rally-errors';
@@ -15,7 +16,7 @@ export async function GET(request:Request){
 }
 export async function POST(request:Request){
  try{
-  if(request.headers.get('origin')!==new URL(request.url).origin)throw new AppError(403,'Request origin not allowed.');
+  if(!allowedOrigin(request))throw new AppError(403,'Request origin not allowed.');
   if(!request.headers.get('content-type')?.startsWith('application/json'))throw new AppError(415,'JSON required.');
   const body=await request.json().catch(()=>({})) as {action?:string;clubId?:unknown;on?:unknown;channelId?:unknown};
   const me=await viewer(),limited=await rateLimit(env.USER_WRITE_LIMITER,me.authId);if(limited)return limited;

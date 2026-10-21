@@ -2,7 +2,7 @@ import {readPreferences} from './notification-preferences';
 import {readUiPreferences,saveUiPreferences} from './ui-preferences';
 import {profilePhotoUrl,validatePhotoOriginal} from './profile-photo';
 import {makeService} from './rally-service';
-import {sameOrigin} from './auth-rules';
+import {allowedOrigin} from './auth-rules';
 import {accountPlan,beginDeletion,finishDeletion,transferOwnership} from './account-deletion';
 import {AppError} from './rally-errors';
 
@@ -41,7 +41,7 @@ export function accountHandlers(deps:Dependencies) {
    } catch(error){return failure(error)}
   },
   async POST(request:Request){
-   if(!sameOrigin(request))return reply({error:'Request origin not allowed.'},403);
+   if(!allowedOrigin(request))return reply({error:'Request origin not allowed.'},403);
    try {
     const body=await readBody(request);
     const session=await deps.session(),user=session.user;

@@ -1,3 +1,4 @@
+import {allowedOrigin} from '@/lib/auth-rules';
 import {env} from 'cloudflare:workers';
 import {getAuthenticatedUser} from '@/lib/auth';
 import {AppError} from '@/lib/rally-errors';
@@ -8,7 +9,7 @@ const response=(data:unknown,status=200)=>Response.json(data,{status,headers:{'C
 // POST /api/rooms/media?room=<id> with the raw file as the body.
 export async function POST(request:Request){
  try{
-  if(request.headers.get('origin')!==new URL(request.url).origin)throw new AppError(403,'Request origin not allowed.');
+  if(!allowedOrigin(request))throw new AppError(403,'Request origin not allowed.');
   const user=await getAuthenticatedUser();if(!user)throw new AppError(401,'Sign in to use leader rooms.');
   const me=await env.DB.prepare('SELECT id FROM profiles WHERE auth_id=? AND deleted_at IS NULL').bind(user.id).first<{id:string}>();if(!me)throw new AppError(403,'Create your player profile first.');
   const limited=await rateLimit(env.USER_WRITE_LIMITER,user.id);if(limited)return limited;

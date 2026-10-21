@@ -1,7 +1,7 @@
 import {env} from 'cloudflare:workers';
 import {cookies} from 'next/headers';
 import {getAuthenticatedUser} from '@/lib/auth';
-import {sameOrigin} from '@/lib/auth-rules';
+import {allowedOrigin} from '@/lib/auth-rules';
 import {AppError} from '@/lib/rally-errors';
 import {guardAccountWrites} from '@/lib/account-write-guard';
 import {rateLimit} from '@/lib/write-limits';
@@ -12,7 +12,7 @@ async function viewer(){const user=await getAuthenticatedUser();if(!user)throw n
 async function handle(request:Request){
  try{const user=await viewer(),store=await cookies(),device=store.get(pushCookie)?.value;
   if(request.method==='GET')return reply({publicKey:env.VAPID_PRIVATE_KEY&&env.VAPID_SUBJECT?env.VAPID_PUBLIC_KEY??null:null,enabled:!!device&&!!await env.DB.prepare('SELECT 1 FROM push_subscriptions WHERE id=? AND player_id=?').bind(device,user.id).first()});
-  if(!sameOrigin(request))throw new AppError(403,'Request origin not allowed.');const limited=await rateLimit(env.USER_WRITE_LIMITER,user.authId);if(limited)return limited;
+  if(!allowedOrigin(request))throw new AppError(403,'Request origin not allowed.');const limited=await rateLimit(env.USER_WRITE_LIMITER,user.authId);if(limited)return limited;
   const db=guardAccountWrites(env.DB,user.authId);
   if(request.method==='DELETE'){if(device)await db.prepare('DELETE FROM push_subscriptions WHERE id=? AND player_id=?').bind(device,user.id).run();store.delete(pushCookie);return reply({ok:true});}
   if(!env.VAPID_PUBLIC_KEY||!env.VAPID_PRIVATE_KEY||!env.VAPID_SUBJECT)throw new AppError(503,'Push notifications are not configured yet.');
