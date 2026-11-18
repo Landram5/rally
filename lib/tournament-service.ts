@@ -28,7 +28,7 @@ export async function tournamentAction(db:D1Database,user:{id:string},body:Recor
    q(`UPDATE matches SET status='voided' WHERE tournament_id=? AND ${guard}`,eventId,eventId,operationId),
    q(`INSERT INTO tournament_operations (id,tournament_id,actor_id,action,payload,before_state,after_state,revision,created_at) SELECT ?,?,?,?, ?,?,NULL,?,? WHERE ${guard}`,operationId,eventId,user.id,action,payload,event.state_json,event.revision+1,now,eventId,operationId)];
    statements.push(q(`INSERT INTO doubles_audit (id,match_id,actor_id,action,created_at) SELECT ?||id,id,?,'tournament_deleted',? FROM doubles_matches WHERE tournament_id=? AND status!='voided' AND ${guard}`,crypto.randomUUID(),user.id,now,eventId,eventId,operationId),q(`UPDATE doubles_matches SET status='voided' WHERE tournament_id=? AND ${guard}`,eventId,eventId,operationId));
-   const results=await db.batch(statements);if(results[0].meta.changes!==1)bad(409,'The tournament or your access changed. Refresh and try again.');return {ok:true,id:eventId,deleted:true};
+   const results=await db.batch(statements);if(results[0].meta.changes<1)bad(409,'The tournament or your access changed. Refresh and try again.');return {ok:true,id:eventId,deleted:true};
  }
  // A doubles tournament registers teams: the draw's "players" are team ids, and each team is two players.
  const doubles=event.team_size===2,teams=doubles?(await q('SELECT id,p1,p2 FROM doubles_teams WHERE tournament_id=? ORDER BY created_at,id',eventId).all<{id:string;p1:string;p2:string}>()).results:[];
@@ -217,5 +217,5 @@ export async function tournamentAction(db:D1Database,user:{id:string},body:Recor
   }
  }}
  statements.push(q(`INSERT INTO tournament_operations (id,tournament_id,actor_id,action,payload,before_state,after_state,revision,created_at) SELECT ?,?,?,?,?,?,?,?,? WHERE ${guard}`,operationId,eventId,user.id,action,payload,event.state_json,afterJson,event.revision+1,now,eventId,operationId));
- const results=await db.batch(statements);if(results[0].meta.changes!==1)bad(409,'Another organizer changed this tournament. Refresh and try again.');return {ok:true,id:eventId,status};
+ const results=await db.batch(statements);if(results[0].meta.changes<1)bad(409,'Another organizer changed this tournament. Refresh and try again.');return {ok:true,id:eventId,status};
 }
