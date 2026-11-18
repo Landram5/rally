@@ -13,7 +13,7 @@ const {getPublicLeaderboard}=await import('../.test-runtime/public-leaderboard.m
 const path='.test-runtime/test-data.sqlite';rmSync(path,{force:true});let sql;
 function open(){sql=new DatabaseSync(path);sql.exec('PRAGMA foreign_keys=ON');}
 open();for(const f of readdirSync('drizzle').filter(f=>f.endsWith('.sql')).sort())sql.exec(readFileSync('drizzle/'+f,'utf8'));
-function stmt(query,args=[]){return {bind(...a){return stmt(query,a)},async first(){return sql.prepare(query).get(...args)??null},async all(){return {results:sql.prepare(query).all(...args)}},async run(){return {success:true,meta:sql.prepare(query).run(...args)}},execute(){return {success:true,meta:sql.prepare(query).run(...args)}}}}
+function stmt(query,args=[]){return {bind(...a){return stmt(query,a)},async first(){return sql.prepare(query).get(...args)??null},async all(){return {results:sql.prepare(query).all(...args)}},async run(){return {success:true,meta:sql.prepare(query).run(...args)}},execute(){const total=()=>sql.prepare('SELECT total_changes() AS n').get().n,before=total();sql.prepare(query).run(...args);return {success:true,meta:{changes:total()-before}}}}}
 const db={prepare:stmt,async batch(stmts){sql.exec('BEGIN');try{const results=stmts.map(s=>s.execute());sql.exec('COMMIT');return results}catch(e){sql.exec('ROLLBACK');throw e}}};
 const service=makeService(db),act=(who,body)=>service.act(who,body),adminAct=(who,body)=>service.act(who,body,{isSiteAdmin:true,reviewerId:who});
 await act('owner-auth',{action:'save_profile',name:'Owner'});
